@@ -9,6 +9,7 @@ import {
     STATION_KINDS, STATUSES, LINE_TYPES, ROUTE_MODES, COLOR_PRESETS, CORRIDOR_TYPES, LABEL_POSITIONS
 } from '../core/constants.js';
 import { contrastText } from '../core/network-model.js';
+import { STATION_LEVELS, LINE_DEFAULT_LEVEL, stationLevel, levelChanges, withPortal } from '../core/levels.js';
 import { esc } from '../render/svg-renderer.js';
 import { routeIcon } from '../tools/editor.js';
 import { toast } from './toast.js';
@@ -175,6 +176,7 @@ export class Inspector {
             <div class="toggle-row"><span>環狀線(末站接回首站)</span>${sw('', !!line.loop, 'data-lbool="loop"')}</div>
             <div class="toggle-row"><span>顯示於地圖</span>${sw('', !line.hidden, 'data-lbool-inv="hidden"')}</div>
         </div>
+        ${this.levelSection(line)}
         <div class="insp-sec"><h3>車站順序・${stationCount}<button class="btn sm" data-act="reverse">⇅ 反轉方向</button></h3>
             <button class="extend-btn" data-act="extend-start">＋ 從起點延伸</button>
             <div class="seq">${seq || '<p class="hint">尚無車站</p>'}</div>
@@ -185,6 +187,34 @@ export class Inspector {
                 <button class="action" data-act="clear-turns"><span class="grow">清除所有轉折點</span></button>
                 <button class="action btn-danger" data-act="delete-line"><span class="grow">刪除路線(車站保留)</span><kbd>Del</kbd></button>
             </div>
+        </div>`;
+    }
+
+    /** 高程與出土段:全線層級統計、一鍵設定,以及每個層級變換區間的位置滑桿 */
+    levelSection(line) {
+        const LV = { underground: '地下', ground: '平面', elevated: '高架' };
+        const ids = line.nodes.filter(n => n.type === 'station').map(n => n.id);
+        const count = {};
+        ids.forEach(id => { const lv = stationLevel(store.getStation(id), line); count[lv] = (count[lv] || 0) + 1; });
+        const summary = Object.entries(count).map(([k, n]) => `${LV[k]} ${n} 站`).join('・') || '尚無車站';
+        const meters = (a, b) => {
+            const dLat = (a.lat - b.lat) * 111320, dLng = (a.lng - b.lng) * 111320 * Math.cos(a.lat * Math.PI / 180);
+            return Math.hypot(dLat, dLng);
+        };
+        const rows = levelChanges(line, id => store.getStation(id)).map(c => {
+            const A = store.getStation(c.a), B = store.getStation(c.b);
+            const pct = Math.round(c.t * 100);
+            const m = Math.round(meters(A, B) * c.t);
+            return `<div class="portal-row">
+                <div class="portal-head"><span>${esc(A.name)}<em>${LV[c.la]}</em></span><span class="arrow">→</span><span>${esc(B.name)}<em>${LV[c.lb]}</em></span></div>
+                <div class="range-row"><input type="range" min="5" max="95" value="${pct}" data-portal-a="${c.a}" data-portal-b="${c.b}">
+                    <output>距${esc(A.name)}約 ${m} m</output></div></div>`;
+        }).join('');
+        return `<div class="insp-sec"><h3>高程與出土段</h3>
+            <p class="hint" style="margin-top:0">${summary}(自動 = ${LV[LINE_DEFAULT_LEVEL[line.type] || 'ground']})。車站層級在各站設定,或一次套用全線:</p>
+            <div class="chips c3">${Object.entries(LV).map(([k, t]) => `<button class="chip" data-line-level="${k}">全線${t}</button>`).join('')}</div>
+            ${rows ? `<div class="portal-list">${rows}</div><p class="hint">出土段位置也可在地圖上直接拖曳白色標記。</p>`
+                : '<p class="hint">相鄰車站層級都相同,沒有出土段。</p>'}
         </div>`;
     }
 
@@ -230,6 +260,9 @@ export class Inspector {
             <p class="hint">自動:依所屬路線數與連通道判斷,目前為「${RESOLVED[resolved] || ''}」。</p>
         </div>
         <div class="insp-sec"><h3>營運狀態</h3>${chips('c4', STATUSES, s.status || 'open', 'sstatus')}</div>
+        <div class="insp-sec"><h3>層級</h3>${chips('c4', STATION_LEVELS, s.level || 'auto', 'slevel')}
+            <p class="hint">駕駛模式依此建立地下隧道、平面或高架;相鄰兩站層級不同時,於路線上設定出土段位置。${(s.level || 'auto') === 'auto' ? `自動:依路線類型,目前為「${STATION_LEVELS[stationLevel(s, lines[0])]}」。` : ''}</p>
+        </div>
         <div class="insp-sec"><h3>所屬路線・${lines.length}</h3>
             ${lineCards || '<p class="hint">尚未加入任何路線。</p>'}
             ${addBox || (candidates.length ? '<button class="extend-btn" data-act="open-add">＋ 加入路線</button>' : '')}
@@ -297,6 +330,7 @@ export class Inspector {
         const statusSet = new Set(ss.map(s => s.status || 'open'));
         const posSet = new Set(ss.map(s => s.labelPos || 'auto'));
         const kindSet = new Set(ss.map(s => s.kind || 'auto'));
+        const levelSet = new Set(ss.map(s => s.level || 'auto'));
         const opt = (obj, set) => `<option value="" ${set.size > 1 ? 'selected' : ''} disabled>${set.size > 1 ? '混合' : '—'}</option>` +
             Object.entries(obj).map(([k, t]) => `<option value="${k}" ${set.size === 1 && set.has(k) ? 'selected' : ''}>${t}</option>`).join('');
         const posObj = Object.fromEntries(LABEL_POSITIONS.map(d => [d, d === 'auto' ? '自動' : `${DIR_LABEL[d]} ${d}`]));
@@ -323,6 +357,7 @@ export class Inspector {
         <div class="insp-sec"><h3>批次設定</h3>
             <div class="field"><label>營運狀態</label><select class="sel" data-batch="status">${opt(STATUSES, statusSet)}</select></div>
             <div class="field"><label>車站類型</label><select class="sel" data-batch="kind">${opt(STATION_KINDS, kindSet)}</select></div>
+            <div class="field"><label>層級</label><select class="sel" data-batch="level">${opt(STATION_LEVELS, levelSet)}</select></div>
             <div class="field"><label>站名位置</label><select class="sel" data-batch="labelPos">${opt(posObj, posSet)}</select></div>
         </div>
         <div class="insp-sec"><button class="btn btn-danger block" data-act="delete-station">刪除 ${ss.length} 個車站</button></div>`;
@@ -360,6 +395,15 @@ export class Inspector {
         else if (d.lf) store.updateLine(this.selId(), { [d.lf]: t.value });
         else if (d.lfColor !== undefined) store.updateLine(this.selId(), { color: t.value });
         else if (d.num) store.setStationNumber(this.selId(), d.num, t.value.trim());
+        else if (d.portalA) {
+            const line = store.getLine(this.selId());
+            const u = t.value / 100;
+            store.updateLine(line.id, { portals: withPortal(line, d.portalA, d.portalB, u) });
+            const A = store.getStation(d.portalA), B = store.getStation(d.portalB);
+            const m = Math.round(Math.hypot((A.lat - B.lat) * 111320, (A.lng - B.lng) * 111320 * Math.cos(A.lat * Math.PI / 180)) * u);
+            const out = t.parentElement.querySelector('output');
+            if (out) out.textContent = `距${A.name}約 ${m} m`;
+        }
         else if (d.set) store.updateSettings({ [d.set]: t.value });
         else if (d.setNum) {
             store.updateSettings({ [d.setNum]: parseFloat(t.value) });
@@ -390,6 +434,12 @@ export class Inspector {
 
         if (d.kind) store.updateStation(id, { kind: d.kind });
         else if (d.sstatus) store.updateStation(id, { status: d.sstatus });
+        else if (d.slevel) store.updateStation(id, { level: d.slevel });
+        else if (d.lineLevel) {
+            const ids = store.getLine(id).nodes.filter(n => n.type === 'station').map(n => n.id);
+            store.updateStations(ids, { level: d.lineLevel });
+            toast(`全線 ${ids.length} 站設為「${STATION_LEVELS[d.lineLevel]}」`, { undo: true });
+        }
         else if (d.labelpos) store.updateStation(id, { labelPos: d.labelpos });
         else if (d.rmLine) { store.removeStationFromLine(id, d.rmLine); toast('已自路線移除', { undo: true }); }
         else if (d.extendFrom) this.editor.extendFrom(d.extendFrom, id);

@@ -14,12 +14,14 @@ import { openModal } from '../ui/modal.js';
 import { toast } from '../ui/toast.js';
 import { renderSign, stationSignData } from '../signs/sign-render.js';
 import { svgToCanvas } from '../signs/sign-raster.js';
-import { buildDriveRoute, suggestScale, nextLimit } from './route3d.js';
-import { TRAIN_SPECS, createTrain, stepTrain, notchLabel, suggestNotch, gradeStop } from './physics.js';
+import { buildDriveRoute, suggestScale, nextLimit, applyProfile } from './route3d.js';
+import { stationLevel, getPortal, LEVEL_HEIGHT } from '../core/levels.js';
+import { TRAIN_SPECS, createTrain, stepTrain, notchLabel, suggestNotch, gradeStop, atoNotch } from './physics.js';
 import { Announcer, scriptDeparture, scriptArrival, scriptDoorsClosing } from './announcer.js';
 import { PHRASES } from './phrases.js';
 
-const ENVS = { auto: '依路線類型', underground: '地下(隧道)', elevated: '高架', ground: '地面' };
+const VIEW_NAMES = { cab: '駕駛室視角', third: '第三人稱視角', chase: '車外追蹤視角', side: '車側視角', aerial: '空拍視角' };
+const ENVS = { auto: '依車站層級', underground: '全線地下', elevated: '全線高架', ground: '全線平面' };
 const TIMES = { day: '白天', overcast: '陰天', dusk: '黃昏', night: '夜間' };
 const QUALITIES = { high: '高(陰影、人潮)', medium: '中', low: '低(效能優先)' };
 const SIDES = { auto: '依路線類型', left: '左側', right: '右側' };
@@ -75,7 +77,8 @@ export async function openDriveSetup(ctx) {
                 <tr><td><kbd>E</kbd></td><td>緊急制動 EB</td><td><kbd>H</kbd></td><td>鳴笛</td></tr>
                 <tr><td><kbd>N</kbd></td><td>回到惰行</td><td><kbd>R</kbd></td><td>重播廣播</td></tr>
                 <tr><td>滑鼠拖曳</td><td>環顧(雙擊回正)</td><td><kbd>M</kbd> / <kbd>Esc</kbd></td><td>靜音 / 暫停選單</td></tr>
-                <tr><td><kbd>V</kbd></td><td>切換視角:駕駛室 / 車外追蹤 / 車側</td><td></td><td></td></tr>
+                <tr><td><kbd>V</kbd></td><td>視角:駕駛室 / 第三人稱 / 車外追蹤 / 車側 / 空拍</td><td><kbd>A</kbd></td><td>自動駕駛開關</td></tr>
+                <tr><td>主控制器</td><td colspan="3">按住握把上下拖曳(滑鼠或手指),或點刻度直接換檔;手動操作會解除自動駕駛</td></tr>
             </table>
         </div>`,
         foot: `<span class="grow"></span><button class="btn" data-close>取消</button><button class="btn btn-primary" id="dv-go">開始駕駛 <kbd>Enter</kbd></button>`,
@@ -244,10 +247,16 @@ async function startDrive(ctx, cfg, announcer) {
     if (session) return;
     const line = store.getLine(cfg.lineId);
     const spec = TRAIN_SPECS[line.type] || TRAIN_SPECS.metro;
-    const env = cfg.env === 'auto' ? ({ metro: 'underground', lrt: 'ground', rail: 'ground', hsr: 'elevated' }[line.type] || 'ground') : cfg.env;
     const side = cfg.side === 'auto' ? (line.type === 'metro' ? 'left' : 'right') : cfg.side;
     const leg = planLeg(ctx.view, cfg.lineId, cfg.fromId, cfg.toId);
     const route = buildDriveRoute(leg.pathLL, leg.stops, { radius: spec.radius, scale: cfg.scale, vmax: spec.vmax, lead: spec.platform + 80, tail: 400 });
+    // 高程剖面:各站層級(或全線統一)→ 軌面高度;相鄰兩站不同時依路線的出土段位置銜接
+    const levelOf = (id) => cfg.env === 'auto' ? stationLevel(store.getStation(id), line) : cfg.env;
+    const levels = route.stations.map(rs => levelOf(rs.id));
+    applyProfile(route,
+        levels.map(lv => ({ y: LEVEL_HEIGHT[lv], half: spec.platform / 2 })),
+        route.stations.slice(0, -1).map((rs, k) => getPortal(line, rs.id, route.stations[k + 1].id)));
+    const env = levels.every(l => l === levels[0]) ? levels[0] : 'mixed';
     const trainLen = spec.cars * spec.carLen;
 
     document.body.classList.add('drive-mode');
@@ -294,7 +303,7 @@ async function startDrive(ctx, cfg, announcer) {
         }
         textures.stop = await canvasTexture(THREE, stopMarkerCanvas(spec.cars), true);
         stations.push({
-            idx: k, id: rs.id, s: rs.s, sStop, p1: sStop + 8, p0: sStop + 8 - spec.platform, side,
+            idx: k, id: rs.id, s: rs.s, sStop, p1: sStop + 8, p0: sStop + 8 - spec.platform, side, level: levels[k],
             name: d.name, sub: d.sub, data: d, textures,
             transfer: transfersOf(rs.id, line.id)
         });
@@ -378,9 +387,10 @@ class DriveSession {
         const L = this.line;
         const hud = document.createElement('div');
         hud.className = 'dv-hud';
-        const notches = [];
+        const notches = this.notches = [];
         for (let k = this.spec.P; k >= -(this.spec.B + 1); k--) notches.push(k);
         const term = this.stations[this.stations.length - 1];
+        const cls = (k) => k > 0 ? 'p' : k === 0 ? 'n' : k <= -(this.spec.B + 1) ? 'eb' : 'b';
         hud.innerHTML = `
             <div class="dv-top-left">
                 <div class="dv-line"><span class="code-badge" style="background:${L.color};color:${contrastText(L.color)}">${esc(L.code || '—')}</span>
@@ -388,39 +398,155 @@ class DriveSession {
                 <div class="dv-next"><small data-next-label>下一站</small><b data-next-name></b><span data-next-sub></span><em data-next-dist></em></div>
             </div>
             <div class="dv-top-center"><div class="dv-clock" data-clock>00:00</div><div class="dv-msg" data-msg hidden></div></div>
+            <button class="dv-route-toggle" data-cmd="route" title="站序">☰</button>
             <div class="dv-route" data-route>${this.stations.map((s, i) => `<div class="dv-rs" data-rs="${i}"><i></i><span>${esc(s.name)}</span><em data-rs-grade="${i}"></em></div>`).join('')}</div>
             <div class="dv-caption" data-caption hidden></div>
-            <div class="dv-bottom">
-                <div class="dv-notch" data-notch>${notches.map(k => `<span data-n="${k}" class="${k > 0 ? 'p' : k < 0 ? 'b' : 'n'}">${notchLabel(k, this.spec)}</span>`).join('')}</div>
-                <div class="dv-meter">
-                    <svg viewBox="0 0 220 130" class="dv-gauge"><path d="M20 120A90 90 0 0 1 200 120" fill="none" stroke="rgba(255,255,255,0.18)" stroke-width="12" stroke-linecap="round"/>
-                        <path data-arc d="" fill="none" stroke="#F2B01E" stroke-width="12" stroke-linecap="round"/>
-                        <path data-limit-tick d="" stroke="#E5484D" stroke-width="5"/></svg>
-                    <div class="dv-speed"><b data-speed>0</b><small>km/h</small></div>
-                    <div class="dv-limit" data-limit></div>
-                    <div class="dv-flags"><span data-atp>ATP</span><span data-doors>車門</span><span data-sig>號誌</span></div>
+            <div class="dv-console" data-console>
+                <div class="cs-unit cs-mc" title="主控制器:按住握把上下拖曳(或點刻度)換檔">
+                    <div class="mc-label">主控制器</div>
+                    <div class="mc-body">
+                        <div class="mc-plate">${notches.map(k => `<span data-n="${k}" class="${cls(k)}">${notchLabel(k, this.spec)}</span>`).join('')}</div>
+                        <div class="mc-slot" data-mc-slot style="--n:${notches.length}">
+                            <div class="mc-knob" data-mc-knob><i></i><b></b></div>
+                        </div>
+                    </div>
                 </div>
-                <div class="dv-stopguide" data-guide hidden>
-                    <small>停車位置</small>
-                    <div class="dv-ruler"><i class="dv-target"></i><i class="dv-tol" data-tol></i><i class="dv-me" data-me></i></div>
-                    <b data-guide-dist></b><span data-assist></span>
+                <div class="cs-unit cs-gauge">
+                    ${this.gaugeSvg()}
+                    <div class="cs-digital"><b data-speed>0</b><small>km/h</small></div>
                 </div>
-                <div class="dv-btns">
-                    <button data-cmd="power">▲ 牽引</button><button data-cmd="brake">▼ 制動</button>
-                    <button data-cmd="doors">D 車門</button><button data-cmd="eb" class="eb">EB</button>
-                    <button data-cmd="pause">❚❚</button>
+                <div class="cs-unit cs-mid">
+                    <div class="cs-lamps">
+                        <span class="lamp" data-lamp="atp"><i></i>ATP</span>
+                        <span class="lamp" data-lamp="doors"><i></i>車門</span>
+                        <span class="lamp" data-lamp="sig"><i></i>出發</span>
+                        <span class="lamp" data-lamp="ato"><i></i>自動</span>
+                        <span class="lamp" data-lamp="eb"><i></i>緊急</span>
+                    </div>
+                    <div class="cs-tims">
+                        <div class="tims-row"><span data-tims-label>下一站</span><b data-tims-name></b></div>
+                        <div class="tims-row"><span>距離</span><b data-tims-dist></b><span>限速</span><b data-limit-v></b></div>
+                        <div class="tims-limit" data-limit></div>
+                        <div class="tims-guide" data-guide hidden>
+                            <div class="dv-ruler"><i class="dv-target"></i><i class="dv-tol" data-tol></i><i class="dv-me" data-me></i></div>
+                            <div class="tims-row"><b data-guide-dist></b><span data-assist></span></div>
+                        </div>
+                    </div>
+                </div>
+                <div class="cs-unit cs-btns">
+                    <button class="pb door" data-cmd="doors" title="車門(D)"><span data-door-ico>◀▶</span><small data-door-txt>車門</small></button>
+                    <button class="pb horn" data-cmd="horn" title="鳴笛(H,按住)"><span>📯</span><small>鳴笛</small></button>
+                    <button class="pb ato" data-cmd="ato" title="自動駕駛(A)"><span class="key"><i></i></span><small>自動駕駛</small></button>
+                    <button class="pb view" data-cmd="view" title="切換視角(V)"><span>🎥</span><small data-view-txt>駕駛室</small></button>
+                    <button class="pb eb" data-cmd="eb" title="緊急制動(E)"><span></span><small>緊急制動</small></button>
+                    <button class="pb pause" data-cmd="pause" title="暫停(Esc)"><span>❚❚</span><small>暫停</small></button>
                 </div>
             </div>
             <div class="dv-pause" data-pause hidden></div>`;
         this.el.appendChild(hud);
         this.hud = hud;
         this.q = (s) => hud.querySelector(s);
-        hud.querySelector('.dv-btns').addEventListener('click', (e) => {
-            const b = e.target.closest('[data-cmd]');
-            if (!b) return;
+        this.bindConsole();
+    }
+
+    /** 類比速度表(SVG):270° 刻度、指針、限速標記 */
+    gaugeSvg() {
+        const vmax = this.spec.vmax;
+        const major = vmax > 200 ? 50 : vmax > 100 ? 20 : 10;
+        const ang = (v) => -225 + 270 * Math.min(1, v / vmax);
+        const pt = (a, r) => { const t = a * Math.PI / 180; return [100 + r * Math.cos(t), 100 + r * Math.sin(t)]; };
+        let ticks = '';
+        for (let v = 0; v <= vmax; v += major / 2) {
+            const big = v % major === 0;
+            const [x1, y1] = pt(ang(v), big ? 70 : 74), [x2, y2] = pt(ang(v), 82);
+            ticks += `<line x1="${x1.toFixed(1)}" y1="${y1.toFixed(1)}" x2="${x2.toFixed(1)}" y2="${y2.toFixed(1)}" stroke="#E9EEF0" stroke-width="${big ? 2.6 : 1.2}"/>`;
+            if (big) { const [tx, ty] = pt(ang(v), 58); ticks += `<text x="${tx.toFixed(1)}" y="${(ty + 4).toFixed(1)}">${v}</text>`; }
+        }
+        const arc = (a0, a1, r) => { const [x0, y0] = pt(a0, r), [x1, y1] = pt(a1, r); return `M${x0.toFixed(1)} ${y0.toFixed(1)}A${r} ${r} 0 ${a1 - a0 > 180 ? 1 : 0} 1 ${x1.toFixed(1)} ${y1.toFixed(1)}`; };
+        this.gaugeAng = ang;
+        this.gaugeArc = arc;
+        return `<svg viewBox="0 0 200 200" class="cs-dial">
+            <defs><radialGradient id="dvBezel" cx="40%" cy="30%"><stop offset="0" stop-color="#F4F6F7"/><stop offset=".55" stop-color="#8E979C"/><stop offset="1" stop-color="#3B4246"/></radialGradient>
+                <radialGradient id="dvFace" cx="50%" cy="40%"><stop offset="0" stop-color="#20272B"/><stop offset="1" stop-color="#0B0E10"/></radialGradient></defs>
+            <circle cx="100" cy="100" r="98" fill="url(#dvBezel)"/>
+            <circle cx="100" cy="100" r="90" fill="url(#dvFace)" stroke="#000" stroke-width="2"/>
+            <path d="${arc(-225, 45, 86)}" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="6"/>
+            <path data-ok-arc d="" fill="none" stroke="#2FB36B" stroke-width="6"/>
+            <path data-over-arc d="" fill="none" stroke="#E5484D" stroke-width="6"/>
+            <g class="cs-ticks">${ticks}</g>
+            <text x="100" y="146" class="cs-unit-txt">km/h</text>
+            <g data-limit-mark><path d="M100 10l-6 -0.1 6 11 6 -11z" fill="#FF4B4B" stroke="#000" stroke-width=".8"/></g>
+            <g data-needle><path d="M97.6 100L100 22 102.4 100z" fill="#FF6A2B"/><path d="M98 100h4l-1 18h-2z" fill="#FF6A2B"/></g>
+            <circle cx="100" cy="100" r="9" fill="#2A3034" stroke="#9AA3A8" stroke-width="2"/>
+            <circle cx="96" cy="96" r="70" fill="url(#dvFace)" opacity="0"/>
+            <path d="M30 60A80 80 0 0 1 150 28" fill="none" stroke="rgba(255,255,255,.07)" stroke-width="16" stroke-linecap="round"/>
+        </svg>`;
+    }
+
+    /** 主控制器拖曳、按鈕(含按住鳴笛)、站序面板開合 */
+    bindConsole() {
+        const slot = this.q('[data-mc-slot]');
+        const pick = (clientY) => {
+            const r = slot.getBoundingClientRect();
+            const u = (clientY - r.top) / r.height;
+            const i = Math.max(0, Math.min(this.notches.length - 1, Math.round(u * this.notches.length - 0.5)));
+            return this.notches[i];
+        };
+        const manual = (n) => {
+            if (this.paused || this.finished) return;
+            if (this.ato) { this.setAto(false); this.flash('手動操作主控制器,自動駕駛解除', 2.5, true); }
+            if (n !== this.train.notch) { this.setNotch(n); navigator.vibrate?.(8); }
+        };
+        slot.addEventListener('pointerdown', (e) => {
+            e.preventDefault();
             this.announcer.unlock();
-            ({ power: () => this.setNotch(this.train.notch + 1), brake: () => this.setNotch(this.train.notch - 1), doors: () => this.toggleDoors(), eb: () => this.setNotch(-(this.spec.B + 1)), pause: () => this.togglePause() })[b.dataset.cmd]();
+            try { slot.setPointerCapture(e.pointerId); } catch { /* 合成事件 */ }
+            slot.classList.add('grab');
+            manual(pick(e.clientY));
+            const move = (ev) => manual(pick(ev.clientY));
+            const up = () => { slot.classList.remove('grab'); slot.removeEventListener('pointermove', move); slot.removeEventListener('pointerup', up); slot.removeEventListener('pointercancel', up); };
+            slot.addEventListener('pointermove', move);
+            slot.addEventListener('pointerup', up);
+            slot.addEventListener('pointercancel', up);
         });
+        this.q('.mc-plate').addEventListener('click', (e) => {
+            const n = e.target.closest('[data-n]');
+            if (n) manual(+n.dataset.n);
+        });
+        const horn = this.q('[data-cmd="horn"]');
+        const hornOff = () => { horn.classList.remove('on'); this.announcer.horn(false); };
+        horn.addEventListener('pointerdown', (e) => { e.preventDefault(); this.announcer.unlock(); horn.classList.add('on'); this.announcer.horn(true); try { horn.setPointerCapture(e.pointerId); } catch { /* 合成事件 */ } });
+        horn.addEventListener('pointerup', hornOff);
+        horn.addEventListener('pointercancel', hornOff);
+        this.hud.addEventListener('click', (e) => {
+            const b = e.target.closest('[data-cmd]');
+            if (!b || b.dataset.cmd === 'horn') return;
+            this.announcer.unlock();
+            const act = {
+                doors: () => this.toggleDoors(),
+                eb: () => { if (this.ato) this.setAto(false); this.setNotch(-(this.spec.B + 1)); },
+                ato: () => this.setAto(!this.ato),
+                view: () => this.cycleView(),
+                pause: () => this.togglePause(),
+                route: () => this.hud.classList.toggle('show-route')
+            }[b.dataset.cmd];
+            if (act && (!this.finished || b.dataset.cmd === 'route')) act();
+        });
+    }
+
+    setAto(on) {
+        this.ato = !!on;
+        this.train.atoStop = false;
+        this.flash(on ? '自動駕駛(ATO)啟動:自動加減速、停車與開關門' : '自動駕駛解除,改為手動駕駛', 2.5);
+    }
+
+    cycleView() {
+        const order = ['cab', 'third', 'chase', 'side', 'aerial'];
+        const next = order[(order.indexOf(this.world.view) + 1) % order.length];
+        this.world.look.yaw = 0;
+        this.world.look.pitch = next === 'cab' ? -0.07 : 0;
+        this.world.setView(next);
+        this.flash(VIEW_NAMES[next], 1.5);
     }
 
     flash(text, secs = 3, warn = false) {
@@ -436,24 +562,35 @@ class DriveSession {
         const q = this.q;
         const v = t.v * 3.6;
         const lim = nextLimit(this.route, t.s, 600);
+        const vmax = this.spec.vmax;
+        // 速度表:指針、綠色(限速內)/紅色(超過限速)弧、限速標記
         q('[data-speed]').textContent = Math.round(v);
-        const ang = (u) => Math.PI * (1 - Math.min(1, u));
-        const arc = (u) => { const a = ang(u); return `M20 120A90 90 0 0 1 ${110 + 90 * Math.cos(a)} ${120 - 90 * Math.sin(a)}`; };
-        q('[data-arc]').setAttribute('d', v > 0.5 ? arc(v / this.spec.vmax) : '');
-        const la = ang(lim.current / this.spec.vmax);
-        q('[data-limit-tick]').setAttribute('d', `M${110 + 78 * Math.cos(la)} ${120 - 78 * Math.sin(la)}L${110 + 102 * Math.cos(la)} ${120 - 102 * Math.sin(la)}`);
-        q('[data-limit]').innerHTML = `限速 <b>${lim.current}</b>` + (this.cfg.assist && lim.next < lim.current ? `<span>前方 ${Math.round(lim.at - t.s)} m 限 ${lim.next}</span>` : '');
-        q('[data-atp]').classList.toggle('on', t.atp);
-        const doorTxt = { open: '車門開', closing: '關門中', closed: '車門關' }[this.doors];
-        const dEl = q('[data-doors]');
-        dEl.textContent = `${this.side === 'left' ? '◀' : '▶'} ${doorTxt}`;
-        dEl.className = this.doors === 'closed' ? 'ok' : 'on';
+        q('[data-needle]').setAttribute('transform', `rotate(${(this.gaugeAng(v) + 90).toFixed(2)} 100 100)`);
+        q('[data-limit-mark]').setAttribute('transform', `rotate(${(this.gaugeAng(lim.current) + 90).toFixed(2)} 100 100)`);
+        const a0 = this.gaugeAng(0), av = this.gaugeAng(Math.min(v, lim.current)), al = this.gaugeAng(lim.current);
+        q('[data-ok-arc]').setAttribute('d', v > 0.5 ? this.gaugeArc(a0, av, 86) : '');
+        q('[data-over-arc]').setAttribute('d', v > lim.current ? this.gaugeArc(al, this.gaugeAng(Math.min(v, vmax)), 86) : '');
+        q('[data-limit-v]').textContent = `${lim.current}`;
+        q('[data-limit]').textContent = this.cfg.assist && lim.next < lim.current ? `前方 ${Math.round(lim.at - t.s)} m 限速 ${lim.next}` : '';
+        // 指示燈
         const prevSt = this.stations[this.target - 1];
         const sigOk = prevSt ? this.departOk(prevSt) : true;
-        const sEl = q('[data-sig]');
-        sEl.textContent = sigOk ? '出發 ●' : '號誌 ●';
-        sEl.className = sigOk ? 'ok' : 'on';
-        q('[data-notch]').querySelectorAll('span').forEach(s => s.classList.toggle('cur', +s.dataset.n === t.notch));
+        const lamp = (k, cls) => { q(`[data-lamp="${k}"]`).className = `lamp ${cls || ''}`; };
+        lamp('atp', t.atp ? 'red blink' : '');
+        lamp('doors', this.doors === 'closed' ? 'green' : this.doors === 'closing' ? 'amber blink' : 'amber');
+        lamp('sig', sigOk ? 'green' : 'red');
+        lamp('ato', this.ato ? 'blue' : '');
+        lamp('eb', t.notch <= -(this.spec.B + 1) ? 'red' : '');
+        q('[data-door-txt]').textContent = this.doors === 'open' ? '關門' : this.doors === 'closing' ? '關門中' : '開門';
+        q('[data-door-ico]').textContent = this.side === 'left' ? '◀' : '▶';
+        this.q('.pb.ato').classList.toggle('on', !!this.ato);
+        q('[data-view-txt]').textContent = VIEW_NAMES[this.world.view].replace(/視角$/, '');
+        // 主控制器握把位置與刻度
+        const i = this.notches.indexOf(t.notch);
+        this.q('[data-mc-knob]').style.setProperty('--i', i);
+        this.q('[data-mc-knob]').className = `mc-knob ${t.notch > 0 ? 'p' : t.notch === 0 ? 'n' : t.notch <= -(this.spec.B + 1) ? 'eb' : 'b'}`;
+        this.q('[data-mc-knob] b').textContent = notchLabel(t.notch, this.spec);
+        this.q('.mc-plate').querySelectorAll('span').forEach(s => s.classList.toggle('cur', +s.dataset.n === t.notch));
 
         // 下一站
         const st = this.stations[Math.min(this.target, this.stations.length - 1)];
@@ -464,7 +601,11 @@ class DriveSession {
         const showSt = atStop ? this.stations[this.target - 1] : st;
         q('[data-next-name]').textContent = showSt.name;
         q('[data-next-sub]').textContent = showSt.sub || '';
-        q('[data-next-dist]').textContent = atStop ? (this.doors === 'open' ? (this.dwellLeft > 0 ? `停站 ${Math.ceil(this.dwellLeft)} 秒` : '可關門 D') : this.doors === 'closing' ? '關門中' : '可出發') : dist > 1000 ? `${(dist / 1000).toFixed(2)} km` : `${Math.max(0, Math.round(dist))} m`;
+        const distTxt = atStop ? (this.doors === 'open' ? (this.dwellLeft > 0 ? `停站 ${Math.ceil(this.dwellLeft)} 秒` : '可關門') : this.doors === 'closing' ? '關門中' : '可出發') : dist > 1000 ? `${(dist / 1000).toFixed(2)} km` : `${Math.max(0, Math.round(dist))} m`;
+        q('[data-next-dist]').textContent = distTxt;
+        q('[data-tims-label]').textContent = atStop ? '停靠' : '下一站';
+        q('[data-tims-name]').textContent = showSt.name;
+        q('[data-tims-dist]').textContent = atStop ? distTxt : dist > 1000 ? `${(dist / 1000).toFixed(2)}km` : `${Math.max(0, Math.round(dist))}m`;
 
         // 停車導引(500 m 內)
         const guide = q('[data-guide]');
@@ -477,7 +618,7 @@ class DriveSession {
             q('[data-me]').style.left = `${50 + pos * 48}%`;
             q('[data-tol]').style.width = `${Math.min(96, tol / range * 96)}%`;
             q('[data-guide-dist]').textContent = Math.abs(dist) < 10 ? `${dist >= 0 ? '還有' : '超過'} ${Math.abs(dist).toFixed(2)} m` : `${Math.round(dist)} m`;
-            const sug = this.cfg.assist ? suggestNotch(t, this.spec, dist) : null;
+            const sug = this.cfg.assist && !this.ato ? suggestNotch(t, this.spec, dist) : null;
             q('[data-assist]').textContent = sug && t.v > 0.3 ? `建議 ${notchLabel(-sug, this.spec)}` : '';
         }
         // 路線圖
@@ -587,7 +728,7 @@ class DriveSession {
                 if (!b) return;
                 const a = b.dataset.p;
                 if (a === 'resume') this.togglePause(false);
-                else if (a === 'mute') { this.announcer.muted = !this.announcer.muted; this.togglePause(true); }
+                else if (a === 'mute') { this.announcer.muted = !this.announcer.muted; if (this.announcer.muted) this.announcer.stopBuzzer(); this.togglePause(true); }
                 else if (a === 'credits') this.showCredits();
                 else if (a === 'restart') this.restart();
                 else if (a === 'exit') this.exit();
@@ -606,23 +747,18 @@ class DriveSession {
             if (k === 'escape' || k === 'p') { handled(); if (this.finished) this.exit(); else this.togglePause(); return; }
             if (this.paused || this.finished) return;
             if (e.repeat && !['arrowup', 'arrowdown', 'w', 's'].includes(k)) { handled(); return; }
+            if (['arrowup', 'w', 'arrowdown', 's'].includes(k) && this.ato) { this.setAto(false); }
             if (k === 'arrowup' || k === 'w') { handled(); if (!e.repeat || this._rep()) this.setNotch(this.train.notch + 1); }
             else if (k === 'arrowdown' || k === 's') { handled(); if (!e.repeat || this._rep()) this.setNotch(this.train.notch - 1); }
-            else if (k === 'n' || k === '0') { handled(); this.setNotch(0); }
-            else if (k === 'e' || k === 'backspace') { handled(); this.setNotch(-(this.spec.B + 1)); }
+            else if (k === 'n' || k === '0') { handled(); if (this.ato) this.setAto(false); this.setNotch(0); }
+            else if (k === 'e' || k === 'backspace') { handled(); if (this.ato) this.setAto(false); this.setNotch(-(this.spec.B + 1)); }
             else if (k === 'd') { handled(); this.toggleDoors(); }
             else if (k === 'h') { handled(); this.announcer.horn(true); }
-            else if (k === 'm') { handled(); this.announcer.muted = !this.announcer.muted; this.flash(this.announcer.muted ? '已靜音' : '已開啟聲音', 1.5); if (this.announcer.muted) this.announcer.stop(); }
+            else if (k === 'm') { handled(); this.announcer.muted = !this.announcer.muted; this.flash(this.announcer.muted ? '已靜音' : '已開啟聲音', 1.5); if (this.announcer.muted) { this.announcer.stop(); this.announcer.stopBuzzer(); } }
             else if (k === 'r') { handled(); if (this.lastScript) this.announcer.announce(this.lastScript.parts, this.lastScript.label); }
             else if (k === 'c') { handled(); this.world.look.yaw = 0; this.world.look.pitch = -0.07; }
-            else if (k === 'v') {
-                handled();
-                const order = ['cab', 'chase', 'side'];
-                const next = order[(order.indexOf(this.world.view) + 1) % order.length];
-                this.world.look.yaw = 0; this.world.look.pitch = next === 'cab' ? -0.07 : 0;
-                this.world.setView(next);
-                this.flash({ cab: '駕駛室視角', chase: '車外追蹤視角', side: '車側視角' }[next], 1.5);
-            }
+            else if (k === 'v') { handled(); this.cycleView(); }
+            else if (k === 'a') { handled(); this.setAto(!this.ato); }
         };
         this.onKeyUp = (e) => { if (e.key.toLowerCase() === 'h') this.announcer.horn(false); };
         window.addEventListener('keydown', this.onKey, true);
@@ -634,6 +770,7 @@ class DriveSession {
             const now = performance.now();
             if (now - (this._wheelT || 0) < 120) return;
             this._wheelT = now;
+            if (this.ato) this.setAto(false);
             this.setNotch(this.train.notch + (e.deltaY < 0 ? 1 : -1));
         };
         cv.addEventListener('wheel', this.onWheel, { passive: false });
@@ -688,7 +825,11 @@ class DriveSession {
         if (this.phase === 'dwell') {
             if (this.doors === 'open' && this.dwellLeft > 0) {
                 this.dwellLeft -= dt;
-                if (this.dwellLeft <= 0) this.flash(this.target >= this.stations.length ? '終點站' : '停站時間到,按 D 關門', 3);
+                if (this.dwellLeft <= 0) {
+                    const terminal = this.target >= this.stations.length;
+                    this.flash(terminal ? '終點站' : '停站時間到,按 D 關門', 3);
+                    if (!terminal) this.announcer.buzzer(3); // 倒數結束:關門蜂鳴
+                }
             }
             if (this.doors === 'closing') {
                 this.doorTimer -= dt;
@@ -700,6 +841,7 @@ class DriveSession {
             }
         }
         const limit = nextLimit(this.route, t.s, 1).current;
+        if (this.ato) this.atoStep(limit);
         const ev = stepTrain(t, this.spec, dt, limit);
         if (ev.atpOn) this.flash(`ATP 超速制動(限速 ${limit})`, 3, true);
 
@@ -752,6 +894,28 @@ class DriveSession {
         }
     }
 
+    /** 自動駕駛:停站時間到自動關門、號誌開放後出發,依減速曲線停車並自動開門 */
+    atoStep(limit) {
+        const t = this.train;
+        const term = this.target >= this.stations.length;
+        if (this.phase === 'dwell') {
+            if (this.doors === 'open') { if (this.dwellLeft <= 0 && !term) this.toggleDoors(); t.notch = -this.spec.B; return; }
+            if (this.doors === 'closing' || term) { t.notch = -this.spec.B; return; }
+        }
+        const st = this.stations[this.target];
+        if (!st) return;
+        const stopDist = st.sStop - t.s;
+        // 停妥:開門
+        if (this.phase === 'run' && t.v === 0 && Math.abs(stopDist) <= Math.min(0.5, this.cfg.tol) && this.doors === 'closed') {
+            t.notch = -this.spec.B;
+            this.toggleDoors();
+            return;
+        }
+        const nl = nextLimit(this.route, t.s, 800);
+        const n = atoNotch(t, this.spec, { stopDist, limit, nextLimit: nl.next < limit ? { next: nl.next, at: nl.at - t.s } : null });
+        if (n !== t.notch) this.setNotch(n);
+    }
+
     say(parts, label) {
         this.lastScript = { parts, label };
         this.announcer.announce(parts, label);
@@ -800,7 +964,7 @@ class DriveSession {
         window.removeEventListener('keydown', this.onKey, true);
         window.removeEventListener('keyup', this.onKeyUp, true);
         window.removeEventListener('resize', this.onResize);
-        if (keepAnnouncer) { this.announcer.stop(); this.announcer.horn(false); this.announcer.motor(0, false); }
+        if (keepAnnouncer) { this.announcer.stop(); this.announcer.stopBuzzer(); this.announcer.horn(false); this.announcer.motor(0, false); }
         else this.announcer.dispose();
         this.world.dispose();
         this.el.remove();

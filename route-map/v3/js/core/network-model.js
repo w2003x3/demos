@@ -12,6 +12,7 @@ import {
     nearestDir8, DIR_VEC, longestSegmentMid, textWidth
 } from './geometry.js';
 import { LINE_TYPE_WIDTH, WIDTH_SCALE, BASEMAPS } from './constants.js';
+import { stationLevel, getPortal, pointAlong } from './levels.js';
 
 /** 依底圖/背景色決定文字與暈邊顏色 */
 export function themeFor(settings) {
@@ -325,6 +326,17 @@ export function buildModel(state, project, opts = {}) {
         });
     }
 
+    // ---------- 7b. 出土段(相鄰兩站層級不同的區間上,變換位置的標記) ----------
+    const portals = [];
+    sections.forEach(sec => {
+        if (!sec.aId || !sec.bId || sec.aId === sec.bId) return;
+        const la = stationLevel(stationById.get(sec.aId), sec.line), lb = stationLevel(stationById.get(sec.bId), sec.line);
+        if (la === lb) return;
+        const t = getPortal(sec.line, sec.aId, sec.bId);
+        const p = pointAlong(sec.drawPath, t);
+        if (p) portals.push({ lineId: sec.line.id, aId: sec.aId, bId: sec.bId, la, lb, t, x: p.x, y: p.y, angle: p.angle, w: sec.w, color: sec.color, sec: sec.idx });
+    });
+
     // ---------- 8. 外框 ----------
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     const grow = (x, y) => {
@@ -340,7 +352,7 @@ export function buildModel(state, project, opts = {}) {
 
     return {
         scale: S, baseW, fontSize, theme, settings,
-        sections, stations, labels, badges, corridors, handles,
+        sections, stations, labels, badges, corridors, handles, portals,
         lineEdges, linePts, stationPts, bbox
     };
 }

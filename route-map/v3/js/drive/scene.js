@@ -12,7 +12,7 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RailAssets } from '../vendor/rail-assets.js';
-import { poseAt } from './route3d.js';
+import { poseAt, heightAt, sectionKind, COVER_DEPTH } from './route3d.js';
 
 const CHUNK = 100;
 const BEHIND = 250;
@@ -219,7 +219,11 @@ export class Assets {
  * 沿路線掃出斷面。profile: [[lateral, up], ...](lateral 向右為正);closed 時首尾相連。
  * offset:斷面整體橫移;uv:貼圖一次重複的公尺數(u 沿斷面、v 沿路線)
  */
-function sweep(route, s0, s1, step, profile, { closed = false, offset = 0, base = 0, uv = 0 } = {}) {
+/**
+ * 沿路線掃出剖面。rel=true 時剖面高度相對於軌面(隨路線高程);
+ * 剖面點可帶第三個值 true,表示該點為絕對高度(例:引道擋土牆頂、路堤底部貼地)。
+ */
+function sweep(route, s0, s1, step, profile, { closed = false, offset = 0, base = 0, uv = 0, rel = false } = {}) {
     const n = Math.max(2, Math.ceil((s1 - s0) / step) + 1);
     const m = profile.length;
     const pos = new Float32Array(n * m * 3);
@@ -231,10 +235,10 @@ function sweep(route, s0, s1, step, profile, { closed = false, offset = 0, base 
         const p = poseAt(route, s);
         const rx = -p.tz, rz = p.tx;
         for (let j = 0; j < m; j++) {
-            const [lat, up] = profile[j];
+            const [lat, up, abs] = profile[j];
             const k = (i * m + j) * 3;
             pos[k] = p.x + rx * (lat + offset);
-            pos[k + 1] = base + up;
+            pos[k + 1] = abs ? up : base + up + (rel ? p.y : 0);
             pos[k + 2] = p.z + rz * (lat + offset);
             if (uvs) { uvs[(i * m + j) * 2] = along[j] / uv; uvs[(i * m + j) * 2 + 1] = s / uv; }
         }
@@ -262,6 +266,15 @@ function place(obj, route, s, lateral = 0, y = 0, yaw = 0) {
     obj.position.set(p.x - p.tz * lateral, y, p.z + p.tx * lateral);
     obj.rotation.set(0, Math.atan2(-p.tx, -p.tz) + yaw, 0);
     return obj;
+}
+
+/** 同 place,但高度 y 相對於該處軌面 */
+function placeT(obj, route, s, lateral = 0, y = 0, yaw = 0) {
+    return place(obj, route, s, lateral, y + heightAt(route, s), yaw);
+}
+
+function placeMatrixT(route, s, lateral = 0, y = 0, yaw = 0, scale = 1) {
+    return placeMatrix(route, s, lateral, y + heightAt(route, s), yaw, scale);
 }
 
 function placeMatrix(route, s, lateral = 0, y = 0, yaw = 0, scale = 1) {
@@ -306,7 +319,9 @@ export class DriveWorld {
         this.assets = cfg.assets;
         this.env = cfg.env;
         this.Q = QUALITY[cfg.quality] || QUALITY.medium;
-        this.base = cfg.env === 'elevated' ? 9 : 0;
+        // 剖面:每公尺的軌面高度(未設定時全線 0);全線皆為有頂隧道時沿用純地下的簡化場景
+        const ys = this.route.ys;
+        this.allUnder = !!ys && ys.every(y => y <= COVER_DEPTH);
         this.chunks = new Map();
         this.stationGroups = new Map();
         this.view = 'cab';
@@ -322,13 +337,15 @@ export class DriveWorld {
 
         const scene = this.scene = new THREE.Scene();
         const T = this.T = TIMES[cfg.time] || TIMES.day;
-        const under = this.under = cfg.env === 'underground';
-        r.toneMappingExposure = under ? 1.0 : T.exposure;
-        scene.background = new THREE.Color(under ? 0x0A0B0D : T.sky);
+        const under = this.under = this.allUnder;
         this.ahead = this.Q.ahead;
-        scene.fog = new THREE.Fog(under ? 0x0A0B0D : T.fog, under ? 80 : this.ahead * 0.25, under ? 700 : this.ahead - 50);
-        scene.add(new THREE.HemisphereLight(T.hemi[0], T.hemi[1], under ? 0.7 : T.hemi[2]));
-        const sun = this.sun = new THREE.DirectionalLight(T.sun[0], under ? 0.1 : T.sun[1]);
+        this.skyColor = new THREE.Color(T.sky);
+        this.tunnelColor = new THREE.Color(0x0A0B0D);
+        scene.background = this.skyColor.clone();
+        scene.fog = new THREE.Fog(T.fog, this.ahead * 0.25, this.ahead - 50);
+        this.hemi = new THREE.HemisphereLight(T.hemi[0], T.hemi[1], T.hemi[2]);
+        scene.add(this.hemi);
+        const sun = this.sun = new THREE.DirectionalLight(T.sun[0], T.sun[1]);
         sun.position.set(-120, 200, 80);
         if (this.Q.shadow && !under) {
             sun.castShadow = true;
@@ -372,16 +389,9 @@ export class DriveWorld {
         this.M.walk.color.set(0xC9C3B6);
         this.sleeperGeo = new THREE.BoxGeometry(2.4, 0.16, 0.24);
 
-        // 地面(跟著鏡頭移動的大平面;貼圖座標隨位置位移,看起來是固定的)
-        if (!under) {
-            const g = new THREE.Mesh(new THREE.PlaneGeometry(6000, 6000), this.M.ground);
-            g.rotation.x = -Math.PI / 2;
-            g.position.y = -0.36;
-            g.receiveShadow = true;
-            if (this.M.ground.map) [this.M.ground.map, this.M.ground.normalMap, this.M.ground.roughnessMap].forEach(t => t && t.repeat.set(6000 / 6, 6000 / 6));
-            scene.add(g);
-            this.ground = g;
-        }
+        // 地面:涵蓋整條路線的靜態平面,明挖引道處挖洞(看得到引道內的軌道)
+        this.otherLateral = cfg.platformSide === 'left' ? OTHER_TRACK : -OTHER_TRACK;
+        if (!under) this._buildGround();
 
         // 駕駛室與鏡頭
         this.camera = new THREE.PerspectiveCamera(68, 1, 0.05, 3000);
@@ -391,7 +401,7 @@ export class DriveWorld {
         this.lever = cab.getObjectByName('MasterLever');
         this._SpeedScreen = cab.getObjectByName('SpeedScreen');
         this._InfoScreen = cab.getObjectByName('InfoScreen');
-        this.cabLight = new THREE.PointLight(0xFFF2DA, under || T.night > 0.5 ? 1.2 : 0.5, 4, 2);
+        this.cabLight = new THREE.PointLight(0xFFF2DA, T.night > 0.5 ? 1.2 : 0.5, 4, 2);
         this.cabLight.position.set(0, 2.0, 0);
         this.cab.add(this.cabLight, this.camera);
         this.camera.position.set(0, 1.62, 0.05);
@@ -399,8 +409,10 @@ export class DriveWorld {
         scene.add(this.cab);
 
         this.trackLateral = 0;
-        this.otherLateral = cfg.platformSide === 'left' ? OTHER_TRACK : -OTHER_TRACK;
         this.hasOther = !under;
+        // 隧道內外的環境光(0=戶外、1=隧道內),每格依鏡頭位置漸變
+        this.amb = -1;
+        this._setAmbience(this._coverAt(this.cfg.stations[0]?.sStop ?? 0));
         this.signals = [];
 
         // 本列車(車外視角用)與對向列車
@@ -419,12 +431,79 @@ export class DriveWorld {
         const env = await ra.environment(this.T.hdri, this.renderer).catch(() => null);
         if (!env) return;
         this.scene.environment = env.envMap;
-        this.scene.environmentIntensity = this.under ? 0.25 : this.T.env;
-        if (!this.under) {
-            this.scene.background = env.background;
-            this.scene.backgroundIntensity = this.T.night ? 0.8 : 1.0;
-            this.scene.backgroundBlurriness = 0.02;
+        this.envBackground = this.allUnder ? null : env.background;
+        this.scene.backgroundIntensity = this.T.night ? 0.8 : 1.0;
+        this.scene.backgroundBlurriness = 0.02;
+        const a = this.amb;
+        this.amb = -1;
+        this._setAmbience(a);
+    }
+
+    /** 里程 s 是否在有頂的地下空間(隧道或地下車站) */
+    _coverAt(s) {
+        const st = this.stationCovering(s, 6);
+        if (st) return st.level === 'underground' ? 1 : 0;
+        return heightAt(this.route, s) <= COVER_DEPTH + 0.5 ? 1 : 0;
+    }
+
+    /** 環境光:a=0 戶外、1 隧道內(霧、背景、日光、曝光) */
+    _setAmbience(a) {
+        a = Math.max(0, Math.min(1, a));
+        if (Math.abs(a - this.amb) < 0.004) return;
+        this.amb = a;
+        const T = this.T, sc = this.scene, lerp = (x, y) => x + (y - x) * a;
+        sc.fog.color.set(T.fog).lerp(this.tunnelColor, a);
+        sc.fog.near = lerp(this.ahead * 0.25, 80);
+        sc.fog.far = lerp(this.ahead - 50, 700);
+        sc.background = a > 0.5 ? this.tunnelColor : (this.envBackground || this.skyColor);
+        this.hemi.intensity = lerp(T.hemi[2], 0.7);
+        this.sun.intensity = lerp(T.sun[1], 0.1);
+        this.renderer.toneMappingExposure = lerp(T.exposure, 1.0);
+        sc.environmentIntensity = lerp(T.env, 0.25);
+        if (this.cabLight) this.cabLight.intensity = Math.max(lerp(0.5, 1.2), T.night > 0.5 ? 1.2 : 0);
+    }
+
+    /** 靜態地面:路線外框外加 3 km;明挖引道(開口段)挖空 */
+    _buildGround() {
+        const { xs, zs, ys } = this.route;
+        let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+        for (let i = 0; i < xs.length; i += 10) { x0 = Math.min(x0, xs[i]); x1 = Math.max(x1, xs[i]); z0 = Math.min(z0, zs[i]); z1 = Math.max(z1, zs[i]); }
+        const M = 3000;
+        // ShapeGeometry 在 XY 平面,轉成水平面後 world z = -shape y
+        const shape = new THREE.Shape([
+            new THREE.Vector2(x0 - M, -(z0 - M)), new THREE.Vector2(x1 + M, -(z0 - M)),
+            new THREE.Vector2(x1 + M, -(z1 + M)), new THREE.Vector2(x0 - M, -(z1 + M))
+        ]);
+        const lo = Math.min(0, this.otherLateral) - 2.9, hi = Math.max(0, this.otherLateral) + 2.9;
+        if (ys) {
+            let a = -1;
+            const flush = (b) => {
+                if (b - a < 4) return;
+                const L = [], R = [];
+                for (let s = a; s <= b; s += 3) {
+                    const p = poseAt(this.route, Math.min(b, s));
+                    L.push(new THREE.Vector2(p.x - p.tz * lo, -(p.z + p.tx * lo)));
+                    R.push(new THREE.Vector2(p.x - p.tz * hi, -(p.z + p.tx * hi)));
+                }
+                shape.holes.push(new THREE.Path([...L, ...R.reverse()]));
+            };
+            for (let i = 0; i < ys.length; i++) {
+                const open = sectionKind(ys[i]) === 'trough';
+                if (open && a < 0) a = i * this.route.step;
+                if (!open && a >= 0) { flush(i * this.route.step); a = -1; }
+            }
+            if (a >= 0) flush((ys.length - 1) * this.route.step);
         }
+        const geo = new THREE.ShapeGeometry(shape);
+        const pos = geo.attributes.position, uv = new Float32Array(pos.count * 2);
+        for (let i = 0; i < pos.count; i++) { uv[i * 2] = pos.getX(i) / 6; uv[i * 2 + 1] = pos.getY(i) / 6; }
+        geo.setAttribute('uv', new THREE.BufferAttribute(uv, 2));
+        const g = new THREE.Mesh(geo, this.M.ground);
+        g.rotation.x = -Math.PI / 2;
+        g.position.y = -0.36;
+        g.receiveShadow = true;
+        this.scene.add(g);
+        this.ground = g;
     }
 
     /** 6 節編組:前導車 + 4 中間車 + 尾端前導車(反向) */
@@ -475,8 +554,9 @@ export class DriveWorld {
             const bx = pb.x - pb.tz * lateral, bz = pb.z + pb.tx * lateral;
             // 車體方向取前後轉向架連線(彎道上較自然)
             const yaw = Math.atan2(-(fx - bx), -(fz - bz));
-            if (!reversed) { car.position.set(fx, this.base, fz); car.rotation.set(0, yaw, 0); }
-            else { car.position.set(bx, this.base, bz); car.rotation.set(0, yaw + Math.PI, 0); }
+            const pitch = Math.atan2(pa.y - pb.y, CAR_L);
+            if (!reversed) { car.position.set(fx, pa.y, fz); car.rotation.set(pitch, yaw, 0, 'YXZ'); }
+            else { car.position.set(bx, pb.y, bz); car.rotation.set(-pitch, yaw + Math.PI, 0, 'YXZ'); }
         });
     }
 
@@ -495,11 +575,73 @@ export class DriveWorld {
         this.infoTex = apply(this._InfoScreen, infoCanvas);
     }
 
+    /** 視角:cab 駕駛室、third 第三人稱(駕駛員身後)、chase 車外追蹤、side 車側、aerial 空拍 */
     setView(v) {
         this.view = v;
-        this.cab.children.forEach(c => { if (c !== this.camera) c.visible = v === 'cab'; });
-        this.consist.visible = v !== 'cab';
-        if (v !== 'cab') this.scene.add(this.camera); else this.cab.add(this.camera);
+        const inCab = v === 'cab' || v === 'third';
+        this.cab.children.forEach(c => { if (c !== this.camera && c !== this.driver) c.visible = inCab; });
+        if (this.driver) this.driver.visible = v === 'third';
+        this.consist.visible = !inCab;
+        this.camera.up.set(0, 1, 0);
+        this.camera.fov = v === 'aerial' ? 50 : v === 'third' ? 78 : 68;
+        this.camera.updateProjectionMatrix();
+        if (inCab) this.cab.add(this.camera); else this.scene.add(this.camera);
+    }
+
+    /**
+     * 駕駛員(第三人稱用):坐在駕駛室模型的座椅上(座面約 z 0.15、高 0.42),
+     * 制服、帽子,左手握主控制器(模型 MasterLever,位於左側)、右手放在操作台。
+     * 駕駛室座標:+X 右、+Y 上、-Z 前;後牆約在 z 1.44。
+     */
+    _buildDriver() {
+        const g = new THREE.Group();
+        const mat = (c, r = 0.8) => new THREE.MeshStandardMaterial({ color: c, roughness: r });
+        const uniform = mat(0x1F2B44), shirt = mat(0xC9D8E8), skin = mat(0xD9A882, 0.6), shoe = mat(0x111214, 0.4);
+        const box = (w, h, d, m, x, y, z, rx = 0) => { const o = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), m); o.position.set(x, y, z); o.rotation.x = rx; g.add(o); return o; };
+        const cyl = (r1, r2, h, m, x, y, z) => { const o = new THREE.Mesh(new THREE.CylinderGeometry(r1, r2, h, 18), m); o.position.set(x, y, z); g.add(o); return o; };
+        const limb = (from, to, r, m) => {
+            const o = new THREE.Mesh(new THREE.CylinderGeometry(r, r * 0.9, from.distanceTo(to), 10), m);
+            o.position.copy(from).add(to).multiplyScalar(0.5);
+            o.quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), to.clone().sub(from).normalize());
+            g.add(o);
+            return o;
+        };
+        const V = (x, y, z) => new THREE.Vector3(x, y, z);
+        // 腿:大腿往前、小腿垂下、鞋
+        [-0.11, 0.11].forEach(x => {
+            limb(V(x, 0.62, 0.15), V(x, 0.6, -0.3), 0.085, uniform);
+            limb(V(x, 0.6, -0.3), V(x, 0.1, -0.34), 0.07, uniform);
+            box(0.11, 0.08, 0.26, shoe, x, 0.04, -0.4);
+        });
+        // 軀幹、領口、名牌
+        box(0.42, 0.56, 0.24, uniform, 0, 0.95, 0.2, -0.06);
+        box(0.15, 0.1, 0.04, shirt, 0, 1.2, 0.08);
+        box(0.08, 0.025, 0.01, mat(0xD8C27A, 0.4), 0.12, 1.08, 0.075);
+        // 頭、帽子(帽沿朝前)
+        cyl(0.045, 0.05, 0.1, skin, 0, 1.29, 0.16);
+        const head = new THREE.Mesh(new THREE.SphereGeometry(0.115, 20, 16), skin);
+        head.position.set(0, 1.45, 0.14);
+        g.add(head);
+        cyl(0.122, 0.125, 0.09, uniform, 0, 1.56, 0.15);
+        cyl(0.124, 0.124, 0.02, mat(0xE8E2CC), 0, 1.525, 0.15);
+        box(0.2, 0.015, 0.1, shoe, 0, 1.52, 0.04);
+        // 手臂:左手握主控制器、右手放操作台
+        const lv = this.lever ? this.cab.worldToLocal(this.lever.getWorldPosition(new THREE.Vector3())) : V(-0.45, 0.84, -0.72);
+        const arm = (sx, hand) => {
+            const sh = V(sx, 1.17, 0.18);
+            const elbow = V(sx * 1.25, 0.95, (sh.z + hand.z) / 2 + 0.08);
+            limb(sh, elbow, 0.055, uniform);
+            limb(elbow, hand, 0.045, uniform);
+            const h = new THREE.Mesh(new THREE.SphereGeometry(0.05, 12, 10), skin);
+            h.position.copy(hand);
+            g.add(h);
+        };
+        arm(-0.22, V(lv.x, lv.y + 0.24, lv.z));
+        arm(0.22, V(0.3, 1.16, -0.38));
+        g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+        g.visible = this.view === 'third';
+        this.cab.add(g);
+        this.driver = g;
     }
 
     resize() {
@@ -523,98 +665,144 @@ export class DriveWorld {
         return g;
     }
 
+    /** 把 [s0,s1) 依每公尺的路段類型切成連續區間:[{ kind, a, b }] */
+    _runs(s0, s1, kindAt) {
+        const runs = [];
+        let cur = null;
+        for (let s = s0; s < s1; s += 1) {
+            const k = kindAt(s);
+            if (!cur || cur.kind !== k) { cur = { kind: k, a: s, b: s + 1 }; runs.push(cur); } else cur.b = s + 1;
+        }
+        if (cur) cur.b = s1;
+        return runs;
+    }
+
+    /** 里程 s 的路段類型:tunnel / trough / ground / viaduct,或地下車站 station-under */
+    _kindAt(s) {
+        const st = this.stationCovering(s, 1);
+        if (st) return st.level === 'underground' ? 'station-under' : st.level === 'elevated' ? 'viaduct' : 'ground';
+        return sectionKind(heightAt(this.route, s));
+    }
+
     _buildChunk(k) {
         const route = this.route;
         const s0 = k * CHUNK, s1 = Math.min(route.length, s0 + CHUNK);
         if (s1 <= s0) return null;
         const g = new THREE.Group();
         const R = rng(k + 17);
-        const B = this.base;
-        const under = this.under;
-        const elevated = this.env === 'elevated';
         const side = this.cfg.platformSide === 'left' ? -1 : 1;
         const A = this.assets;
+        const kindAt = (s) => this._kindAt(s);
+        const runs = this._runs(s0, s1, kindAt);
+        const has = (kind) => runs.some(r => r.kind === kind);
+        const allTunnel = runs.every(r => r.kind === 'tunnel' || r.kind === 'station-under');
+        const lo = Math.min(0, this.otherLateral) - 2.4, hi = Math.max(0, this.otherLateral) + 2.4;
+        const add = (geo, mat) => { const m = new THREE.Mesh(geo, mat); g.add(m); return m; };
 
-        // 軌道(鋼軌、道床、枕木)
-        const tracks = [0, ...(this.hasOther ? [this.otherLateral] : [])];
+        // 軌道(鋼軌、道床、枕木);有頂隧道內只建本線
+        const tracks = [0, ...(this.hasOther && !allTunnel ? [this.otherLateral] : [])];
         tracks.forEach(off => {
             [-GAUGE / 2, GAUGE / 2].forEach(r => {
-                g.add(new THREE.Mesh(sweep(route, s0, s1, 2, [[r - 0.036, 0.13], [r + 0.036, 0.13], [r + 0.036, 0.165], [r - 0.036, 0.165]], { closed: true, offset: off, base: B - 0.15 }), this.M.rail));
-                g.add(new THREE.Mesh(sweep(route, s0, s1, 2, [[r - 0.075, 0], [r + 0.075, 0], [r + 0.012, 0.13], [r - 0.012, 0.13]], { closed: true, offset: off, base: B - 0.15 }), this.M.railSide));
+                add(sweep(route, s0, s1, 2, [[r - 0.036, 0.13], [r + 0.036, 0.13], [r + 0.036, 0.165], [r - 0.036, 0.165]], { closed: true, offset: off, base: -0.15, rel: true }), this.M.rail);
+                add(sweep(route, s0, s1, 2, [[r - 0.075, 0], [r + 0.075, 0], [r + 0.012, 0.13], [r - 0.012, 0.13]], { closed: true, offset: off, base: -0.15, rel: true }), this.M.railSide);
             });
-            g.add(new THREE.Mesh(sweep(route, s0, s1, 4, [[-2.0, -0.34], [-1.45, -0.1], [1.45, -0.1], [2.0, -0.34]], { offset: off, base: B - 0.15, uv: 2 }), this.M.ballast));
+            add(sweep(route, s0, s1, 4, [[-2.0, -0.34], [-1.45, -0.1], [1.45, -0.1], [2.0, -0.34]], { offset: off, base: -0.15, uv: 2, rel: true }), this.M.ballast);
             const cnt = Math.floor((s1 - s0) / 0.6);
             const inst = new THREE.InstancedMesh(this.sleeperGeo, this.M.sleeper, cnt);
             const m4 = new THREE.Matrix4(), q = new THREE.Quaternion(), e = new THREE.Euler(), one = new THREE.Vector3(1, 1, 1), v = new THREE.Vector3();
             for (let i = 0; i < cnt; i++) {
                 const p = poseAt(route, s0 + i * 0.6 + 0.3);
-                e.set(0, Math.atan2(-p.tx, -p.tz), 0);
+                e.set(Math.atan(p.grade), Math.atan2(-p.tx, -p.tz), 0, 'YXZ');
                 q.setFromEuler(e);
-                v.set(p.x - p.tz * off, B - 0.25, p.z + p.tx * off);
+                v.set(p.x - p.tz * off, p.y - 0.25, p.z + p.tx * off);
                 m4.compose(v, q, one);
                 inst.setMatrixAt(i, m4);
             }
             inst.receiveShadow = true;
             g.add(inst);
-            if (!under && this.cfg.overhead) {
-                g.add(new THREE.Mesh(sweep(route, s0, s1, 4, [[-0.012, 5.4], [0.012, 5.4], [0.012, 5.425], [-0.012, 5.425]], { closed: true, offset: off, base: B }), this.M.wire));
-                g.add(new THREE.Mesh(sweep(route, s0, s1, 4, [[-0.01, 6.3], [0.01, 6.3], [0.01, 6.32], [-0.01, 6.32]], { closed: true, offset: off, base: B }), this.M.wire));
-            }
         });
 
         const inStation = (s, pad = 2) => !!this.stationCovering(s, pad);
+        const outer = this.otherLateral > 0 ? -1 : 1;
 
         // 速限標誌(限速區段起點,立在本線外側;牌面朝向進站列車)
         (this.cfg.limitSigns || []).forEach(ls => {
             if (ls.s < s0 || ls.s >= s1) return;
-            const outer = this.otherLateral > 0 ? -1 : 1;
             const sign = A.slot('trackside/speed-limit');
             if (!sign) return;
-            place(sign, route, ls.s, outer * (under ? 2.1 : 2.6), B);
+            placeT(sign, route, ls.s, outer * (kindAt(ls.s) === 'tunnel' ? 2.1 : 2.6), 0);
             if (ls.tex) sign.traverse(m => { if (m.isMesh && /LimitFace/.test(m.material?.name || m.name)) m.material = new THREE.MeshBasicMaterial({ map: ls.tex, toneMapped: false }); });
             g.add(sign);
         });
 
-        if (under) {
-            // 單線隧道(月台區段由車站模組提供牆與天花)
-            const wallIn = -2.6 * side, wallOut = 2.4 * side;
-            let a = s0;
-            const flush = (b) => {
-                if (b - a < 0.5) return;
-                g.add(new THREE.Mesh(sweep(route, a, b, 2, side > 0
-                    ? [[wallIn, -0.4], [wallIn, 4.6], [-1.2, 5.3], [1.2, 5.3], [wallOut, 4.6], [wallOut, -0.4]]
-                    : [[wallOut, -0.4], [wallOut, 4.6], [-1.2, 5.3], [1.2, 5.3], [wallIn, 4.6], [wallIn, -0.4]], { base: B, uv: 4 }), this.M.tunnel));
-            };
-            for (let s = s0; s <= s1; s += 2) {
-                if (inStation(s, 1)) { flush(s); a = s + 2; }
+        const wallIn = -2.6 * side, wallOut = 2.4 * side;
+        const tunnelProfile = side > 0
+            ? [[wallIn, -0.4], [wallIn, 4.6], [-1.2, 5.3], [1.2, 5.3], [wallOut, 4.6], [wallOut, -0.4]]
+            : [[wallOut, -0.4], [wallOut, 4.6], [-1.2, 5.3], [1.2, 5.3], [wallIn, 4.6], [wallIn, -0.4]];
+        const masts = [], lights = [];
+        const mastsAt = (a, b) => {
+            if (!this.cfg.overhead) return;
+            for (let s = Math.ceil(a / 50) * 50; s < b; s += 50) if (!inStation(s, 6)) masts.push(placeMatrixT(route, s, outer * 3.2, 0, outer > 0 ? 0 : Math.PI));
+        };
+        runs.forEach(({ kind, a, b }) => {
+            if (b - a < 0.5) return;
+            if (kind === 'tunnel') {
+                // 單線隧道
+                const m = add(sweep(route, a, b, 2, tunnelProfile, { uv: 4, rel: true }), this.M.tunnel);
+                m.userData.tunnel = true;
+                for (let s = Math.ceil(a / 25) * 25; s < b; s += 25) if (!inStation(s, 8)) lights.push(placeMatrixT(route, s, -2.45 * side, 3.2));
+                // 洞口:隧道與明挖引道交界處的端牆(隧道頂到地面以上)
+                [a, b].forEach(edge => {
+                    if (edge <= 0 || edge >= route.length) return;
+                    if (kindAt(edge === a ? edge - 1 : edge + 0.5) !== 'trough') return;
+                    const y = heightAt(route, edge);
+                    const top = y + 5.3, h = Math.max(0.6, 0.6 - top);
+                    const w = new THREE.Mesh(new THREE.BoxGeometry(hi - lo + 2.4, h, 0.6), this.M.deck);
+                    place(w, route, edge, (lo + hi) / 2, top + h / 2);
+                    g.add(w);
+                });
+            } else if (kind === 'trough') {
+                // 明挖引道:兩側擋土牆(底部隨軌面、頂部在地面上 0.45 m)與底板
+                add(sweep(route, a, b, 2, [[lo - 0.35, -0.4], [lo, -0.4], [lo, 0.45, true], [lo - 0.35, 0.45, true]], { closed: true, rel: true, uv: 3 }), this.M.deck);
+                add(sweep(route, a, b, 2, [[hi, -0.4], [hi + 0.35, -0.4], [hi + 0.35, 0.45, true], [hi, 0.45, true]], { closed: true, rel: true, uv: 3 }), this.M.deck);
+                add(sweep(route, a, b, 4, [[lo, -0.42], [hi, -0.42]], { rel: true, uv: 3 }), this.M.walk);
+                mastsAt(a, b);
+            } else if (kind === 'viaduct') {
+                // 高架:橋面板與護欄;低於 2.6 m 為路堤(斜坡貼地),較高處為橋墩
+                add(sweep(route, a, b, 4, [[lo, -0.35], [hi, -0.35], [hi, -1.35], [lo, -1.35]], { closed: true, uv: 3, rel: true }), this.M.deck);
+                add(sweep(route, a, b, 4, [[lo, -0.35], [lo, 0.95], [lo + 0.22, 0.95], [lo + 0.22, -0.35]], { closed: true, uv: 3, rel: true }), this.M.deck);
+                add(sweep(route, a, b, 4, [[hi - 0.22, -0.35], [hi - 0.22, 0.95], [hi, 0.95], [hi, -0.35]], { closed: true, uv: 3, rel: true }), this.M.deck);
+                this._runs(a, b, (s) => heightAt(route, s) < 2.6 ? 'low' : 'high').forEach(r => {
+                    if (r.kind === 'low') {
+                        add(sweep(route, r.a, r.b, 2, [[lo, -1.35], [hi, -1.35], [hi + 1.6, -0.36, true], [lo - 1.6, -0.36, true]], { closed: true, rel: true, uv: 3 }), this.M.deck);
+                        return;
+                    }
+                    for (let s = Math.ceil(r.a / 30) * 30; s < r.b; s += 30) {
+                        if (inStation(s, 2)) continue;
+                        const pier = A.slot('trackside/pier');
+                        if (!pier) continue;
+                        placeT(pier, route, s, (lo + hi) / 2, 0);
+                        pier.scale.y = (heightAt(route, s) + 0.4) / 10.8;
+                        g.add(pier);
+                    }
+                });
+                mastsAt(a, b);
+            } else if (kind === 'ground') {
+                mastsAt(a, b);
             }
-            flush(s1);
-            // 隧道燈、走道
-            const lights = [];
-            for (let s = Math.ceil(s0 / 25) * 25; s < s1; s += 25) if (!inStation(s, 8)) lights.push(placeMatrix(route, s, -2.45 * side, B + 3.2));
-            g.add(A.instanced('trackside/tunnel-light', lights));
-        } else {
-            if (elevated) {
-                const lo = Math.min(0, this.otherLateral) - 2.4, hi = Math.max(0, this.otherLateral) + 2.4;
-                g.add(new THREE.Mesh(sweep(route, s0, s1, 4, [[lo, -0.35], [hi, -0.35], [hi, -1.35], [lo, -1.35]], { closed: true, base: B, uv: 3 }), this.M.deck));
-                g.add(new THREE.Mesh(sweep(route, s0, s1, 4, [[lo, -0.35], [lo, 0.95], [lo + 0.22, 0.95], [lo + 0.22, -0.35]], { closed: true, base: B, uv: 3 }), this.M.deck));
-                g.add(new THREE.Mesh(sweep(route, s0, s1, 4, [[hi - 0.22, -0.35], [hi - 0.22, 0.95], [hi, 0.95], [hi, -0.35]], { closed: true, base: B, uv: 3 }), this.M.deck));
-                for (let s = Math.ceil(s0 / 30) * 30; s < s1; s += 30) {
-                    const pier = A.slot('trackside/pier');
-                    if (!pier) continue;
-                    place(pier, route, s, (lo + hi) / 2, B);
-                    pier.scale.y = (B + 0.4) / 10.8;
-                    g.add(pier);
-                }
+            // 架空線(隧道與地下車站以外)
+            if (this.cfg.overhead && kind !== 'tunnel' && kind !== 'station-under') {
+                tracks.forEach(off => {
+                    add(sweep(route, a, b, 4, [[-0.012, 5.4], [0.012, 5.4], [0.012, 5.425], [-0.012, 5.425]], { closed: true, offset: off, rel: true }), this.M.wire);
+                    add(sweep(route, a, b, 4, [[-0.01, 6.3], [0.01, 6.3], [0.01, 6.32], [-0.01, 6.32]], { closed: true, offset: off, rel: true }), this.M.wire);
+                });
             }
-            if (this.cfg.overhead) {
-                const outer = this.otherLateral > 0 ? -1 : 1;
-                const ms = [];
-                for (let s = Math.ceil(s0 / 50) * 50; s < s1; s += 50) if (!inStation(s, 6)) ms.push(placeMatrix(route, s, outer * 3.2, B, outer > 0 ? 0 : Math.PI));
-                g.add(A.instanced('trackside/mast', ms));
-            }
-            this._buildStreet(g, s0, s1, R, side, elevated);
-        }
+        });
+        if (lights.length) g.add(A.instanced('trackside/tunnel-light', lights));
+        if (masts.length) g.add(A.instanced('trackside/mast', masts));
+
+        // 兩側街道(全段都是隧道時不建;高架段道路貼近橋下;隧道/引道上方不設軌道護欄)
+        if (!this.allUnder && !allTunnel) this._buildStreet(g, s0, s1, R, side, has('viaduct') && !has('ground'), has('tunnel') || has('trough') || has('station-under'));
         if (this.T.night && A.rail) A.rail.setNight(g, this.T.night);
         this._shadowify(g);
         this.scene.add(g);
@@ -650,7 +838,7 @@ export class DriveWorld {
      * 兩側街道:軌道邊護欄 → 雙線道路 → 人行道(路燈、行道樹、電線桿)→ 連續街屋(騎樓朝軌道)→ 後排高樓。
      * 街屋與樹以實例化繪製;冷氣、消防栓、配電箱記在 detail,列車接近時才產生(見 stream)。
      */
-    _buildStreet(g, s0, s1, R, side, elevated) {
+    _buildStreet(g, s0, s1, R, side, elevated, sunken = false) {
         const route = this.route;
         const A = this.assets;
         const dens = this.Q.street;
@@ -672,7 +860,7 @@ export class DriveWorld {
             g.add(new THREE.Mesh(sweep(route, s0, s1, 4, prof(roadOut - 0.35, roadOut - 0.2, -0.295)), this.M.line));
             g.add(new THREE.Mesh(sweep(route, s0, s1, 4, prof(roadIn + 0.2, roadIn + 0.35, -0.295)), this.M.line));
             // 軌道邊護欄(地面段)
-            if (!elevated && !stationSide) {
+            if (!elevated && !stationSide && !sunken) {
                 const ms = [];
                 for (let s = s0 + 1; s < s1; s += 2) ms.push(placeMatrix(route, s, L(trackEdge + 0.4), -0.3, Math.PI / 2));
                 g.add(A.instanced('trackside/barrier', ms));
@@ -737,8 +925,9 @@ export class DriveWorld {
         const route = this.route;
         const A = this.assets;
         const g = new THREE.Group();
-        const under = this.under;
-        const B = this.base;
+        // 每站依自己的層級:地下站用封閉月台與全高月台門,其餘為開放月台;高度取該站軌面
+        const under = st.level === 'underground';
+        const B = heightAt(route, (st.p0 + st.p1) / 2);
         const flip = st.side === 'left';
         const n = Math.ceil((st.p1 - st.p0) / SEG);
         const mirror = (o) => { if (o && flip) o.scale.x = -1; return o; };
@@ -749,7 +938,7 @@ export class DriveWorld {
             const s = st.p0 + SEG * (i + 0.5);
             add(mirror(place(A.slot(under ? 'platform/underground' : 'platform/open'), route, s, 0, B)));
             add(mirror(place(A.slot(under ? 'platform/psd-full' : 'platform/psd-half'), route, s, 0, B)));
-            if (this.env === 'elevated') {
+            if (st.level === 'elevated') {
                 const deck = new THREE.Mesh(new THREE.BoxGeometry(PW + 0.4, 1.2, SEG), this.M.deck);
                 place(deck, route, s, lat(EDGE + PW / 2), B - 1.6);
                 g.add(deck);
@@ -922,42 +1111,70 @@ export class DriveWorld {
         const cabS = Math.max(0, st.s - 1.4);
         const p = poseAt(route, cabS);
         const lat = this.trackLateral;
-        this.cab.position.set(p.x - p.tz * lat, this.base + PH, p.z + p.tx * lat);
+        this.cab.position.set(p.x - p.tz * lat, p.y + PH, p.z + p.tx * lat);
         const t = st.time || 0;
         const vr = Math.min(1, st.v / 25);
         const sway = vr * (Math.sin(t * 1.7) * 0.004 + Math.sin(t * 5.3) * 0.0015);
         const bob = vr * Math.sin(t * 9.1) * 0.006;
         this.cab.rotation.set(0, 0, 0);
         this.cab.rotateY(Math.atan2(-p.tx, -p.tz));
+        this.cab.rotateX(Math.atan(p.grade));
         this.cab.rotateZ(sway);
         if (this.lever) this.lever.rotation.x = st.notch * 0.085;
+        if (!this.driver && this.view === 'third') this._buildDriver();
 
+        const covered = this._coverAt(st.s) > 0.5;
         if (this.view === 'cab') {
             this.camera.position.set(0, 1.62 + bob, 0.05);
             this.camera.rotation.set(this.look.pitch, this.look.yaw, 0, 'YXZ');
+        } else if (this.view === 'third') {
+            // 駕駛員右後上方,越過肩膀看前方
+            // 貼近天花板、往下俯看:駕駛員頭肩在畫面中央,上方仍看得到前窗
+            this.camera.position.set(0.5, 1.98 + bob, 1.36);
+            this.camera.rotation.set(-0.42 + this.look.pitch, this.look.yaw + 0.2, 0, 'YXZ');
+        } else if (this.view === 'aerial') {
+            this._poseConsist(this.consist, st.s, lat, 1);
+            // 空拍:列車正上方往下看,畫面上方為行進方向;拖曳左右旋轉、上下調整高度
+            const c = poseAt(route, Math.max(0, st.s - 25));
+            const h = 90 * Math.exp(-this.look.pitch * 2.2);
+            const ang = Math.atan2(c.tx, c.tz) + this.look.yaw;
+            this.camera.position.set(c.x, Math.max(c.y, 0) + h, c.z);
+            this.camera.up.set(-Math.sin(ang), 0, -Math.cos(ang));
+            this.camera.lookAt(c.x, c.y, c.z);
         } else {
             this._poseConsist(this.consist, st.s, lat, 1);
-            // 車外追蹤:列車左後上方,滑鼠可環顧
-            const back = poseAt(route, Math.max(0, st.s - 34));
-            const side = this.view === 'side' ? 14 : 9;
-            const yaw = this.look.yaw;
+            // 車外追蹤/車側:列車左後上方,滑鼠可環顧;隧道內鏡頭收在隧道裡
+            const back = poseAt(route, Math.max(0, st.s - (covered ? 30 : 34)));
+            const side = covered ? 0.6 : this.view === 'side' ? 14 : 9;
+            const up = covered ? 4.5 : (this.view === 'side' ? 3.2 : 5.2) - this.look.pitch * 10;
+            const yaw = covered ? 0 : this.look.yaw;
             const cx = back.x + back.tz * side * Math.cos(yaw) - back.tx * 6 * Math.sin(yaw);
             const cz = back.z - back.tx * side * Math.cos(yaw) - back.tz * 6 * Math.sin(yaw);
-            this.camera.position.set(cx, this.base + (this.view === 'side' ? 3.2 : 5.2) - this.look.pitch * 10, cz);
+            this.camera.position.set(cx, back.y + up, cz);
             const tgt = poseAt(route, st.s + 10);
-            this.camera.lookAt(tgt.x, this.base + 2.0, tgt.z);
+            this.camera.lookAt(tgt.x, tgt.y + 2.0, tgt.z);
         }
+
+        // 空拍時地下段:地面半透明、隱藏隧道頂,看得到隧道內的列車
+        const xray = this.view === 'aerial' && covered;
+        if (this.ground && this._xray !== xray) {
+            this._xray = xray;
+            this.M.ground.transparent = xray;
+            this.M.ground.opacity = xray ? 0.3 : 1;
+            this.M.ground.depthWrite = !xray;
+            this.M.ground.needsUpdate = true;
+        }
+        this.chunks.forEach(g => g && g.children.forEach(o => { if (o.userData.tunnel) o.visible = !xray; }));
+
+        // 隧道內外環境光(依鏡頭所在位置,漸變)
+        const camS = this.view === 'aerial' ? -1 : this.view === 'cab' || this.view === 'third' ? st.s : st.s - 30;
+        const target = camS < 0 ? 0 : this._coverAt(camS);
+        this._setAmbience(this.amb + (target - this.amb) * Math.min(1, (st.dt || 0.016) * 2.5));
 
         // 陰影相機跟著列車
         if (this.sun.castShadow) {
-            this.sun.position.set(p.x - 120, this.base + 200, p.z + 80);
-            this.sun.target.position.set(p.x, this.base, p.z);
-        }
-        if (this.ground) {
-            const gx = Math.round(p.x / 60) * 60, gz = Math.round(p.z / 60) * 60;
-            this.ground.position.set(gx, -0.36, gz);
-            const m = this.M.ground;
-            [m.map, m.normalMap, m.roughnessMap].forEach(tx => tx && tx.offset.set(gx / 6, -gz / 6));
+            this.sun.position.set(p.x - 120, p.y + 200, p.z + 80);
+            this.sun.target.position.set(p.x, p.y, p.z);
         }
         this.signals.forEach(sg => {
             const ok = st.departOk(sg.st);

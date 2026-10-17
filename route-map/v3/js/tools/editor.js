@@ -12,13 +12,14 @@ import { bus } from '../core/event-bus.js';
 import { history } from '../core/history.js';
 import { routeEdge, snapPoint, nearestDir8, dist, distToPolyline } from '../core/geometry.js';
 import { ROUTE_MODES, STATUSES } from '../core/constants.js';
+import { withPortal, fractionOnPath } from '../core/levels.js';
 import { contrastText } from '../core/network-model.js';
 import { esc } from '../render/svg-renderer.js';
 import { toast } from '../ui/toast.js';
 import { showContextMenu } from '../ui/context-menu.js';
 import { promptNewLine } from '../ui/modal.js';
 
-const DRAGGABLE = new Set(['station', 'label', 'turn', 'elbow', 'mid']);
+const DRAGGABLE = new Set(['station', 'label', 'turn', 'elbow', 'mid', 'portal']);
 const SNAP_PX = 10;
 const HOVER_PX = 14;
 
@@ -137,7 +138,7 @@ export class Editor {
         const d = t.dataset;
         this.press = {
             k: d.k, id: d.id, lineId: d.line, idx: d.idx !== undefined ? +d.idx : null,
-            to: d.to !== undefined ? +d.to : null, sec: d.sec !== undefined ? +d.sec : null, mode: d.mode,
+            to: d.to !== undefined ? +d.to : null, sec: d.sec !== undefined ? +d.sec : null, mode: d.mode, a: d.a, b: d.b,
             cx: e.clientX, cy: e.clientY, shift: e.shiftKey, alt: e.altKey,
             latlng: this.map.mouseEventToLatLng(e)
         };
@@ -207,6 +208,9 @@ export class Editor {
                 break;
             case 'corridor':
                 store.select('corridor', [p.id]);
+                break;
+            case 'portal':
+                store.select('line', [p.lineId]);
                 break;
             case 'turn': {
                 const now = Date.now();
@@ -416,6 +420,8 @@ export class Editor {
             if (!store.selectedStationIds().includes(p.id)) store.select('station', [p.id]);
         } else if (p.k === 'turn') {
             this.drag = { type: 'turn', lineId: p.lineId, idx: p.idx, anchors: this.turnAnchors(p.lineId, p.idx) };
+        } else if (p.k === 'portal') {
+            this.drag = { type: 'portal', lineId: p.lineId, a: p.a, b: p.b };
         } else if (p.k === 'elbow' || p.k === 'mid') {
             const idx = p.k === 'elbow' ? p.idx + 1 : this.midInsertIndex(p);
             const ll = p.latlng;
@@ -476,6 +482,14 @@ export class Editor {
             const ll = this.view.toLatLng(target);
             store.moveItems([], [{ lineId: d.lineId, idx: d.idx, lat: ll.lat, lng: ll.lng }]);
             this.drawGuides(guides);
+        } else if (d.type === 'portal') {
+            // 出土段:沿該站間區段滑動
+            const sec = this.view.model.sections.find(s => s.line.id === d.lineId &&
+                ((s.aId === d.a && s.bId === d.b) || (s.aId === d.b && s.bId === d.a)));
+            const line = store.getLine(d.lineId);
+            if (!sec || !line) return;
+            const t = fractionOnPath(sec.drawPath, P);
+            store.updateLine(d.lineId, { portals: withPortal(line, sec.aId, sec.bId, t) });
         }
     }
 

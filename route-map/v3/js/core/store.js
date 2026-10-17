@@ -15,6 +15,7 @@
  */
 import { bus } from './event-bus.js';
 import { DEFAULT_SETTINGS, BASEMAPS, defaultSigns } from './constants.js';
+import { withPortal } from './levels.js';
 
 /** 讀檔時補齊指標設計欄位 */
 function normalizeSigns(s) {
@@ -25,6 +26,18 @@ function normalizeSigns(s) {
         style: { ...d.style, ...(s.style || {}) },
         stationIcons: { ...(s.stationIcons || {}) }
     };
+}
+
+/** 合併專案時,出土段的鍵(兩站 id)換成新的車站 id(比例保持「自原 a 往原 b」的方向) */
+function remapPortals(line, idMap) {
+    const out = {};
+    Object.entries(line.portals || {}).forEach(([key, t]) => {
+        const [a, b] = key.split('|');
+        const na = idMap.get(a), nb = idMap.get(b);
+        if (!na || !nb || !Number.isFinite(t)) return;
+        Object.assign(out, withPortal({ portals: out }, na, nb, t));
+    });
+    return out;
 }
 
 const FORMAT_VERSION = 3;
@@ -179,6 +192,7 @@ class Store {
             sub: '',
             kind: 'auto',
             status: 'open',
+            level: 'auto',
             labelPos: 'auto',
             numbers: {},
             lines: [],
@@ -192,7 +206,7 @@ class Store {
     updateStation(id, props) {
         const s = this.getStation(id);
         if (!s) return;
-        ['name', 'sub', 'kind', 'status', 'labelPos'].forEach(k => {
+        ['name', 'sub', 'kind', 'status', 'level', 'labelPos'].forEach(k => {
             if (props[k] !== undefined) s[k] = props[k];
         });
         this._changed();
@@ -202,7 +216,7 @@ class Store {
         ids.forEach(id => {
             const s = this.getStation(id);
             if (!s) return;
-            ['kind', 'status', 'labelPos'].forEach(k => {
+            ['kind', 'status', 'level', 'labelPos'].forEach(k => {
                 if (props[k] !== undefined) s[k] = props[k];
             });
         });
@@ -414,6 +428,7 @@ class Store {
             hidden: false,
             widthScale: 'normal', // thin|normal|thick
             showCode: true,
+            portals: {},
             nodes: []
         };
         this.state.lines.push(line);
@@ -424,7 +439,7 @@ class Store {
     updateLine(id, props) {
         const line = this.getLine(id);
         if (!line) return;
-        ['name', 'code', 'color', 'type', 'status', 'routing', 'loop', 'hidden', 'widthScale', 'showCode'].forEach(k => {
+        ['name', 'code', 'color', 'type', 'status', 'routing', 'loop', 'hidden', 'widthScale', 'showCode', 'portals'].forEach(k => {
             if (props[k] !== undefined) line[k] = props[k];
         });
         this._changed();
@@ -658,10 +673,10 @@ class Store {
         const state = this._emptyState();
 
         state.stations = (data.stations || []).map(s => ({
-            sub: '', kind: 'auto', status: 'open', labelPos: 'auto', numbers: {}, ...s, lines: []
+            sub: '', kind: 'auto', status: 'open', level: 'auto', labelPos: 'auto', numbers: {}, ...s, lines: []
         }));
         state.lines = (data.lines || []).map(l => ({
-            code: '', type: 'metro', status: 'open', routing: 'diag-first', loop: false, hidden: false, widthScale: 'normal', showCode: true,
+            code: '', type: 'metro', status: 'open', routing: 'diag-first', loop: false, hidden: false, widthScale: 'normal', showCode: true, portals: {},
             ...l,
             nodes: (l.nodes || []).filter(n => n && (n.type === 'station' || n.type === 'turning'))
         }));
@@ -711,7 +726,7 @@ class Store {
             const id = `s${this.stationIdCounter++}`;
             idMap.set(s.id, id);
             this.state.stations.push({
-                sub: '', kind: 'auto', status: 'open', labelPos: 'auto', ...s, id, numbers: {}, lines: []
+                sub: '', kind: 'auto', status: 'open', level: 'auto', labelPos: 'auto', ...s, id, numbers: {}, lines: []
             });
         });
         const lineMap = new Map();
@@ -721,7 +736,8 @@ class Store {
             this.state.lines.push({
                 code: '', type: 'metro', status: 'open', routing: 'diag-first', loop: false, hidden: false,
                 widthScale: 'normal', showCode: true, ...l, id,
-                nodes: (l.nodes || []).map(n => n.type === 'station' ? { ...n, id: idMap.get(n.id) } : { ...n })
+                nodes: (l.nodes || []).map(n => n.type === 'station' ? { ...n, id: idMap.get(n.id) } : { ...n }),
+                portals: remapPortals(l, idMap)
             });
         });
         // 站號依新的路線 id 對應

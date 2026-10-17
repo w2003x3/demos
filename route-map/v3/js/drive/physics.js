@@ -87,6 +87,54 @@ export function suggestNotch(t, spec, dist) {
     return Math.min(spec.B + 1, Math.max(1, k));
 }
 
+/**
+ * 自動駕駛(ATO)檔位:依限速巡航、依減速曲線對前方限速與停車點減速,並精準停在 stopDist 處。
+ * @param {object} t 列車狀態
+ * @param {object} spec 列車性能
+ * @param {object} o { stopDist 到停車點距離(m,無則 Infinity), limit 目前限速 km/h, nextLimit {next, at 距離 m} }
+ * @returns {number} 檔位
+ */
+export function atoNotch(t, spec, { stopDist = Infinity, limit = spec.vmax, nextLimit = null } = {}) {
+    const b = spec.brake * 0.72;          // 規劃用減速度(常用最大的七成,留餘裕)
+    const lag = 0.5;                       // 制動建立延遲補償(s)
+    const vNow = t.v;
+    // 允許速度:目前限速 −3 km/h、對前方較低限速與停車點的減速曲線
+    let vAllow = Math.max(0, (limit - 3) / 3.6);
+    if (nextLimit && nextLimit.at > 0 && nextLimit.next < limit) {
+        vAllow = Math.min(vAllow, Math.sqrt(((nextLimit.next - 4) / 3.6) ** 2 + 2 * b * Math.max(0, nextLimit.at - vNow * lag * 2)));
+    }
+    if (Number.isFinite(stopDist)) {
+        // 停車:所需減速度達規劃值即進入停車模式,之後每格依所需減速度選檔直到停妥。
+        // 制動以時間常數 0.45 s 建立,減速度從目前值爬升期間會多走 ≈ v·τ·(D−a)/D,先扣掉再求 D
+        if (vNow > 0.05 && stopDist > 0.15) {
+            const cur = Math.max(0, -t.a);
+            let need = requiredDecel(vNow, Math.max(0.02, stopDist - 0.05));
+            for (let k = 0; k < 3; k++) {
+                const extra = need > cur ? vNow * 0.45 * (need - cur) / need : 0;
+                need = requiredDecel(vNow, Math.max(0.02, stopDist - 0.05 - extra));
+            }
+            if (need >= b) t.atoStop = true;
+            if (t.atoStop && need > 0.03) return -Math.min(spec.B, Math.max(1, Math.round(need / spec.brake * spec.B)));
+            if (t.atoStop) return 0;
+        }
+        if (vNow <= 0.05) t.atoStop = false;
+        vAllow = Math.min(vAllow, Math.sqrt(2 * b * Math.max(0, stopDist - vNow * lag)));
+        if (stopDist <= 0.15) return -spec.B;
+        // 停車點前停住了(不到位):低速推進
+        if (vNow < 0.05 && stopDist > 0.3) return stopDist > 3 ? 2 : 1;
+        if (stopDist < 3 && vNow < 1.2) return vNow < 0.6 ? 1 : 0;
+    }
+    const err = vNow - vAllow;
+    if (err > 0.6) {
+        // 超過允許速度:依超出量與距離選制動
+        const k = Math.ceil(Math.min(spec.B, (err / 1.6 + 0.3) * spec.B * 0.5));
+        return -Math.max(1, k);
+    }
+    if (err > -0.4) return t.notch > 0 ? 0 : Math.min(0, t.notch < -1 ? t.notch + 1 : 0); // 保速:惰行(制動逐步放鬆)
+    if (err > -2) return Math.min(spec.P, Math.max(1, Math.round(-err)));
+    return spec.P;
+}
+
 /** 停車誤差評分(誤差單位 m,正=冒進) */
 export function gradeStop(err, tol = 1) {
     const a = Math.abs(err);

@@ -107,6 +107,21 @@ export function renderNetwork(model, opts = {}) {
         out.push('</g>');
     }
 
+    // --- 出土段標記(僅編輯畫面;橫跨路線的短白條,可拖曳) ---
+    if (interactive && model.portals?.length) {
+        const LV = { underground: '地下', ground: '平面', elevated: '高架' };
+        out.push('<g class="net-portals">');
+        model.portals.forEach(p => {
+            const deg = p.angle * 180 / Math.PI;
+            const len = Math.max(14, p.w * 2.6), th = Math.max(5, p.w * 0.75);
+            out.push(`<g class="handle portal" data-k="portal" data-line="${p.lineId}" data-a="${p.aId}" data-b="${p.bId}" transform="translate(${f1(p.x)} ${f1(p.y)}) rotate(${f1(deg)})">` +
+                `<rect x="${f1(-th / 2)}" y="${f1(-len / 2)}" width="${f1(th)}" height="${f1(len)}" rx="${f1(th * 0.3)}" fill="#ffffff" stroke="${theme.ink}" stroke-width="1.6"/>` +
+                `<path d="M${f1(-th / 2)} 0H${f1(th / 2)}" stroke="${p.color}" stroke-width="1.6"/>` +
+                `<title>出土段:${LV[p.la]} → ${LV[p.lb]}(拖曳調整位置)</title></g>`);
+        });
+        out.push('</g>');
+    }
+
     // --- 車站 ---
     out.push('<g class="net-stations">');
     model.stations.forEach(s => {

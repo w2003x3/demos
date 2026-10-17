@@ -190,6 +190,46 @@ export class Announcer {
         }
     }
 
+    /**
+     * 關門蜂鳴(仿北捷月台/車門的「嗡嗡」聲,不進廣播佇列):
+     * 兩個略為失諧的方波疊成粗糙的低頻蜂鳴,以每秒約 4 次斷續發聲。
+     */
+    buzzer(sec = 3) {
+        const ctx = this._audioCtx();
+        if (!ctx || this.muted) return;
+        this.stopBuzzer();
+        const t0 = ctx.currentTime + 0.02, on = 0.17, period = 0.25;
+        const env = ctx.createGain();
+        env.gain.value = 0;
+        const v = 0.08 * this.volume;
+        for (let t = 0; t + on <= sec; t += period) {
+            env.gain.setValueAtTime(0, t0 + t);
+            env.gain.linearRampToValueAtTime(v, t0 + t + 0.01);
+            env.gain.setValueAtTime(v, t0 + t + on - 0.015);
+            env.gain.linearRampToValueAtTime(0, t0 + t + on);
+        }
+        const lp = ctx.createBiquadFilter();
+        lp.type = 'lowpass'; lp.frequency.value = 2200;
+        env.connect(lp).connect(ctx.destination);
+        const oscs = [392, 398].map(f => {
+            const o = ctx.createOscillator();
+            o.type = 'square'; o.frequency.value = f;
+            o.connect(env); o.start(t0); o.stop(t0 + sec + 0.05);
+            return o;
+        });
+        this._buzz = { env, oscs };
+        oscs[0].onended = () => { if (this._buzz?.oscs === oscs) this._buzz = null; };
+    }
+
+    stopBuzzer() {
+        if (!this._buzz || !this.ctx) return;
+        const { env, oscs } = this._buzz;
+        env.gain.cancelScheduledValues(this.ctx.currentTime);
+        env.gain.setValueAtTime(0, this.ctx.currentTime);
+        oscs.forEach(o => { try { o.stop(); } catch { /* */ } });
+        this._buzz = null;
+    }
+
     /** 行駛噪音:隨速度改變音高/音量的低頻嗡鳴 */
     motor(speedRatio, power) {
         const ctx = this.ctx;
@@ -217,6 +257,7 @@ export class Announcer {
     dispose() {
         this.stop();
         this.horn(false);
+        this.stopBuzzer();
         if (this._motor) { try { this._motor.o.stop(); this._motor.o2.stop(); } catch { /* */ } this._motor = null; }
         if (this.ctx) { this.ctx.close(); this.ctx = null; }
         if (typeof speechSynthesis !== 'undefined') speechSynthesis.onvoiceschanged = null;

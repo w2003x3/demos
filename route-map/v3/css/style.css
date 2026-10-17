@@ -569,3 +569,12 @@ body.sim-mode .project-name { pointer-events: none; }
 .svc-chev { color: var(--text-2); width: 14px; text-align: center; }
 .sim-foot { display: flex; gap: 8px; padding: 10px 16px; border-top: 1px solid var(--sep); background: var(--panel); }
 .sim-foot .sel { flex: 1; }
+
+/* 高程與出土段 */
+.portal-list { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }
+.portal-row { border: 1px solid var(--line, #e2e0da); border-radius: 8px; padding: 8px 10px; }
+.portal-head { display: flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600; margin-bottom: 4px; flex-wrap: wrap; }
+.portal-head em { font-style: normal; font-weight: 500; font-size: 11px; color: var(--text-2); margin-left: 4px; }
+.portal-head .arrow { color: var(--text-2); }
+.portal-row .range-row output { font-family: inherit; font-size: 11.5px; min-width: 96px; }
+.network-svg .portal { cursor: ew-resize; }

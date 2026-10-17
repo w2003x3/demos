@@ -99,7 +99,61 @@ export function poseAt(route, s) {
     let tx = xs[b] - xs[a], tz = zs[b] - zs[a];
     const l = Math.hypot(tx, tz) || 1;
     tx /= l; tz /= l;
-    return { x, z, tx, tz, heading: Math.atan2(tx, -tz) };
+    // 軌面高度與坡度(未設定剖面時為 0)
+    const ys = route.ys;
+    const y = ys ? ys[i] + (ys[i + 1] - ys[i]) * u : 0;
+    const grade = ys ? (ys[b] - ys[a]) / ((b - a) * route.step || 1) : 0;
+    return { x, z, y, tx, tz, grade, heading: Math.atan2(tx, -tz) };
+}
+
+/** 路段類型(依軌面高度):隧道(有頂)、明挖引道(開口)、平面、高架 */
+export const COVER_DEPTH = -6;       // 軌面低於此深度為有頂隧道
+export function sectionKind(y) {
+    if (y <= COVER_DEPTH) return 'tunnel';
+    if (y < -0.4) return 'trough';
+    if (y <= 0.4) return 'ground';
+    return 'viaduct';
+}
+
+/**
+ * 高程剖面:每站在月台前後各 pad 公尺維持該站層級的高度;
+ * 相鄰兩站高度不同時,在出土位置(站間比例 t)以平滑豎曲線銜接,最陡處為 grade;空間不足時改為佔滿站間(會較陡)。
+ * @param {object} route buildDriveRoute 的結果(會寫入 route.ys、route.stationY)
+ * @param {Array<{y, half}>} st 依行駛順序,每站軌面高度與月台半長
+ * @param {Array<number>} portalT 第 k 與 k+1 站之間的出土位置比例(自第 k 站起算)
+ */
+export function applyProfile(route, st, portalT, { grade = 0.04, pad = 30 } = {}) {
+    const n = route.xs.length;
+    const ys = new Float32Array(n);
+    const S = route.stations.map(x => x.s);
+    const smooth = u => u <= 0 ? 0 : u >= 1 ? 1 : u * u * (3 - 2 * u);
+    for (let i = 0; i < n; i++) {
+        const s = i * route.step;
+        let k = 0;
+        while (k < S.length - 1 && s > S[k + 1]) k++;
+        if (S.length === 1 || s <= S[0]) { ys[i] = st[0].y; continue; }
+        if (s >= S[S.length - 1]) { ys[i] = st[S.length - 1].y; continue; }
+        const ya = st[k].y, yb = st[k + 1].y;
+        if (ya === yb) { ys[i] = ya; continue; }
+        const e = S[k] + st[k].half + pad, b = S[k + 1] - st[k + 1].half - pad;
+        const room = Math.max(1, b - e);
+        const want = Math.abs(yb - ya) * 1.5 / grade; // smoothstep 最陡處為平均坡度的 1.5 倍
+        const len = Math.min(room, want);
+        const c = S[k] + (S[k + 1] - S[k]) * (portalT[k] ?? 0.5);
+        const r0 = Math.max(e, Math.min(b - len, c - len / 2));
+        ys[i] = ya + (yb - ya) * smooth((s - r0) / len);
+    }
+    route.ys = ys;
+    route.stationY = st.map(x => x.y);
+    return route;
+}
+
+/** 里程 s 的軌面高度 */
+export function heightAt(route, s) {
+    if (!route.ys) return 0;
+    const f = Math.max(0, Math.min(route.ys.length - 1.0001, s / route.step));
+    const i = Math.floor(f);
+    return route.ys[i] + (route.ys[i + 1] - route.ys[i]) * (f - i);
 }
 
 /** 曲線半徑 → 允許速度(km/h);橫向加速度上限 latA(m/s²) */
