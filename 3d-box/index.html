@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>3D 紙箱生成器 | Box Generator</title>
+    <meta name="description" content="互動式 3D 紙箱生成器，支援天地蓋、飛機盒、一般紙箱等多種樣式">
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div id="canvas-container"></div>
+    
+    <!-- 控制面板 -->
+    <div class="control-panel">
+        <h1 class="panel-title">
+            <span class="icon">📦</span>
+            3D 紙箱生成器
+        </h1>
+        
+        <!-- 紙箱類型選擇 -->
+        <div class="control-section">
+            <h2 class="section-title">紙箱類型</h2>
+            <div class="box-type-grid">
+                <button class="box-type-btn active" data-type="standard">
+                    <div class="btn-icon">📦</div>
+                    <span>一般紙箱</span>
+                </button>
+                <button class="box-type-btn" data-type="lidbase">
+                    <div class="btn-icon">🎁</div>
+                    <span>天地蓋</span>
+                </button>
+                <button class="box-type-btn" data-type="airplane">
+                    <div class="btn-icon">✈️</div>
+                    <span>飛機盒</span>
+                </button>
+            </div>
+        </div>
+        
+        <!-- 尺寸控制 -->
+        <div class="control-section">
+            <h2 class="section-title">尺寸設定</h2>
+            <div class="dimension-controls">
+                <div class="dimension-input">
+                    <label for="width">長度 (L)</label>
+                    <div class="input-wrapper">
+                        <input type="range" id="width-slider" min="50" max="300" value="150">
+                        <input type="number" id="width" value="150" min="50" max="300">
+                        <span class="unit">mm</span>
+                    </div>
+                </div>
+                <div class="dimension-input">
+                    <label for="depth">寬度 (W)</label>
+                    <div class="input-wrapper">
+                        <input type="range" id="depth-slider" min="50" max="300" value="100">
+                        <input type="number" id="depth" value="100" min="50" max="300">
+                        <span class="unit">mm</span>
+                    </div>
+                </div>
+                <div class="dimension-input">
+                    <label for="height">高度 (H)</label>
+                    <div class="input-wrapper">
+                        <input type="range" id="height-slider" min="50" max="300" value="120">
+                        <input type="number" id="height" value="120" min="50" max="300">
+                        <span class="unit">mm</span>
+                    </div>
+                </div>
+                <div class="dimension-input">
+                    <label for="thickness">紙板厚度 (T)</label>
+                    <div class="input-wrapper">
+                        <input type="range" id="thickness-slider" min="0" max="10" value="3" step="0.5">
+                        <input type="number" id="thickness" value="3" min="0" max="10" step="0.5">
+                        <span class="unit">mm</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 動畫控制 -->
+        <div class="control-section">
+            <h2 class="section-title">動畫控制</h2>
+            <div class="animation-controls">
+                <button id="open-box" class="action-btn primary">
+                    <span class="btn-text">📤 開箱</span>
+                </button>
+                <button id="close-box" class="action-btn secondary">
+                    <span class="btn-text">📥 合箱</span>
+                </button>
+            </div>
+            <div class="animation-slider">
+                <label for="animation-progress">動畫進度（摺疊 → 開箱）</label>
+                <input type="range" id="animation-progress" min="0" max="150" value="0">
+            </div>
+        </div>
+        
+        <!-- 顏色設定 -->
+        <div class="control-section">
+            <h2 class="section-title">外觀設定</h2>
+            <div class="color-controls">
+                <div class="color-input">
+                    <label for="box-color">紙箱顏色</label>
+                    <input type="color" id="box-color" value="#b5895a">
+                </div>
+                <div class="checkbox-input">
+                    <input type="checkbox" id="show-texture" checked>
+                    <label for="show-texture">顯示紙箱紋理</label>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 操作提示 -->
+        <div class="tips">
+            <p>💡 拖曳旋轉 | 滾輪縮放 | 右鍵平移</p>
+        </div>
+    </div>
+    
+    <!-- 尺寸顯示 -->
+    <div class="dimension-display">
+        <span id="display-width">150</span> × <span id="display-depth">100</span> × <span id="display-height">120</span> mm
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

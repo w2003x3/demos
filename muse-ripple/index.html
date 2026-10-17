@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="一詞春水 - 注音押韻查詢工具，為詩詞歌詞創作者打造">
+  <meta name="keywords" content="注音, 押韻, 韻腳, 歌詞, 詩詞, 創作">
+  <title>一詞春水 🌊 - 注音押韻查詢</title>
+  <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700&display=swap" rel="stylesheet">
+  
+  <script type="module" crossorigin src="./assets/index-dd145241.js"></script>
+  <link rel="stylesheet" href="./assets/index-ba6add37.css">
+</head>
+
+<body>
+  <div id="app">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-content">
+        <h1 class="logo">
+          <span class="logo-icon">🌊</span>
+          <span class="logo-text">一詞春水</span>
+        </h1>
+        <p class="tagline">注音押韻查詢工具</p>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-container">
+      <!-- Left Panel: Editor -->
+      <section class="panel editor-panel" id="editor-panel">
+        <div class="panel-header">
+          <h2>✍️ 創作編輯器</h2>
+          <div class="panel-actions">
+            <button class="btn btn-icon" id="new-work-btn" title="新建作品">
+              <span>📄</span>
+            </button>
+            <button class="btn btn-icon" id="save-btn" title="儲存">
+              <span>💾</span>
+            </button>
+            <button class="btn btn-icon" id="export-btn" title="匯出">
+              <span>📤</span>
+            </button>
+            <button class="btn btn-icon" id="import-btn" title="讀取">
+              <span>📥</span>
+            </button>
+          </div>
+        </div>
+        <div class="editor-container">
+          <textarea id="editor" class="editor-textarea" placeholder="在這裡開始創作...&#10;&#10;選取文字後可查詢押韻字詞"
+            spellcheck="false"></textarea>
+          <div class="editor-footer">
+            <span class="char-count">字數: <span id="char-count">0</span></span>
+            <span class="auto-save-status" id="auto-save-status">已儲存</span>
+          </div>
+        </div>
+
+        <!-- Works List -->
+        <div class="works-list-container">
+          <h3>📚 我的作品</h3>
+          <ul class="works-list" id="works-list"></ul>
+        </div>
+      </section>
+
+      <!-- Right Panel: Search & Results -->
+      <section class="panel search-panel" id="search-panel">
+        <!-- Search Input -->
+        <div class="search-container">
+          <div class="search-tabs">
+            <button class="tab active" data-mode="zhuyin">注音查字</button>
+            <button class="tab" data-mode="char">字/音查詞</button>
+            <button class="tab" data-mode="rhyme">押韻查詢</button>
+          </div>
+
+          <!-- 精準/寬鬆 模式切換（僅字/音查詞顯示） -->
+          <div class="match-mode-toggle" id="match-mode-toggle" style="display: none;">
+            <span class="toggle-label">匹配模式：</span>
+            <label class="toggle-switch">
+              <input type="checkbox" id="loose-mode-checkbox">
+              <span class="toggle-slider"></span>
+            </label>
+            <span class="toggle-text" id="match-mode-text">精準</span>
+          </div>
+
+          <div class="search-input-wrapper">
+            <input type="text" id="search-input" class="search-input" placeholder="輸入注音符號 (如 ㄊㄧㄢ)" autocomplete="off">
+            <button class="btn btn-search" id="search-btn">
+              🔍
+            </button>
+          </div>
+
+          <div class="zhuyin-keyboard" id="zhuyin-keyboard">
+            <!-- 聲母 -->
+            <div class="keyboard-row">
+              <button class="key">ㄅ</button>
+              <button class="key">ㄆ</button>
+              <button class="key">ㄇ</button>
+              <button class="key">ㄈ</button>
+              <button class="key">ㄉ</button>
+              <button class="key">ㄊ</button>
+              <button class="key">ㄋ</button>
+              <button class="key">ㄌ</button>
+            </div>
+            <div class="keyboard-row">
+              <button class="key">ㄍ</button>
+              <button class="key">ㄎ</button>
+              <button class="key">ㄏ</button>
+              <button class="key">ㄐ</button>
+              <button class="key">ㄑ</button>
+              <button class="key">ㄒ</button>
+            </div>
+            <div class="keyboard-row">
+              <button class="key">ㄓ</button>
+              <button class="key">ㄔ</button>
+              <button class="key">ㄕ</button>
+              <button class="key">ㄖ</button>
+              <button class="key">ㄗ</button>
+              <button class="key">ㄘ</button>
+              <button class="key">ㄙ</button>
+            </div>
+            <!-- 韻母 -->
+            <div class="keyboard-row">
+              <button class="key medial">ㄧ</button>
+              <button class="key medial">ㄨ</button>
+              <button class="key medial">ㄩ</button>
+              <button class="key final">ㄚ</button>
+              <button class="key final">ㄛ</button>
+              <button class="key final">ㄜ</button>
+              <button class="key final">ㄝ</button>
+            </div>
+            <div class="keyboard-row">
+              <button class="key final">ㄞ</button>
+              <button class="key final">ㄟ</button>
+              <button class="key final">ㄠ</button>
+              <button class="key final">ㄡ</button>
+              <button class="key final">ㄢ</button>
+              <button class="key final">ㄣ</button>
+              <button class="key final">ㄤ</button>
+              <button class="key final">ㄥ</button>
+            </div>
+            <div class="keyboard-row">
+              <button class="key final">ㄦ</button>
+              <button class="key tone">ˉ</button>
+              <button class="key tone">ˊ</button>
+              <button class="key tone">ˇ</button>
+              <button class="key tone">ˋ</button>
+              <button class="key tone">˙</button>
+              <button class="key special">⌫</button>
+              <button class="key special">清空</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Results Panel -->
+        <div class="results-container" id="results-container">
+          <div class="results-header">
+            <h3 id="results-title">搜尋結果</h3>
+            <span class="results-count" id="results-count"></span>
+          </div>
+          <div class="results-content" id="results-content">
+            <div class="empty-state">
+              <span class="empty-icon">🔍</span>
+              <p>輸入注音或文字開始查詢</p>
+            </div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <p>© 2026 一詞春水 | 資料來源：<a href="https://www.moedict.tw/" target="_blank">萌典</a>、<a
+          href="https://dict.revised.moe.edu.tw/" target="_blank">教育部國語辭典</a> | <a href="data/DATA_LICENSE.md"
+          target="_blank">授權聲明 (CC BY-SA)</a></p>
+    </footer>
+
+    <!-- Hidden File Input -->
+    <input type="file" id="file-input" accept=".txt" style="display: none;">
+  </div>
+
+  
+</body>
+
+</html>

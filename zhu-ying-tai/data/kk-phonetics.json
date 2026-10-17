@@ -1,0 +1,358 @@
+{
+  "vowels": {
+    "monophthongs": [
+      {
+        "kk": "i",
+        "ipa": "/iː/",
+        "zhuyin": "ㄧ",
+        "description": "長音，嘴型扁平拉長，舌位高",
+        "examples": ["see", "bee", "feel", "eat"]
+      },
+      {
+        "kk": "ɪ",
+        "ipa": "/ɪ/",
+        "zhuyin": "ㄧ（短）",
+        "description": "短促放鬆，嘴型較寬鬆",
+        "examples": ["sit", "bit", "fish", "in"]
+      },
+      {
+        "kk": "e",
+        "ipa": "/eɪ/",
+        "zhuyin": "ㄟ",
+        "description": "嘴角微上揚",
+        "examples": ["say", "day", "make", "take"]
+      },
+      {
+        "kk": "ɛ",
+        "ipa": "/ɛ/",
+        "zhuyin": "ㄝ",
+        "description": "嘴巴中等開，舌位中",
+        "examples": ["bed", "red", "get", "let"]
+      },
+      {
+        "kk": "æ",
+        "ipa": "/æ/",
+        "zhuyin": "ㄝ＋ㄚ",
+        "description": "嘴巴大開，舌位低，像「ㄝ」往「ㄚ」滑",
+        "examples": ["cat", "bad", "man", "hat"]
+      },
+      {
+        "kk": "ɑ",
+        "ipa": "/ɑː/",
+        "zhuyin": "ㄚ（深）",
+        "description": "嘴巴大開，喉嚨深處發音",
+        "examples": ["father", "hot", "box", "stop"]
+      },
+      {
+        "kk": "ɔ",
+        "ipa": "/ɔː/",
+        "zhuyin": "ㄛ",
+        "description": "嘴唇圓形突出，長音",
+        "examples": ["all", "call", "law", "caught"]
+      },
+      {
+        "kk": "o",
+        "ipa": "/oʊ/",
+        "zhuyin": "ㄛㄨ",
+        "description": "從「ㄛ」滑向「ㄨ」",
+        "examples": ["go", "no", "show", "home"]
+      },
+      {
+        "kk": "u",
+        "ipa": "/uː/",
+        "zhuyin": "ㄨ",
+        "description": "長音，嘴唇圓突，舌位高",
+        "examples": ["too", "blue", "food", "moon"]
+      },
+      {
+        "kk": "ʊ",
+        "ipa": "/ʊ/",
+        "zhuyin": "ㄨ（短）",
+        "description": "短促放鬆，嘴唇略圓",
+        "examples": ["book", "put", "look", "good"]
+      },
+      {
+        "kk": "ʌ",
+        "ipa": "/ʌ/",
+        "zhuyin": "ㄜ（開）",
+        "description": "嘴巴稍開，舌位中央偏低",
+        "examples": ["cup", "but", "come", "love"]
+      },
+      {
+        "kk": "ə",
+        "ipa": "/ə/",
+        "zhuyin": "ㄜ（輕）",
+        "description": "輕聲，非重音節使用",
+        "examples": ["about", "banana", "sofa"]
+      },
+      {
+        "kk": "ɝ",
+        "ipa": "/ɝː/",
+        "zhuyin": "ㄦ",
+        "description": "捲舌 R 音，重音節",
+        "examples": ["bird", "word", "her", "learn"]
+      },
+      {
+        "kk": "ɚ",
+        "ipa": "/ɚ/",
+        "zhuyin": "ㄦ（輕）",
+        "description": "輕聲捲舌，非重音節",
+        "examples": ["teacher", "water", "mother"]
+      }
+    ],
+    "diphthongs": [
+      {
+        "kk": "aɪ",
+        "ipa": "/aɪ/",
+        "zhuyin": "ㄞ",
+        "description": "從「ㄚ」滑向「ㄧ」",
+        "examples": ["I", "my", "time", "like", "fly"]
+      },
+      {
+        "kk": "aʊ",
+        "ipa": "/aʊ/",
+        "zhuyin": "ㄠ",
+        "description": "從「ㄚ」滑向「ㄨ」",
+        "examples": ["now", "how", "out", "about"]
+      },
+      {
+        "kk": "ɔɪ",
+        "ipa": "/ɔɪ/",
+        "zhuyin": "ㄛㄧ",
+        "description": "從「ㄛ」滑向「ㄧ」",
+        "examples": ["boy", "toy", "oil", "voice"]
+      },
+      {
+        "kk": "ju",
+        "ipa": "/juː/",
+        "zhuyin": "ㄩ",
+        "description": "類似注音ㄩ",
+        "examples": ["you", "use", "new", "few"]
+      },
+      {
+        "kk": "ɪr",
+        "ipa": "/ɪr/",
+        "zhuyin": "ㄧㄦ",
+        "description": "ㄧ加捲舌",
+        "examples": ["ear", "here", "near", "fear"]
+      },
+      {
+        "kk": "ɛr",
+        "ipa": "/ɛr/",
+        "zhuyin": "ㄝㄦ",
+        "description": "ㄝ加捲舌",
+        "examples": ["air", "care", "where", "there"]
+      },
+      {
+        "kk": "ʊr",
+        "ipa": "/ʊr/",
+        "zhuyin": "ㄨㄦ",
+        "description": "ㄨ加捲舌",
+        "examples": ["tour", "sure", "pure"]
+      },
+      {
+        "kk": "ɔr",
+        "ipa": "/ɔːr/",
+        "zhuyin": "ㄛㄦ",
+        "description": "ㄛ加捲舌",
+        "examples": ["or", "door", "more", "four"]
+      },
+      {
+        "kk": "ɑr",
+        "ipa": "/ɑːr/",
+        "zhuyin": "ㄚㄦ",
+        "description": "ㄚ加捲舌",
+        "examples": ["car", "far", "star", "arm"]
+      }
+    ]
+  },
+  "consonants": {
+    "stops": [
+      {
+        "kk": "p",
+        "zhuyin": "ㄆ",
+        "description": "送氣音，雙唇閉合後爆破",
+        "examples": ["pen", "paper", "stop"]
+      },
+      {
+        "kk": "b",
+        "zhuyin": "ㄅ",
+        "description": "不送氣，聲帶振動",
+        "examples": ["bed", "baby", "cab"]
+      },
+      {
+        "kk": "t",
+        "zhuyin": "ㄊ",
+        "description": "送氣音，舌尖頂上齒齦",
+        "examples": ["ten", "table", "cat"]
+      },
+      {
+        "kk": "d",
+        "zhuyin": "ㄉ",
+        "description": "不送氣，聲帶振動",
+        "examples": ["dog", "day", "bad"]
+      },
+      {
+        "kk": "k",
+        "zhuyin": "ㄎ",
+        "description": "送氣音，舌根頂軟顎",
+        "examples": ["cat", "keep", "back"]
+      },
+      {
+        "kk": "g",
+        "zhuyin": "ㄍ",
+        "description": "不送氣，聲帶振動",
+        "examples": ["go", "game", "big"]
+      }
+    ],
+    "fricatives": [
+      {
+        "kk": "f",
+        "zhuyin": "ㄈ",
+        "description": "上齒咬下唇，無聲",
+        "examples": ["fan", "fish", "life"]
+      },
+      {
+        "kk": "v",
+        "zhuyin": "ㄈ（濁）",
+        "description": "上齒咬下唇，聲帶振動",
+        "examples": ["van", "love", "have"]
+      },
+      {
+        "kk": "θ",
+        "zhuyin": "ㄙ（咬舌）",
+        "description": "舌尖放齒間，無聲送氣",
+        "examples": ["think", "three", "math"]
+      },
+      {
+        "kk": "ð",
+        "zhuyin": "ㄗ（咬舌）",
+        "description": "舌尖放齒間，聲帶振動",
+        "examples": ["this", "that", "the", "mother"]
+      },
+      {
+        "kk": "s",
+        "zhuyin": "ㄙ",
+        "description": "舌尖接近齒齦，無聲",
+        "examples": ["see", "sun", "bus"]
+      },
+      {
+        "kk": "z",
+        "zhuyin": "ㄗ（濁）",
+        "description": "舌尖接近齒齦，聲帶振動",
+        "examples": ["zoo", "zero", "buzz"]
+      },
+      {
+        "kk": "ʃ",
+        "zhuyin": "ㄒㄩ",
+        "description": "類似「需」的發音，嘴型圓突",
+        "examples": ["she", "ship", "wash", "fish"]
+      },
+      {
+        "kk": "ʒ",
+        "zhuyin": "ㄖ",
+        "description": "類似ㄖ但不捲舌，聲帶振動",
+        "examples": ["vision", "measure", "beige"]
+      },
+      {
+        "kk": "h",
+        "zhuyin": "ㄏ",
+        "description": "喉嚨送氣，無聲",
+        "examples": ["hi", "hello", "hope"]
+      }
+    ],
+    "affricates": [
+      {
+        "kk": "tʃ",
+        "zhuyin": "ㄑ",
+        "description": "舌尖頂上顎後爆破+摩擦",
+        "examples": ["cheese", "church", "watch"]
+      },
+      {
+        "kk": "dʒ",
+        "zhuyin": "ㄐ",
+        "description": "同上但聲帶振動",
+        "examples": ["job", "judge", "bridge"]
+      }
+    ],
+    "nasals": [
+      {
+        "kk": "m",
+        "zhuyin": "ㄇ",
+        "description": "雙唇閉合，氣流從鼻腔出",
+        "examples": ["mom", "map", "time"]
+      },
+      {
+        "kk": "n",
+        "zhuyin": "ㄋ",
+        "description": "舌尖頂齒齦，氣流從鼻腔出",
+        "examples": ["no", "name", "sun"]
+      },
+      {
+        "kk": "ŋ",
+        "zhuyin": "ㄥ（尾）",
+        "description": "舌根頂軟顎，鼻音，只出現在字尾",
+        "examples": ["sing", "king", "long"]
+      }
+    ],
+    "liquidsAndGlides": [
+      {
+        "kk": "l",
+        "zhuyin": "ㄌ",
+        "description": "舌尖頂齒齦，氣流從舌兩側出",
+        "examples": ["let", "love", "ball"]
+      },
+      {
+        "kk": "r",
+        "zhuyin": "ㄖ（捲舌）",
+        "description": "舌尖捲起不碰上顎，美式發音",
+        "examples": ["red", "run", "car"]
+      },
+      {
+        "kk": "w",
+        "zhuyin": "ㄨ",
+        "description": "嘴唇圓突，半母音",
+        "examples": ["we", "water", "swim"]
+      },
+      {
+        "kk": "j",
+        "zhuyin": "ㄧ",
+        "description": "舌面接近硬顎，半母音",
+        "examples": ["yes", "you", "yellow"]
+      }
+    ]
+  },
+  "confusedPairs": [
+    {
+      "pair": ["/i/", "/ɪ/"],
+      "difference": "長短差異：/i/ 較長較緊，/ɪ/ 較短較鬆",
+      "examples": ["seat", "sit"]
+    },
+    {
+      "pair": ["/æ/", "/ɛ/"],
+      "difference": "開口差異：/æ/ 嘴更開，舌更低",
+      "examples": ["bad", "bed"]
+    },
+    {
+      "pair": ["/ʌ/", "/ə/"],
+      "difference": "重音差異：/ʌ/ 重音，/ə/ 輕音",
+      "examples": ["but", "about"]
+    },
+    {
+      "pair": ["/l/", "/r/"],
+      "difference": "舌位差異：/l/ 舌尖觸上顎，/r/ 舌尖懸空捲起",
+      "examples": ["light", "right"]
+    },
+    {
+      "pair": ["/θ/", "/s/"],
+      "difference": "舌位差異：/θ/ 舌尖在齒間，/s/ 舌尖在齒後",
+      "examples": ["think", "sink"]
+    },
+    {
+      "pair": ["/b/", "/v/"],
+      "difference": "位置差異：/b/ 雙唇音，/v/ 唇齒音",
+      "examples": ["berry", "very"]
+    }
+  ],
+  "taiwanese": null
+}

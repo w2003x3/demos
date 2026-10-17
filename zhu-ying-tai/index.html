@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>注英台 · 用注音學英文發音</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="site-header">
+    <h1>注英台 <span class="subtitle">用注音學英文發音</span></h1>
+    <p class="tagline">以熟悉的注音符號為橋樑,快速掌握英文 KK 音標的近似發音</p>
+  </header>
+
+  <nav class="tabs" role="tablist">
+    <button class="tab active" data-tab="phonetics" role="tab" aria-selected="true">📖 KK 音標學習</button>
+    <button class="tab" data-tab="practice" role="tab" aria-selected="false">🎲 隨機單字練習</button>
+    <button class="tab" data-tab="lookup" role="tab" aria-selected="false">🔍 單字查詢</button>
+  </nav>
+
+  <main>
+    <!-- KK 音標學習區 -->
+    <section id="phonetics" class="panel active" role="tabpanel">
+      <p class="hint">點擊 🔊 聽發音,點擊範例單字可單獨播放。注音為「近似發音」,實際英語仍有細微差異。</p>
+      <div id="phonetics-content"></div>
+
+      <h2 class="section-title">易混淆音標比較</h2>
+      <div id="confused-content" class="confused-grid"></div>
+    </section>
+
+    <!-- 隨機單字練習 -->
+    <section id="practice" class="panel" role="tabpanel">
+      <div class="practice-controls">
+        <button id="next-word" class="btn-primary">🎲 抽下一個單字</button>
+        <label class="toggle">
+          <input type="checkbox" id="toggle-zhuyin" checked>
+          <span>顯示注音提示</span>
+        </label>
+        <label class="toggle">
+          <select id="difficulty-filter">
+            <option value="0">全部難度</option>
+            <option value="1">初級</option>
+            <option value="2">中級</option>
+            <option value="3">進階</option>
+          </select>
+        </label>
+        <label class="toggle">
+          <input type="checkbox" id="only-unlearned">
+          <span>只抽未學會的字</span>
+        </label>
+      </div>
+      <div id="progress-panel" class="progress-panel">
+        <div class="progress-bar"><div id="progress-fill" class="progress-fill"></div></div>
+        <div class="progress-row">
+          <span id="progress-text">學習進度載入中…</span>
+          <button id="reset-progress" class="btn-link" title="清除所有已學會標記">重設進度</button>
+        </div>
+      </div>
+      <div id="practice-card" class="practice-card"></div>
+    </section>
+
+    <!-- 單字查詢 -->
+    <section id="lookup" class="panel" role="tabpanel">
+      <form id="lookup-form" class="lookup-form">
+        <input type="text" id="lookup-input" placeholder="輸入英文單字,例如 apple" autocomplete="off">
+        <button type="submit" class="btn-primary">查詢</button>
+      </form>
+      <div id="lookup-result" class="lookup-result"></div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <p>注英台 · 本地資料 + Free Dictionary API + 瀏覽器語音合成</p>
+  </footer>
+
+  <script src="app.js"></script>
+</body>
+</html>

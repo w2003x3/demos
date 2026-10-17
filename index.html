@@ -1,0 +1,81 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>作品展示</title>
+<style>
+  :root {
+    --bg: #f6f5f2; --card: #ffffff; --text: #1d1d1f; --muted: #6b6b70; --line: #e4e2dc; --accent: #c2410c;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #141416; --card: #1e1e21; --text: #ececee; --muted: #9a9aa2; --line: #2e2e33; --accent: #fb923c; }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--text);
+    font-family: system-ui, -apple-system, "Segoe UI", "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+    line-height: 1.6;
+  }
+  main { max-width: 960px; margin: 0 auto; padding: 56px 16px 72px; }
+  h1 { font-size: 2rem; margin: 0 0 6px; letter-spacing: .02em; }
+  .lead { color: var(--muted); margin: 0 0 36px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 16px; }
+  a.card {
+    display: flex; flex-direction: column; gap: 6px; padding: 20px 20px 18px;
+    background: var(--card); border: 1px solid var(--line); border-radius: 14px;
+    color: inherit; text-decoration: none; transition: border-color .15s, transform .15s;
+  }
+  a.card:hover, a.card:focus-visible { border-color: var(--accent); transform: translateY(-2px); outline: none; }
+  .emoji { font-size: 1.8rem; line-height: 1; }
+  .name { font-size: 1.15rem; font-weight: 700; margin-top: 6px; }
+  .desc { color: var(--muted); font-size: .92rem; flex: 1; }
+  .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .tags span { font-size: .75rem; color: var(--muted); border: 1px solid var(--line); border-radius: 999px; padding: 1px 9px; }
+  .go { color: var(--accent); font-size: .88rem; font-weight: 600; margin-top: 10px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>作品展示</h1>
+  <p class="lead">點開即可在瀏覽器裡直接體驗,不需安裝。</p>
+  <div class="grid">
+    <a class="card" href="route-map/">
+      <span class="emoji">🚇</span>
+      <span class="name">路網連連看</span>
+      <span class="desc">在真實地圖上繪製捷運/鐵道路網圖:新增車站與路線、共站與轉乘連通道,匯出成路網示意圖。</span>
+      <span class="tags"><span>Leaflet</span><span>OpenStreetMap</span></span>
+      <span class="go">開啟 →</span>
+    </a>
+    <a class="card" href="iron-rice-bowl/">
+      <span class="emoji">🍱</span>
+      <span class="name">鐵飯碗 · 火車便當</span>
+      <span class="desc">扮演新自強號 EMU3000 的列車餐服員:推便當車、心算結帳、送預訂便當,一路升遷到局長。</span>
+      <span class="tags"><span>Three.js</span><span>3D 遊戲</span></span>
+      <span class="go">開啟 →</span>
+    </a>
+    <a class="card" href="3d-box/">
+      <span class="emoji">📦</span>
+      <span class="name">3D 紙箱生成器</span>
+      <span class="desc">互動式紙箱展開/摺疊動畫,支援一般紙箱、天地蓋、飛機盒,尺寸即時調整。</span>
+      <span class="tags"><span>Three.js</span><span>GSAP</span></span>
+      <span class="go">開啟 →</span>
+    </a>
+    <a class="card" href="zhu-ying-tai/">
+      <span class="emoji">🔤</span>
+      <span class="name">注英台</span>
+      <span class="desc">用熟悉的注音符號學英文 KK 音標:音標卡片、隨機單字練習、單字發音查詢。</span>
+      <span class="tags"><span>Web Speech API</span></span>
+      <span class="go">開啟 →</span>
+    </a>
+    <a class="card" href="muse-ripple/">
+      <span class="emoji">🌊</span>
+      <span class="name">一詞春水</span>
+      <span class="desc">注音押韻查詢工具:注音查字、字查詞、找同韻腳字詞,附創作編輯器。</span>
+      <span class="tags"><span>Vite</span><span>教育部辭典資料</span></span>
+      <span class="go">開啟 →</span>
+    </a>
+  </div>
+</main>
+</body>
+</html>
