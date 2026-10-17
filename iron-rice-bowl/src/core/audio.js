@@ -112,6 +112,11 @@ export class Voice {
     this.announceQueue = [];
     this.announcing = null;
     this.talking = null;
+    /**
+     * 對話的可聽度:(anchor) => 0~1,由遊戲階段設定(例:不同車廂 = 0)。
+     * 0 時只顯示字幕不出聲;廣播不受影響(全車都聽得到)。
+     */
+    this.hearing = null;
   }
 
   async init() {
@@ -145,6 +150,15 @@ export class Voice {
    * anchor:說話者的 THREE.Object3D,UI 用來把漫畫對話框貼在人物頭上。
    */
   talk(ids, anchor = null, onEnd = null) {
+    // 整段都聽不到(別節車廂):只出字幕,不打斷附近正在說的話
+    const list = [].concat(ids);
+    if (this.hearing && list.every((it) => {
+      const a = (typeof it === 'string' ? anchor : it.anchor ?? anchor);
+      return a && this.hearing(a) <= 0.01;
+    })) {
+      this._playSeq(list, { channel: 'talk', anchor }, () => onEnd?.());
+      return;
+    }
     this.talking?.stop();
     let h = null; // 台詞不存在時 onEnd 可能同步觸發,故先宣告
     h = this._playSeq([].concat(ids), { channel: 'talk', anchor }, () => {
@@ -185,21 +199,23 @@ export class Voice {
     const line = this.lines.get(id);
     if (!line) { console.warn('[voice] 未定義台詞', id); done(); return null; }
     this.onSubtitle?.({ ...meta, role: line.role, label: ROLE_LABEL[line.role] || '', text: line.text });
-    if (this.muted) {
+    const gain = meta.channel === 'talk' && meta.anchor && this.hearing ? this.hearing(meta.anchor) : 1;
+    if (this.muted || gain <= 0.01) {
       const t = setTimeout(done, 400 + line.text.length * 120);
       return { stop: () => clearTimeout(t) };
     }
     if (this.files.has(id)) {
       const a = new Audio(`${this.base}/${id}.mp3`);
+      a.volume = Math.min(1, gain);
       a.onended = done;
       a.onerror = done;
       a.play().catch(done);
       return { stop: () => { a.onended = a.onerror = null; a.pause(); } };
     }
-    return this._speak(line, done);
+    return this._speak(line, done, gain);
   }
 
-  _speak(line, done) {
+  _speak(line, done, gain = 1) {
     if (!('speechSynthesis' in window)) {
       const t = setTimeout(done, 400 + line.text.length * 120);
       return { stop: () => clearTimeout(t) };
@@ -214,6 +230,7 @@ export class Voice {
     const pct = (s) => (s ? parseFloat(s) / 100 : 0);
     u.pitch = 1 + pct(cfg.pitch);
     u.rate = 1 + pct(cfg.rate);
+    u.volume = Math.min(1, gain);
     let finished = false;
     const fin = () => { if (!finished) { finished = true; done(); } };
     u.onend = fin;

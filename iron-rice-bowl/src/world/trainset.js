@@ -198,12 +198,44 @@ export class TrainSet {
     }
   }
 
-  /** 自動門:靠近 2.3 m 內開啟。 */
-  updateDoors(x, dt) {
+  /**
+   * 自動門:推車/服勤員任一端進入門前 1 m 內才開始開啟,約 1 秒全開。
+   * 一般速度走到門口時已開好;快速推車會來不及(見 onboardPhase 撞門判定)。
+   */
+  updateDoors(lo, hi, dt) {
     for (const d of this.doors) {
-      const target = Math.abs(d.x - x) < 2.3 ? 1 : 0;
-      d.open += (target - d.open) * Math.min(1, dt * 5);
+      const target = d.x > lo - 1.0 && d.x < hi + 1.0 ? 1 : 0;
+      d.open += (target - d.open) * Math.min(1, dt * (target ? 2.6 : 3.5));
       d.obj.position.z = -d.open * 0.86;
     }
+  }
+
+  /** 窗簾:拉下後遮住整條窗帶(看不到窗外,可關閉窗外景色省效能)。 */
+  setCurtains(on) {
+    if (!this.curtains) {
+      const I = this.type.interior;
+      const tex = Tex.label((c, w, h) => {
+        const g = c.createLinearGradient(0, 0, w, 0);
+        for (let i = 0; i <= 24; i++) g.addColorStop(i / 24, i % 2 ? '#b9a27c' : '#d8c49c');
+        c.fillStyle = g; c.fillRect(0, 0, w, h);
+        c.fillStyle = 'rgba(80,60,30,0.25)'; c.fillRect(0, h - 10, w, 10);
+      }, 512, 128);
+      tex.wrapS = THREE.RepeatWrapping;
+      tex.repeat.set(4, 1);
+      const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.95, side: THREE.DoubleSide });
+      const w = 2 * I.partitionX - 0.1;
+      const geos = [];
+      for (let k = 0; k < this.n; k++) {
+        for (const side of [1, -1]) {
+          const g = new THREE.PlaneGeometry(w, 0.82);
+          g.rotateY(side > 0 ? Math.PI : 0);
+          g.translate(this.carX(k), 1.25, side * 1.33);
+          geos.push(g);
+        }
+      }
+      this.curtains = new THREE.Mesh(mergeGeometries(geos), mat);
+      this.group.add(this.curtains);
+    }
+    this.curtains.visible = !!on;
   }
 }

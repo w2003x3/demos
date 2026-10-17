@@ -16,7 +16,8 @@ const DRINK_SLOTS = [];
 for (const x of [0.19, 0.255, 0.32, 0.385]) for (const z of [-0.15, -0.05, 0.05, 0.15]) DRINK_SLOTS.push([x, 0, z]);
 const POS_X = -0.33;     // 結帳機台在推車上的位置
 const POS_TILT = 0.38;   // 朝服勤員傾斜(rad)
-const KEYS = ['1', '2', '3', '4', '5', '⌫', '6', '7', '8', '9', '0', '⏎'];
+export const POS_KEYS = ['1', '2', '3', '4', '5', '⌫', '6', '7', '8', '9', '0', '⏎'];
+const KEYS = POS_KEYS;
 
 const font = '"Noto Sans TC","Microsoft JhengHei",sans-serif';
 
@@ -67,7 +68,7 @@ export class CartCrew {
     this.posScreenTex = Tex.label(() => {}, 512, 192);
     this.posKeysTex = Tex.label(() => {}, 512, 192);
     mkPlane(0.19, 0.066, this.posScreenTex, 0.037);
-    mkPlane(0.19, 0.066, this.posKeysTex, -0.04);
+    this.posKeysMesh = mkPlane(0.19, 0.066, this.posKeysTex, -0.04); // 可點擊:onboardPhase 以射線取 UV 換算按鍵
     this.posGroup = g;
     this.group.add(g);
     this.posState = { line1: '', line2: '', mode: 'idle', pressed: null, pressedT: 0 };

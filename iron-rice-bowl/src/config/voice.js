@@ -30,6 +30,17 @@ const PASSENGER_LINES = {
   overcharge: '欸,你算錯了吧?怎麼這麼貴!再算一次啦!',
   preorder_thanks: '謝謝,我等好久了!',
   not_mine: '咦?我沒有訂這個喔。',
+  curtain: '你顯卡爛為什麼要關我窗簾啦!我要看風景!',
+  blocking: '推車擋到路了啦,我要下車耶!',
+  pitch_buy: '嗯……好啊,那我看看。',
+  pitch_no: '不用了,謝謝。',
+  pitch_annoyed: '我在休息,不要吵好不好!',
+  soldout_ok: '那其他的照拿就好。',
+  soldout_leave: '賣完了喔?那算了。',
+  not_soldout: '咦?明明還有啊,騙我喔?',
+  crash: '唉唷!推車撞到我了啦!',
+  door_noise: '吵死了,推車撞門很大聲耶!',
+  nextstop_wrong: '咦?真的嗎?旁邊的人說不是耶……',
 };
 
 const ATTENDANT_LINES = {
@@ -44,6 +55,11 @@ const ATTENDANT_LINES = {
   restock: '補貨完成,再出發!',
   deliver: '您好,您預訂的便當送到了。',
   checkout: '我算一下喔……',
+  pitch: '您好,要不要來個熱騰騰的便當或飲料?',
+  soldout: '不好意思,這個已經賣完了。',
+  sorry_crash: '對不起對不起!',
+  station_restock: '月台補貨,麻煩了,謝謝!',
+  vendor: '來,便當跟飲料幫你補上了!',
 };
 
 const CONDUCTOR_LINES = {
@@ -79,6 +95,9 @@ export function buildVoiceLines() {
   for (const inc of INCIDENTS) {
     const v = INCIDENT_VOICE[inc.id];
     if (v) add(`inc_${inc.id}`, v[0], v[1]);
+    // 選項的回應(由當事人說);按住型完成後的道謝
+    (inc.options || []).forEach((o, i) => { if (o.say) add(`inc_${inc.id}_r${i}`, v ? v[0] : 'passengerM', o.say); });
+    if (inc.say) add(`inc_${inc.id}_done`, inc.say[0], inc.say[1]);
   }
 
   // 列車廣播:每個任務的起站歡迎詞;每站的「即將抵達」(中/英)

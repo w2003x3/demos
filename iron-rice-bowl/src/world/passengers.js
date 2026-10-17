@@ -30,6 +30,7 @@ export class Passengers {
     seat.occupied = occupied;
     seat.wants = false;
     seat.served = false;
+    seat.pitched = false;
     this._hideIcon(seat);
     if (!occupied) return;
     seat.matrix = new THREE.Matrix4().compose(new THREE.Vector3(seat.x, 0, seat.z),

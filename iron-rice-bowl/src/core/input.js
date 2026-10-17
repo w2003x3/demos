@@ -16,6 +16,20 @@ export class Input {
     addEventListener('blur', () => this.down.clear());
   }
 
+  /** 畫面按鈕(觸控/滑鼠):點一下 = 按下一次。 */
+  press(code) {
+    this.pressed.add(code);
+    this.queue.push(code);
+  }
+
+  /** 畫面按鈕:按住(on=true)/放開。按下當幀也算 wasPressed。 */
+  hold(code, on) {
+    if (on) {
+      if (!this.down.has(code)) { this.pressed.add(code); this.queue.push(code); }
+      this.down.add(code);
+    } else this.down.delete(code);
+  }
+
   isDown(...codes) { return codes.some((c) => this.down.has(c)); }
   wasPressed(...codes) { return codes.some((c) => this.pressed.has(c)); }
 

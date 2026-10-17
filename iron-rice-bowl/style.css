@@ -235,3 +235,124 @@ kbd { display: inline-block; min-width: 20px; text-align: center; background: #e
   .led { top: 230px; width: calc(100vw - 28px); }
   .hud-left, .hud-right { width: calc(50vw - 21px); }
 }
+
+/* ===================================================================== 觸控 / 點擊操作 */
+.touch { position: absolute; inset: 0; pointer-events: none; }
+.touch button { pointer-events: auto; touch-action: none; -webkit-user-select: none; user-select: none; -webkit-tap-highlight-color: transparent; }
+.t-pad, .t-acts { position: absolute; bottom: 70px; display: grid; gap: 8px; }
+.t-pad { left: 14px; grid-template-columns: 64px; }
+.t-acts { right: 14px; grid-template-columns: repeat(3, 64px); }
+.t-acts .primary { grid-row: span 2; height: auto; }
+.t-btn {
+  width: 64px; height: 56px; border-radius: 14px; border: 1px solid rgba(255,255,255,0.22);
+  background: rgba(14,18,26,0.62); color: #fff; font: 800 20px/1 var(--font); cursor: pointer;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px;
+  backdrop-filter: blur(4px); box-shadow: 0 3px 0 rgba(0,0,0,0.35);
+}
+.t-btn small { font-size: 11px; font-weight: 500; color: #c6cfda; }
+.t-btn.on, .t-btn:active { transform: translateY(2px); box-shadow: none; background: rgba(240,138,36,0.45); }
+.t-btn.primary { background: rgba(240,138,36,0.75); color: #111; font-size: 26px; }
+.t-btn.primary small { color: #222; }
+.t-btn.fast { background: rgba(200,60,40,0.55); }
+.t-top { position: absolute; right: 270px; top: 14px; display: flex; gap: 6px; }
+.t-mini { width: 40px; height: 40px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.22); background: rgba(14,18,26,0.7); color: #fff; font-size: 18px; cursor: pointer; }
+
+/* 操作面板:可點擊的選項與動作鈕 */
+.dialog { pointer-events: auto; }
+.d-item, .d-opt { border: 1px solid transparent; color: var(--fg); font-family: var(--font); text-align: left; cursor: pointer; }
+.d-item:hover, .d-opt:hover { border-color: var(--accent); background: rgba(240,138,36,0.16); }
+.d-opt:disabled { cursor: default; }
+.d-text s { color: #ff8a8a; }
+.d-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 10px; }
+.d-act { flex: 1; min-width: 88px; min-height: 40px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255,255,255,0.1); color: var(--fg); font: 700 14px var(--font); cursor: pointer; }
+.d-act.primary { background: var(--accent); color: #111; border-color: var(--accent); }
+.d-act.on, .d-act:active { filter: brightness(1.25); }
+.d-act:disabled { opacity: 0.45; }
+/* 結帳:面板停靠在畫面上方,側邊面板與按鈕收起,露出收銀機 */
+.dialog.dock-top { top: 70px; bottom: auto; width: min(520px, calc(100vw - 28px)); padding: 10px 14px; }
+.dialog.dock-top .d-text { font-size: 14px; margin-bottom: 4px; }
+#hud.docked .hud-left, #hud.docked .hud-right, #hud.docked #minimap, #hud.docked .t-pad, #hud.docked .t-acts, #hud.docked .prompt, #hud.docked .help { display: none; }
+
+/* 未知職位 */
+.rung.unknown { opacity: 0.55; border-style: dashed; }
+.rung.unknown b { color: var(--muted); letter-spacing: 2px; }
+
+/* 暫停設定 */
+.pause-card .settings { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin: 10px 0; }
+.pause-card .settings .ghost { padding: 10px; }
+
+/* 操作說明 / 新手教學 */
+.screen.tut-screen { z-index: 5; }
+.card.tutorial { width: min(860px, 100%); }
+.tut-head { display: flex; justify-content: space-between; align-items: baseline; }
+.tut-cols { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; }
+.tut-sub { color: var(--accent) !important; font-weight: 700 !important; padding-bottom: 6px !important; }
+.tut-map { position: relative; height: 340px; border-radius: 12px; border: 1px solid var(--line);
+  background: linear-gradient(180deg, #2a3442, #1a2029); overflow: hidden; font-size: 12px; }
+.tm { position: absolute; background: rgba(14,18,26,0.85); border: 1px dashed rgba(255,200,140,0.7); border-radius: 8px; padding: 6px 8px; color: #c6cfda; line-height: 1.4; }
+.tm b { display: block; color: #ffc890; font-size: 13px; }
+.tm-l { left: 10px; top: 10px; width: 30%; height: 34%; }
+.tm-led { left: 34%; top: 10px; width: 32%; }
+.tm-r { right: 10px; top: 10px; width: 28%; height: 42%; }
+.tm-mid { left: 30%; bottom: 72px; width: 40%; }
+.tm-mm { left: 22%; bottom: 10px; width: 56%; }
+.tm-pad { left: 10px; bottom: 60px; width: 15%; }
+.tm-act { right: 10px; bottom: 60px; width: 18%; }
+.tut-icons th { font-size: 22px; width: 160px; color: var(--fg) !important; }
+.ic { display: inline-block; vertical-align: middle; }
+.ic-buyer { width: 12px; height: 12px; border-radius: 50%; background: #ffd34d; box-shadow: 0 0 6px #ffd34d; }
+.ic-inc { width: 0; height: 0; border-left: 7px solid transparent; border-right: 7px solid transparent; border-bottom: 12px solid #ff4d4d; }
+.ic-ticket { width: 12px; height: 12px; background: #4dd0ff; border-radius: 2px; }
+.ic-me { width: 16px; height: 16px; border-radius: 4px; background: #2f9bff; }
+.ic-stock { font-size: 12px; background: rgba(255,255,255,0.08); border-radius: 6px; padding: 2px 6px; }
+.ic-stock.out { color: var(--bad); text-decoration: line-through; }
+.ic-bubble { font: 700 12px var(--font); background: #fff; color: #111; border: 2px solid #111; border-radius: 10px; padding: 2px 6px; }
+.tut-list { margin: 0; padding-left: 20px; line-height: 1.75; font-size: 14px; }
+
+/* ===================================================================== 手機 / 窄螢幕 */
+@media (max-width: 760px), (max-height: 520px) {
+  .panel { padding: 6px 8px; font-size: 11px; border-radius: 9px; }
+  .led { top: 6px; left: 6px; right: 6px; width: auto; min-width: 0; transform: none; height: 30px; }
+  #marquee-text { font-size: 19px; }
+  .hud-left { top: 42px; left: 6px; width: calc(50vw - 9px); }
+  .hud-right { top: 42px; right: 6px; width: calc(50vw - 9px); }
+  .hud-left .route, .hud-left .row.small { display: none; }
+  .big { font-size: 15px; }
+  .trips { font-size: 15px; } .trips b { font-size: 19px; }
+  .stock { grid-template-columns: repeat(3, 1fr); gap: 2px; font-size: 10px; }
+  .stock span { padding: 1px 3px; }
+  .tickets { font-size: 10px; max-height: 56px; overflow: hidden; }
+  #toasts { top: 150px; width: 92vw; }
+  .toast { font-size: 12px; }
+  #minimap { bottom: 6px; width: calc(100vw - 12px); padding: 4px 8px; }
+  .mm-track { height: 28px; }
+  .t-pad, .t-acts { bottom: 52px; gap: 6px; }
+  .t-pad { left: 6px; grid-template-columns: 58px; }
+  .t-acts { right: 6px; grid-template-columns: repeat(3, 54px); }
+  .t-btn { width: 54px; height: 50px; font-size: 17px; }
+  .t-pad .t-btn { width: 58px; }
+  .t-btn.primary { font-size: 22px; }
+  .t-top { right: 8px; top: auto; bottom: 232px; flex-direction: column; }
+  .prompt { bottom: 220px; font-size: 13px; max-width: 70vw; text-align: center; }
+  .dialog { bottom: 52px; width: calc(100vw - 12px); max-height: 56vh; overflow-y: auto; padding: 10px 12px; z-index: 2; }
+  .dialog.dock-top { top: 6px; max-height: 34vh; }
+  .d-menu { grid-template-columns: repeat(3, 1fr); }
+  .d-item, .d-opt { font-size: 13px; padding: 8px 6px; }
+  .d-item small { margin-left: 0; }
+  .help { display: none; }
+  .bubble { max-width: 200px; font-size: 13px; padding: 6px 9px; }
+  .screen { padding: 10px; }
+  .screen.menu { padding-top: 3vh; }
+  .card { padding: 16px; }
+  .c-cols, .tut-cols { grid-template-columns: 1fr; }
+  .c-row { grid-template-columns: 110px 1fr 70px; }
+  .tut-map { height: 380px; }
+  .tm { font-size: 11px; }
+  .tm-l { width: 44%; height: 26%; } .tm-r { width: 44%; height: 26%; }
+  .tm-led { left: 10px; right: 10px; width: auto; top: auto; bottom: 150px; }
+  .tm-mid { left: 25%; width: 50%; bottom: 100px; }
+  .tm-pad { width: 22%; bottom: 46px; } .tm-act { width: 22%; bottom: 46px; }
+  .tut-icons th { width: 90px; font-size: 18px; }
+  .pause-card .settings { grid-template-columns: 1fr; }
+  .menu-foot { flex-wrap: wrap; justify-content: center; }
+}

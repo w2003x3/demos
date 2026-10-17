@@ -10,10 +10,13 @@ import { cloneWithColors } from '../core/assets.js';
 import { TrainSet } from '../world/trainset.js';
 import { Passengers } from '../world/passengers.js';
 import { Scenery } from '../world/scenery.js';
-import { CartCrew, CREW } from '../world/cartCrew.js';
+import { CartCrew, CREW, POS_KEYS } from '../world/cartCrew.js';
 import { OVERCHARGE_COMPLAINT_CHANCE } from './career.js';
 
 const PUSH_SPEED = 1.8;
+const FAST_SPEED = 3.6;     // 快速前進(按住 Shift / 畫面「快速」鈕)
+const CRASH_SPEED = 2.5;    // 超過此速度撞上障礙物、乘客或來不及開的車門才會「撞上」
+const DOOR_OK = 0.62;       // 推車前緣通過車門時,門至少要開到這個比例
 const PULL_SPEED = 0.8;
 const TURN_TIME = 0.7;
 const SERVE_RANGE = 0.95;
@@ -68,7 +71,15 @@ export class OnboardPhase {
     this.stats = {
       revenue: 0, sold: 0, served: 0, missed: 0, sat: 100, wrongOrder: 0, incidents: 0,
       underLoss: 0, underCount: 0, overCount: 0, deductions: 0,
+      crashes: 0, damaged: 0, pitched: 0, pitchSold: 0, restocks: 0,
     };
+    this.stopEvt = null;          // 中途停靠站的事件(擋道判定、月台補貨)
+    this.curtainTimer = 25 + this.R() * 20;
+    this.pendingPitch = null;
+    this._hv = new THREE.Vector3();
+    // 只聽得到同一節車廂的對話(別節車廂只有字幕)
+    g.voice.hearing = (anchor) => this._hearing(anchor);
+    this.applySettings();
     this.complaints = [];
     this.incidents = [];
     this.dialog = null;
@@ -90,12 +101,35 @@ export class OnboardPhase {
   }
 
   dispose() {
+    this.g.voice.hearing = null;
     this.g.scene.remove(this.root);
     this.g.scene.fog = null;
     this.g.voice.stopAll();
     this.g.ui.clearBubbles();
     this.g.camera.fov = FOV.normal;
     this.g.camera.updateProjectionMatrix();
+  }
+
+  /** 套用遊戲中可切換的設定(窗簾);畫質由 Game 處理。 */
+  applySettings() {
+    const on = !!this.g.settings.curtains;
+    this.train.setCurtains(on);
+    // 窗簾拉下:窗外景物不繪製(保留燈光,車內亮度不變)
+    this.scenery.group.children.forEach((o) => { if (!o.isLight) o.visible = !on; });
+  }
+
+  /** 對話可聽度:不同車廂 0(只顯示字幕);同一節車廂依距離 1 → 0.45。 */
+  _hearing(anchor) {
+    const v = anchor.isObject3D ? anchor.getWorldPosition(this._hv) : anchor;
+    if (this.train.local(v.x).k !== this.train.local(this.p.mid).k) return 0;
+    return Math.max(0.45, 1 - Math.abs(v.x - this.p.mid) / 22);
+  }
+
+  /** 推車附近、同一節車廂中隨機一位坐著的乘客(抱怨用)。 */
+  _nearbySeat(range = 6) {
+    const k = this.train.local(this.p.mid).k;
+    const c = this.pax.seats.filter((s) => s.occupied && s.car === k && Math.abs(s.x - this.p.mid) < range);
+    return c.length ? c[(this.R() * c.length) | 0] : null;
   }
 
   // ---------------------------------------------------------------- 預訂便當
@@ -121,6 +155,7 @@ export class OnboardPhase {
       r.dwell -= dt;
       if (r.dwell <= 0) {
         r.mode = 'run';
+        this.stopEvt = null;
         r.announced = false;
         if (r.leg > 0) this.g.voice.announce([`station_depart_${this.stops.at(-1).id}`]);
       }
@@ -160,6 +195,7 @@ export class OnboardPhase {
     }
     r.mode = 'dwell';
     r.dwell = this.cfg.dwell;
+    this.stopEvt = { blockT: 2.5 + this.R() * 3, blockChecked: false, restocked: false };
     const n = this.pax.exchange(0.28, this.cfg.occupancy);
     this.g.ui.toast(`${st.zh} 到了 — ${n} 位旅客上下車`, 'info');
     const [lo, hi] = this.cfg.incidents.perStop;
@@ -237,10 +273,13 @@ export class OnboardPhase {
       }
       return;
     }
+    if (P.stun > 0) { P.stun -= dt; P.vel = 0; return; }
     let want = 0;
+    let fast = false;
     if (!this.dialog) {
       if (inp.isDown('KeyW', 'ArrowUp')) want = 1;
       else if (inp.isDown('KeyS', 'ArrowDown')) want = -1;
+      fast = want > 0 && inp.isDown('ShiftLeft', 'ShiftRight');
       if (inp.wasPressed('Space')) {
         if (this.train.inVestibule(P.mid)) {
           P.turning = { t: 0, from: P.angle };
@@ -251,28 +290,85 @@ export class OnboardPhase {
         this.g.ui.toast('走道太窄!只能在車廂兩端的玄關迴轉推車', 'warn');
       }
     }
-    const target = want > 0 ? PUSH_SPEED : want < 0 ? -PULL_SPEED : 0;
-    const acc = want ? 4 : 6;
+    const target = want > 0 ? (fast ? FAST_SPEED : PUSH_SPEED) : want < 0 ? -PULL_SPEED : 0;
+    const acc = want ? (fast ? 3 : 4) : 6;
     P.vel += Math.sign(target - P.vel) * Math.min(Math.abs(target - P.vel), acc * dt);
+    P.fast = fast;
     if (!P.vel) return;
     const before = P.mid;
+    const speed = Math.abs(P.vel);
+    const frontBefore = before + P.facing * CREW.front * Math.sign(P.vel);
     P.mid += P.vel * P.facing * dt;
-    this._clampMid(before);
+    // 撞門:推車前緣通過車門時,門還沒開夠
+    if (speed > CRASH_SPEED) {
+      const front = P.mid + P.facing * CREW.front * Math.sign(P.vel);
+      const door = this.train.doors.find((d) => (d.x - frontBefore) * (d.x - front) <= 0 && d.open < DOOR_OK);
+      if (door) {
+        P.mid = before;
+        this._crash('door', door);
+        return;
+      }
+    }
+    const blocker = this._clampMid(before);
+    if (blocker && speed > CRASH_SPEED) this._crash('incident', blocker);
   }
 
-  /** 邊界與障礙物限制;before 為移動前位置(用來判斷障礙物在哪一側)。 */
+  /** 快速推車撞上車門或走道上的乘客/行李:停下、耽擱、可能撞壞商品與客訴。 */
+  _crash(kind, what) {
+    const g = this.g, P = this.p;
+    P.vel = 0;
+    P.stun = 1.4;
+    this.stats.crashes++;
+    g.sfx.bad();
+    g.sfx.clack(1.6);
+    // 推車上的商品可能掉出來摔壞
+    const have = ITEM_LIST.filter((i) => this.stock[i.id] > 0);
+    if (have.length && this.R() < 0.6) {
+      const it = have[(this.R() * have.length) | 0];
+      this.stock[it.id]--;
+      this.crew.setStock(this.stock);
+      this.stats.damaged++;
+      g.ui.toast(`${it.name}掉出來摔壞了!`, 'bad');
+    }
+    if (kind === 'door') {
+      g.ui.toast('砰!車門來不及打開,推車撞上去了(放慢速度!)', 'bad');
+      this._sat(-2);
+      const seat = this._nearbySeat(5);
+      if (seat && this.R() < 0.35) {
+        g.voice.talk([{ id: 'att_sorry_crash', anchor: this.crew.head }, { id: `pax_door_noise_${seat.gender}`, anchor: seat.head }]);
+        this._complain('推車撞門噪音');
+      } else g.voice.talk('att_sorry_crash', this.crew.head);
+      return;
+    }
+    const inc = what;
+    this._sat(-6);
+    if (inc.def.prop === 'adult' || inc.def.prop === 'kid') {
+      g.ui.toast('推車撞到乘客了!', 'bad');
+      const gender = this.R() < 0.5 ? 'm' : 'f';
+      g.voice.talk([{ id: 'att_sorry_crash', anchor: this.crew.head }, { id: `pax_crash_${gender}`, anchor: inc.anchor }]);
+      this._complain(`推車撞到乘客(${inc.def.title})`);
+    } else {
+      g.ui.toast(`推車撞上${inc.def.title}!`, 'bad');
+      g.voice.talk('att_sorry_crash', this.crew.head);
+    }
+  }
+
+  /** 邊界與障礙物限制;before 為移動前位置(用來判斷障礙物在哪一側)。回傳擋住推車的狀況(若有)。 */
   _clampMid(before = this.p.mid) {
     const P = this.p;
     const [lo0, hi0] = this._extent(before);
     let minLo = this.train.minX + 0.08, maxHi = this.train.maxX - 0.08;
+    let hiInc = null, loInc = null;
     for (const inc of this.incidents) {
       if (!inc.active) continue;
-      if (inc.x >= hi0 - 0.01) maxHi = Math.min(maxHi, inc.x - 0.3);
-      else if (inc.x <= lo0 + 0.01) minLo = Math.max(minLo, inc.x + 0.3);
+      if (inc.x >= hi0 - 0.01 && inc.x - 0.3 < maxHi) { maxHi = inc.x - 0.3; hiInc = inc; }
+      else if (inc.x <= lo0 + 0.01 && inc.x + 0.3 > minLo) { minLo = inc.x + 0.3; loInc = inc; }
     }
     const [lo, hi] = this._extent();
-    if (hi > maxHi) { P.mid -= hi - maxHi; P.vel = 0; }
-    if (lo < minLo) { P.mid += minLo - lo; P.vel = 0; }
+    let blocker = null;
+    if (hi > maxHi) { P.mid -= hi - maxHi; P.vel = 0; blocker = hiInc; }
+    if (lo < minLo) { P.mid += minLo - lo; P.vel = 0; blocker = loInc; }
+    return blocker;
   }
 
   _updateTrips() {
@@ -411,6 +507,13 @@ export class OnboardPhase {
     const nd = R() < 0.35 ? 0 : R() < 0.85 ? 1 : 2;
     for (const [kind, n] of [['bento', nb], ['drink', nd]]) {
       order.push(...shuffle(pool(kind), R).slice(0, n).map((i) => i.id));
+    }
+    // 乘客不知道推車上賣完了什麼:有機率點到已售完的品項(要告知售完,見 KeyX)
+    const out = ITEM_LIST.filter((i) => this.stock[i.id] <= 0);
+    if (out.length && R() < 0.35) {
+      const it = out[(R() * out.length) | 0];
+      const same = order.findIndex((id) => ITEMS[id].kind === it.kind);
+      if (same >= 0 && R() < 0.5) order[same] = it.id; else order.push(it.id);
     }
     if (!order.length) {
       const any = ITEM_LIST.filter((i) => this.stock[i.id] > 0);
@@ -578,10 +681,10 @@ export class OnboardPhase {
       const next = this.stops[Math.min(r.leg + 1, this.stops.length - 1)];
       const others = shuffle(Object.entries(STATIONS).filter(([id]) => id !== next.id), this.R).slice(0, 2);
       options = [
-        { label: `「下一站是${next.zh}。」`, ok: true, reply: '乘客:「謝謝你!」' },
-        ...others.map(([, s]) => ({ label: `「下一站是${s.zh}。」`, ok: false, reply: '乘客半信半疑……旁邊的人糾正了你。' })),
+        { label: `「下一站是${next.zh}。」`, ok: true, reply: '乘客:「謝謝你!」', voice: 'pax_thanks_f' },
+        ...others.map(([, s]) => ({ label: `「下一站是${s.zh}。」`, ok: false, reply: '乘客半信半疑……旁邊的人糾正了你。', voice: 'pax_nextstop_wrong_f' })),
       ];
-    } else options = def.options.slice();
+    } else options = def.options.map((o, i) => ({ ...o, voice: o.say ? `inc_${def.id}_r${i}` : null }));
     g.voice.talk(`inc_${def.id}`, inc.anchor);
     this.dialog = { kind: 'choice', inc, options: shuffle(options, this.R), lock: 0, msg: '', msgType: '', closing: false };
   }
@@ -601,7 +704,8 @@ export class OnboardPhase {
     if (d.kind === 'hold') {
       if (inp.isDown('KeyE')) d.inc.progress += dt / d.inc.def.duration;
       if (d.inc.progress >= 1) {
-        g.ui.bubble({ text: d.inc.def.done, anchor: this.crew.head, label: '服勤員' });
+        if (d.inc.def.say) g.voice.talk(`inc_${d.inc.def.id}_done`, d.inc.anchor);
+        else g.ui.bubble({ text: d.inc.def.done, anchor: this.crew.head, label: '服勤員' });
         this._resolveIncident(d.inc);
         this._closeDialog();
       }
@@ -611,7 +715,9 @@ export class OnboardPhase {
       const n = inp.digit();
       if (!n || n > d.options.length) return;
       const opt = d.options[n - 1];
-      g.ui.bubble({ text: opt.reply, anchor: d.inc.anchor, label: '' });
+      // 當事人以語音回應(對話框顯示台詞);旁白性質的結果顯示在面板訊息
+      if (opt.voice) g.voice.talk(opt.voice, d.inc.anchor);
+      else g.ui.bubble({ text: opt.reply, anchor: d.inc.anchor, label: '' });
       if (opt.ok) {
         d.msg = opt.reply; d.msgType = 'good';
         d.lock = 1.0; d.closing = true;
@@ -636,6 +742,7 @@ export class OnboardPhase {
         else { d.msg = `${it.name}沒有庫存了`; d.msgType = 'bad'; g.sfx.bad(); }
       }
       if (inp.wasPressed('Backspace')) d.tray.pop();
+      if (inp.wasPressed('KeyX')) { this._tellSoldOut(d); return; }
       if (inp.wasPressed('Enter', 'NumpadEnter', 'KeyE') && d.tray.length) {
         if ([...d.tray].sort().join() !== [...d.order].sort().join()) {
           g.voice.talk(`pax_wrong_item_${d.seat.gender}`, d.seat.head);
@@ -652,6 +759,101 @@ export class OnboardPhase {
       return;
     }
     if (d.stage === 'pos') this._updatePos(d, dt);
+  }
+
+  /** 告知乘客點的東西賣完了:乘客可能改買其他品項,或乾脆不買。 */
+  _tellSoldOut(d) {
+    const g = this.g, sx = d.seat.gender;
+    const out = d.order.filter((id) => this.stock[id] <= 0);
+    if (!out.length) {
+      // 明明有貨卻說賣完
+      g.voice.talk([{ id: 'att_soldout', anchor: this.crew.head }, { id: `pax_not_soldout_${sx}`, anchor: d.seat.head }]);
+      d.msg = '乘客:「明明還有啊?」(說謊扣滿意度)'; d.msgType = 'bad';
+      d.lock = 1.2;
+      this._sat(-3);
+      g.sfx.bad();
+      return;
+    }
+    const rest = d.order.filter((id) => this.stock[id] > 0);
+    if (rest.length && this.R() < 0.65) {
+      g.voice.talk([{ id: 'att_soldout', anchor: this.crew.head }, { id: `pax_soldout_ok_${sx}`, anchor: d.seat.head }]);
+      d.order = rest;
+      d.tray = d.tray.filter((id) => rest.includes(id));
+      d.msg = `乘客改買:${rest.map((id) => ITEMS[id].name).join('、')}`; d.msgType = 'good';
+      d.lock = 0.8;
+      return;
+    }
+    g.voice.talk([{ id: 'att_soldout', anchor: this.crew.head }, { id: `pax_soldout_leave_${sx}`, anchor: d.seat.head }]);
+    this.pax.markServed(d.seat);
+    this.stats.missed++;
+    this._sat(-1);
+    d.msg = '乘客:「那算了。」'; d.msgType = 'bad';
+    d.tray = [];
+    d.stage = 'done';
+    d.lock = 1.4;
+    d.closing = true;
+  }
+
+  // ---------------------------------------------------------------- 推銷(對沒有需求的乘客)
+  /** 推車旁可推銷的乘客:有人坐、沒在等、本趟還沒被推銷/服務過、不是預訂客。 */
+  _pitchTarget() {
+    const cx = this._cartX();
+    let best = null, bd = SERVE_RANGE;
+    for (const s of this.pax.seats) {
+      if (!s.occupied || s.wants || s.served || s.pitched || s.preorder) continue;
+      const d = Math.abs(s.x - cx);
+      if (d < bd) { bd = d; best = s; }
+    }
+    return best;
+  }
+
+  _pitch(seat) {
+    const g = this.g, sx = seat.gender, R = this.R();
+    seat.pitched = true;
+    this.stats.pitched++;
+    const att = { id: 'att_pitch', anchor: this.crew.head };
+    if (R < 0.32) {
+      // 有興趣 → 進入點餐流程
+      this.pendingPitch = { seat, t: 6 };
+      g.voice.talk([att, { id: `pax_pitch_buy_${sx}`, anchor: seat.head }], null, () => { if (this.pendingPitch?.seat === seat) this.pendingPitch.t = 0; });
+    } else if (R < 0.78) {
+      g.voice.talk([att, { id: `pax_pitch_no_${sx}`, anchor: seat.head }]);
+      this.pax.markServed(seat);
+    } else {
+      g.voice.talk([att, { id: `pax_pitch_annoyed_${sx}`, anchor: seat.head }]);
+      this.pax.markServed(seat);
+      this._sat(-3);
+      this._complain('推銷打擾安寧');
+    }
+  }
+
+  // ---------------------------------------------------------------- 補貨
+  /** 在備餐區(第一節車廂後端玄關)隨時可補滿;中途停站時在任一玄關可向月台補一半。 */
+  _restockSpot() {
+    if (ITEM_LIST.every((i) => this.stock[i.id] >= this.cfg.stock[i.id])) return null;
+    const [lo] = this._extent();
+    if (lo <= -this.type.interior.partitionX - 0.2 + 1.2 && this.train.local(this.p.mid).k === 0) return 'home';
+    if (this.run.mode === 'dwell' && this.stopEvt && !this.stopEvt.restocked && this.train.inVestibule(this.p.mid)) return 'station';
+    return null;
+  }
+
+  _restock(spot) {
+    const g = this.g, max = this.cfg.stock;
+    const full = ITEM_LIST.every((i) => this.stock[i.id] >= max[i.id]);
+    if (full) { g.ui.toast('推車已經是滿的', 'warn'); return; }
+    if (spot === 'home') {
+      this.stock = { ...max };
+      g.voice.talk('att_restock', this.crew.head);
+      g.ui.toast('在備餐區補滿貨了', 'good');
+    } else {
+      for (const i of ITEM_LIST) this.stock[i.id] = Math.min(max[i.id], this.stock[i.id] + Math.ceil(max[i.id] / 2));
+      this.stopEvt.restocked = true;
+      g.voice.talk('att_station_restock', this.crew.head);
+      g.ui.toast('月台便當業者幫忙補貨了(每品項 +一半)', 'good');
+    }
+    this.stats.restocks++;
+    this.crew.setStock(this.stock);
+    g.sfx.ok();
   }
 
   _closeDialog() {
@@ -675,6 +877,7 @@ export class OnboardPhase {
     const wasDialog = !!this.dialog;
     this._updateDialog(dt);
     this._updatePlayer(dt);
+    this._updateEvents(dt);
     this._updateTrips();
     this.crew.updatePos(dt);
 
@@ -708,6 +911,29 @@ export class OnboardPhase {
         prompt = '<b>Space</b> 迴轉推車';
       } else if (row) prompt = `<b>F</b> 送預訂便當(第 ${row[0].row + 1} 排)`;
       if (row && inp.wasPressed('KeyF') && !this.dialog) this._openDeliver(row);
+      // 補貨(備餐區 / 停站時的玄關)
+      const spot = this._restockSpot();
+      if (spot) {
+        prompt = `${prompt ? `${prompt} · ` : ''}<b>R</b> ${spot === 'home' ? '備餐區補貨' : '月台補貨'}`;
+        if (inp.wasPressed('KeyR') && !this.dialog) this._restock(spot);
+      }
+      // 推銷
+      const pt = !t && !this.p.vel ? this._pitchTarget() : null;
+      if (pt) {
+        prompt = `${prompt ? `${prompt} · ` : ''}<b>Q</b> 向這位乘客推銷`;
+        if (inp.wasPressed('KeyQ') && !this.dialog) this._pitch(pt);
+      }
+    }
+
+    // 推銷成功:乘客說完「好啊」後開始點餐(推車還在旁邊才算)
+    if (this.pendingPitch) {
+      const pp = this.pendingPitch;
+      pp.t -= dt;
+      if (pp.t <= 0) {
+        this.pendingPitch = null;
+        if (!this.dialog && Math.abs(pp.seat.x - this._cartX()) < SERVE_RANGE * 1.6) { this.stats.pitchSold++; this._openOrder(pp.seat); }
+        else this.pax.markServed(pp.seat);
+      }
     }
 
     // 叫賣
@@ -722,13 +948,59 @@ export class OnboardPhase {
     // 視覺更新
     const moving = Math.abs(this.p.vel) > 0.05;
     this.crew.place(this.p.mid, this.p.angle, this.time, moving);
-    this.train.updateDoors(this.p.mid, dt);
+    this.train.updateDoors(...this._extent(), dt);
     this.scenery.update(this.run.s, this._platformX(), this.p.mid);
     this._updateCamera(dt);
     g.sfx.setRumble(this.run.v / this.type.maxSpeed);
 
     this._hud(dt, prompt);
     return null;
+  }
+
+  /** 定時事件:窗簾拉下時乘客抱怨;停站時推車卡在走道被抱怨擋道。 */
+  _updateEvents(dt) {
+    const g = this.g;
+    if (g.settings.curtains) {
+      this.curtainTimer -= dt;
+      if (this.curtainTimer <= 0) {
+        this.curtainTimer = 35 + this.R() * 30;
+        const seat = this.R() < 0.55 ? this._nearbySeat(9) : null;
+        if (seat) {
+          g.voice.talk(`pax_curtain_${seat.gender}`, seat.head);
+          this._sat(-2);
+          this._complain('拉下窗簾看不到風景');
+        }
+      }
+    }
+    const ev = this.stopEvt;
+    if (ev && !ev.blockChecked && this.run.mode === 'dwell') {
+      ev.blockT -= dt;
+      if (ev.blockT <= 0) {
+        ev.blockChecked = true;
+        if (!this.train.inVestibule(this.p.mid) && !this.p.turning && this.R() < 0.55) {
+          const seat = this._nearbySeat(4);
+          if (seat) {
+            g.voice.talk(`pax_blocking_${seat.gender}`, seat.head);
+            this._sat(-3);
+            this._complain('停靠站時推車擋住走道');
+          }
+        }
+      }
+    }
+  }
+
+  /** 畫面點擊(非拖曳):結帳時點 3D 收銀機按鍵。 */
+  onTap(clientX, clientY) {
+    const d = this.dialog;
+    if (!(d?.kind === 'order' && d.stage === 'pos')) return false;
+    const ray = this._ray || (this._ray = new THREE.Raycaster());
+    ray.setFromCamera(new THREE.Vector2(clientX / innerWidth * 2 - 1, -(clientY / innerHeight) * 2 + 1), this.g.camera);
+    const hit = ray.intersectObject(this.crew.posKeysMesh, false)[0];
+    if (!hit?.uv) return false;
+    const col = Math.min(5, Math.floor(hit.uv.x * 6)), row = Math.min(1, Math.floor((1 - hit.uv.y) * 2));
+    const k = POS_KEYS[row * 6 + col];
+    this.g.input.press(k === '⌫' ? 'Backspace' : k === '⏎' ? 'Enter' : `Digit${k}`);
+    return true;
   }
 
   _platformX() {
@@ -759,8 +1031,10 @@ export class OnboardPhase {
     if (checkout) {
       // 結帳:第一人稱低頭看結帳機台
       pos = att.clone().add(new THREE.Vector3(0, 1.58, 0)).addScaledVector(dir, 0.1);
-      target = this.crew.posWorld().add(new THREE.Vector3(0, -0.11, 0)); // 機台放在畫面上半,避開下方操作面板
-      fov = FOV.pos;
+      target = this.crew.posWorld().add(new THREE.Vector3(0, -0.02, 0)); // 機台置中;結帳面板改停靠在畫面上方
+      // 直式螢幕(手機)水平視角窄:拉近鏡頭,讓收銀機約佔畫面寬度 85%,按鍵夠大好點
+      const aspect = innerWidth / innerHeight;
+      fov = FOV.pos * (aspect < 0.9 ? THREE.MathUtils.clamp(aspect * 1.25, 0.55, 1) : 1);
     } else if (c.mode === 'first') {
       pos = att.clone().add(new THREE.Vector3(0, 1.62, 0)).addScaledVector(dir, 0.12);
       target = pos.clone().addScaledVector(look, 3).add(new THREE.Vector3(0, -0.35 + c.pitch, 0));
@@ -853,10 +1127,12 @@ export class OnboardPhase {
     if (!d) return null;
     const keys = (opts) => opts.map((o, i) => ({ key: i + 1, label: o }));
     if (d.kind === 'hold') {
-      return { title: d.inc.def.title, text: d.inc.def.text, hint: d.inc.def.hint, progress: d.inc.progress, footer: 'Esc 先離開' };
+      return { title: d.inc.def.title, text: d.inc.def.text, hint: d.inc.def.hint, progress: d.inc.progress, footer: 'Esc 先離開',
+        actions: [{ key: 'KeyE', label: '按住處理', hold: true, primary: true }, { key: 'Escape', label: '先離開' }] };
     }
     if (d.kind === 'choice') {
-      return { title: d.inc.def.title, text: d.inc.def.text, options: keys(d.options.map((o) => o.label)), msg: d.msg, msgType: d.msgType, locked: d.lock > 0, footer: '按數字鍵選擇處理方式 · Esc 先離開' };
+      return { title: d.inc.def.title, text: d.inc.def.text, options: keys(d.options.map((o) => o.label)), msg: d.msg, msgType: d.msgType, locked: d.lock > 0, footer: '點選或按數字鍵選擇處理方式 · Esc 先離開',
+        actions: [{ key: 'Escape', label: '先離開' }] };
     }
     if (d.kind === 'deliver') {
       if (d.stage === 'seat') {
@@ -864,18 +1140,18 @@ export class OnboardPhase {
           title: `送預訂便當 — 第 ${d.carNo} 車 第 ${d.row[0].row + 1} 排`,
           text: '要送給哪個座位?(座號標在行李架上)',
           options: keys(d.row.map((s) => `${s.num} 號${s.window ? '(靠窗)' : '(走道)'}${s.occupied ? '' : ' — 空位'}`)),
-          msg: d.msg, msgType: d.msgType, footer: '數字鍵選擇 · Esc 取消',
+          msg: d.msg, msgType: d.msgType, footer: '點選或按數字鍵選擇 · Esc 取消', actions: [{ key: 'Escape', label: '取消' }],
         };
       }
       if (d.stage === 'item') {
         return {
           title: `送到 ${d.carNo} 車 ${d.seat.num} 號`, text: '要送哪一個預訂便當?',
-          options: keys(d.items.map((b) => `${b.name}(預訂剩 ${this.reserved[b.id]})`)), footer: '數字鍵選擇 · Esc 取消',
+          options: keys(d.items.map((b) => `${b.name}(預訂剩 ${this.reserved[b.id]})`)), footer: '點選或按數字鍵選擇 · Esc 取消', actions: [{ key: 'Escape', label: '取消' }],
         };
       }
       return { title: '送預訂便當', text: '', msg: d.msg, msgType: d.msgType, footer: '' };
     }
-    const orderText = d.order.map((id) => ITEMS[id].name).join('、');
+    const orderText = d.order.map((id) => (this.stock[id] <= 0 ? `<s>${ITEMS[id].name}</s>` : ITEMS[id].name)).join('、');
     if (d.stage === 'pick') {
       return {
         title: '乘客點餐',
@@ -883,14 +1159,16 @@ export class OnboardPhase {
         menu: ITEM_LIST.map((i) => ({ key: i.key, label: i.name, price: i.price, stock: this.stock[i.id] - d.tray.filter((x) => x === i.id).length })),
         tray: d.tray.map((id) => ITEMS[id].name),
         msg: d.msg, msgType: d.msgType, locked: d.lock > 0,
-        footer: '數字鍵 1~6 拿取 · Backspace 放回 · Enter 交給乘客 · Esc 取消',
+        footer: '點品項或按 1~6 拿取 · ⌫ 放回 · Enter 交給乘客 · X 告知售完 · Esc 取消',
+        actions: [{ key: 'Enter', label: '交給乘客', primary: true }, { key: 'Backspace', label: '⌫ 放回' }, { key: 'KeyX', label: '告知售完' }, { key: 'Escape', label: '取消' }],
       };
     }
     return {
       title: '心算結帳',
       text: `${d.tray.map((id) => `${ITEMS[id].name} $${ITEMS[id].price}`).join(' + ')}<br>請心算<b>總金額</b>,在結帳機台輸入。`,
-      msg: d.msg, msgType: d.msgType, locked: !!d.waitVoice,
-      footer: d.waitVoice ? '乘客抱怨中……聽完才能重新輸入(列車仍在行駛!)' : '數字鍵輸入金額 · Backspace 修改 · Enter 確認',
+      msg: d.msg, msgType: d.msgType, locked: !!d.waitVoice, dock: 'top',
+      footer: d.waitVoice ? '乘客抱怨中……聽完才能重新輸入(列車仍在行駛!)' : '點收銀機按鍵或用數字鍵輸入金額 · ⌫ 修改 · Enter 確認',
+      actions: [{ key: 'Backspace', label: '⌫' }, { key: 'Enter', label: '確認金額', primary: true }],
     };
   }
 

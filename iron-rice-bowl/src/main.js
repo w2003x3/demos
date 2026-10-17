@@ -21,6 +21,10 @@ const QUALITY = {
   low: { label: '低', areaLights: false, pointLights: false, shadows: false, paxShadows: false, shadowSize: 512, maxDpr: 0.85 },
 };
 const QUALITY_KEY = 'trainBento.quality';
+const SETTINGS_KEY = 'trainBento.settings';
+const TUTORIAL_KEY = 'trainBento.tutorialSeen';
+const load = (k, d) => { try { return JSON.parse(localStorage.getItem(k)) ?? d; } catch { return d; } };
+const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch { /* 忽略 */ } };
 
 const PHASES = {
   onboard: OnboardPhase, station: StationPhase, kitchen: KitchenPhase, driver: DriverPhase,
@@ -50,6 +54,9 @@ class Game {
     this.input = new Input();
     this.sfx = new Sfx();
     this.ui = new UI(document.getElementById('ui'));
+    this.ui.bindInput(this.input);
+    // 遊戲中可切換的設定(窗簾);存在瀏覽器
+    this.settings = { curtains: false, ...load(SETTINGS_KEY, {}) };
     this.voice = new Voice(VOICE_BASE, (s) => {
       if (s.channel === 'announce') this.ui.announce(s.label, s.text);
       else this.ui.bubble({ text: s.text, label: s.label, anchor: s.anchor });
@@ -74,8 +81,18 @@ class Game {
       this.camera.updateProjectionMatrix();
     });
     const c = this.renderer.domElement;
-    c.addEventListener('pointerdown', (e) => { this.mouse.dragging = true; c.setPointerCapture(e.pointerId); });
-    c.addEventListener('pointerup', () => (this.mouse.dragging = false));
+    c.addEventListener('pointerdown', (e) => {
+      this.mouse.dragging = true;
+      this.mouse.down = { x: e.clientX, y: e.clientY };
+      try { c.setPointerCapture(e.pointerId); } catch { /* 合成事件 */ }
+    });
+    c.addEventListener('pointerup', (e) => {
+      this.mouse.dragging = false;
+      // 點一下(沒拖曳):交給遊戲階段處理(例:點 3D 收銀機按鍵)
+      const d = this.mouse.down;
+      if (d && Math.hypot(e.clientX - d.x, e.clientY - d.y) < 8 && this.state === 'play') this.phase?.onTap?.(e.clientX, e.clientY);
+      this.mouse.down = null;
+    });
     c.addEventListener('pointermove', (e) => {
       if (!this.mouse.dragging) return;
       this.mouse.dx += e.movementX;
@@ -106,19 +123,25 @@ class Game {
     // 只能玩「目前職位」的任務;其他職位玩法尚未開放時以鎖定卡片顯示
     const list = MISSIONS.map((m) => (rank.phase !== 'onboard' && !m.locked
       ? { ...m, locked: true, subtitle: `${m.subtitle} · 目前職位:${rank.title}` } : m));
-    list.push(DRIVER_MISSION, KITCHEN_MISSION);
+    // 其他職位的任務:還沒到達該職位前不揭露內容
+    const mask = (m, id) => (c.knows(id) ? m : { ...m, title: '？？？', subtitle: '未知職位', brief: '到達該職位後揭曉。' });
+    list.push(mask(DRIVER_MISSION, 'driver'), mask(KITCHEN_MISSION, 'kitchen'));
+    const name = (id) => (c.knows(id) ? rankById(id).title : '？？？');
     this.ui.menu(list, {
       muted: this.muted,
       quality: this.quality.label,
       onQuality: () => this.cycleQuality(),
+      curtains: this.settings.curtains,
+      onCurtains: () => this.toggleCurtains(),
+      onHelp: () => this.ui.tutorial(() => this.menu()),
       voice: this.voice.source,
       career: {
-        ranks: RANKS,
+        ranks: RANKS.map((r) => ({ ...r, known: c.knows(r.id) })),
         rankIndex: c.rankIndex,
         rank,
         last: c.lastChange,
-        promoteTo: rank.promote && rankById(rank.promote.to).title,
-        demoteTo: rank.demote && rankById(rank.demote.to).title,
+        promoteTo: rank.promote && name(rank.promote.to),
+        demoteTo: rank.demote && name(rank.demote.to),
         demoteVerb: rank.demote?.verb,
         promotion: c.progress(rank.promote),
         demotion: c.progress(rank.demote),
@@ -149,6 +172,14 @@ class Game {
     return this.quality.label;
   }
 
+  /** 窗簾(拉下 = 不繪製窗外景色);遊戲中立即套用。 */
+  toggleCurtains() {
+    this.settings.curtains = !this.settings.curtains;
+    save(SETTINGS_KEY, this.settings);
+    this.phase?.applySettings?.();
+    return this.settings.curtains;
+  }
+
   toggleMute() {
     this.muted = !this.muted;
     this.sfx.setMuted(this.muted);
@@ -159,7 +190,14 @@ class Game {
   brief(m) {
     this.state = 'brief';
     this.pending = m;
-    this.ui.brief(m, () => this.play(m), () => this.menu());
+    this.ui.brief(m, () => this.startMission(m), () => this.menu());
+  }
+
+  /** 首次遊戲:先看完操作說明(快捷鍵、畫面區塊、圖示)才開始。 */
+  startMission(m) {
+    if (load(TUTORIAL_KEY, false)) { this.play(m); return; }
+    this.state = 'tutorial';
+    this.ui.tutorial(() => { save(TUTORIAL_KEY, true); this.play(m); }, { first: true });
   }
 
   async play(m) {
@@ -222,7 +260,7 @@ class Game {
       if (inp.wasPressed('KeyP') || (inp.wasPressed('Escape') && !this.phase.dialog)) {
         this.state = 'pause';
         this.voice.stopAll();
-        this.ui.pause(() => this._resume(), () => this._quit());
+        this._pauseMenu();
       } else {
         const res = this.phase.update(dt);
         if (res) this._endPhase(res);
@@ -230,12 +268,24 @@ class Game {
     } else if (this.state === 'pause') {
       if (inp.wasPressed('KeyP', 'Escape')) this._resume();
     } else if (this.state === 'brief') {
-      if (inp.wasPressed('Enter', 'NumpadEnter')) this.play(this.pending);
+      if (inp.wasPressed('Enter', 'NumpadEnter')) this.startMission(this.pending);
     } else if (this.state === 'result') {
       if (inp.wasPressed('Enter', 'NumpadEnter') && this.career.rank.phase === 'onboard') this.play(this.mission);
     }
     inp.endFrame();
     if (this.phase && this.state !== 'loading') this.renderer.render(this.scene, this.camera);
+  }
+
+  _pauseMenu() {
+    this.ui.pause(() => this._resume(), () => this._quit(), {
+      quality: this.quality.label,
+      onQuality: () => this.cycleQuality(),
+      curtains: this.settings.curtains,
+      onCurtains: () => this.toggleCurtains(),
+      muted: this.muted,
+      onMute: () => this.toggleMute(),
+      onHelp: () => this.ui.tutorial(() => this._pauseMenu()),
+    });
   }
 
   _resume() {

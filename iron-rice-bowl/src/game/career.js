@@ -12,6 +12,7 @@ const fresh = () => ({
   stats: {},     // 在目前職位期間的累積計數(換職位歸零)
   missions: 0,   // 生涯總任務數
   history: [],   // [{ from, to, kind: 'promote'|'demote', reason }]
+  reached: [START_RANK], // 曾經擔任過的職位(選單只揭露這些職位,其餘顯示未知)
 });
 
 export class Career {
@@ -21,7 +22,16 @@ export class Career {
       const raw = localStorage.getItem(KEY);
       if (raw) this.data = { ...fresh(), ...JSON.parse(raw) };
     } catch { /* 無法讀取存檔 → 使用新紀錄 */ }
+    // 舊存檔沒有 reached:由人事紀錄與目前職位補齊
+    const titleToId = Object.fromEntries(RANKS.map((r) => [r.title, r.id]));
+    const set = new Set(this.data.reached || []);
+    set.add(this.data.rank);
+    for (const h of this.data.history || []) { if (titleToId[h.from]) set.add(titleToId[h.from]); if (titleToId[h.to]) set.add(titleToId[h.to]); }
+    this.data.reached = [...set];
   }
+
+  /** 是否已到達(揭露)該職位。 */
+  knows(id) { return this.data.reached.includes(id); }
 
   save() {
     try { localStorage.setItem(KEY, JSON.stringify(this.data)); } catch { /* 忽略 */ }
@@ -70,6 +80,7 @@ export class Career {
       const rec = { from: rank.title, to: to.title, kind: change.kind, verb: change.block.verb, reason: change.reason, clear: !!to.clear };
       d.history.push(rec);
       d.rank = to.id;
+      if (!d.reached.includes(to.id)) d.reached.push(to.id);
       d.stats = {};
       this.save();
       return rec;
