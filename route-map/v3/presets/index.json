@@ -1,0 +1,8 @@
+[
+  { "id": "tw-rail", "title": "台鐵高鐵(含支線)", "file": null, "lines": 0, "stations": 0, "note": "執行 tools/build-presets.mjs 產生", "thumb": [] },
+  { "id": "north-metro", "title": "北部捷運(台北・新北・桃園・基隆)", "file": null, "lines": 0, "stations": 0, "note": "執行 tools/build-presets.mjs 產生", "thumb": [] },
+  { "id": "hsinchu-lrt", "title": "新竹輕軌", "file": null, "lines": 0, "stations": 0, "note": "規劃中,TDX 尚無官方站點資料", "thumb": [] },
+  { "id": "central-metro", "title": "中部捷運(台中・彰化)", "file": null, "lines": 0, "stations": 0, "note": "執行 tools/build-presets.mjs 產生", "thumb": [] },
+  { "id": "tainan-metro", "title": "台南捷運", "file": null, "lines": 0, "stations": 0, "note": "興建/規劃中,TDX 尚無官方站點資料", "thumb": [] },
+  { "id": "kaohsiung-metro", "title": "高雄捷運(高雄・屏東)", "file": null, "lines": 0, "stations": 0, "note": "執行 tools/build-presets.mjs 產生", "thumb": [] }
+]

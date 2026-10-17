@@ -9,9 +9,9 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const projects = path.resolve(here, '..');
 
-// 輸出資料夾 ← 來源專案;files 為要複製的檔案/資料夾(相對於來源)
+// 輸出資料夾 ← 來源專案;files 為要複製的檔案/資料夾(相對於來源);redirect 為輸出資料夾首頁要導向的子路徑
 const sites = [
-  { out: 'route-map', src: '路網連連看/v2', files: ['.'] },
+  { out: 'route-map', src: '路網連連看', files: ['v2', 'v3'], redirect: 'v3/', exclude: /[\\/]tests($|[\\/])|\.blend$/ },
   { out: 'iron-rice-bowl', src: '火車便當', files: ['index.html', 'style.css', 'src', 'assets'] },
   { out: '3d-box', src: '3D紙箱', files: ['index.html', 'app.js', 'styles.css'] },
   { out: 'zhu-ying-tai', src: '注英台', files: ['index.html', 'styles.css', 'app.js', 'data'] },
@@ -30,7 +30,13 @@ for (const s of sites) {
     execSync(`npx vite build --outDir "${out}" --emptyOutDir`, { cwd: src, stdio: 'inherit' });
   } else {
     fs.mkdirSync(out, { recursive: true });
-    for (const f of s.files) fs.cpSync(path.join(src, f), path.join(out, f), { recursive: true });
+    const filter = s.exclude ? (from) => !s.exclude.test(from) : undefined;
+    for (const f of s.files) fs.cpSync(path.join(src, f), path.join(out, f), { recursive: true, filter });
+  }
+  if (s.redirect) {
+    fs.writeFileSync(path.join(out, 'index.html'),
+      `<!doctype html><meta charset="utf-8"><title>轉址中…</title>` +
+      `<meta http-equiv="refresh" content="0; url=${s.redirect}"><a href="${s.redirect}">${s.redirect}</a>\n`);
   }
   console.log(`✓ ${s.out}  ←  ${s.src}`);
 }

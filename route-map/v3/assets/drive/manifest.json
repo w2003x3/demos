@@ -1,0 +1,898 @@
+{
+  "name": "rail-drive-assets",
+  "description": "鐵道駕駛共用 3D 資產(駕駛艙、月台、軌旁設備、街景),由 tools/blender/build_drive_assets.py 產生",
+  "generator": "Blender 5.2.2 LTS",
+  "generated": "2026-10-14T17:19:19",
+  "format": "glTF 2.0 binary (.glb)",
+  "units": "meter",
+  "axes": {
+    "up": "+Y",
+    "forward": "-Z(列車前進方向)",
+    "right": "+X",
+    "blender": "Blender 中為 Z 向上、+Y 前進,匯出時轉為 glTF Y-up"
+  },
+  "trackConvention": {
+    "railTop": 0,
+    "gauge": 1.435,
+    "platformEdge": 1.6,
+    "platformWidth": 6.0,
+    "platformHeight": 1.1,
+    "platformModuleLength": 10.0,
+    "platformSide": "+X;左側月台以 scale.x = -1 鏡像"
+  },
+  "anchors": {
+    "eye": {
+      "node": "CabBody",
+      "position": [
+        0,
+        1.6,
+        0
+      ],
+      "note": "駕駛眼睛(相對 CabBody 原點)"
+    },
+    "cabFloorAboveRail": 1.1,
+    "windshield": {
+      "z": -1.3,
+      "note": "擋風玻璃在原點前方 1.3 m"
+    },
+    "leverPivot": {
+      "node": "MasterLever",
+      "axis": "X",
+      "radPerNotch": 0.085
+    }
+  },
+  "packs": {
+    "cab.glb": "駕駛艙(零件保留相對位置,見各件 offset)",
+    "platform.glb": "月台模組",
+    "scenery.glb": "軌旁設備與街景"
+  },
+  "materialRoles": {
+    "Screen": "駕駛艙螢幕,執行時以動態貼圖取代",
+    "StopFace": "停車位置標牌面,執行時貼圖",
+    "LimitFace": "速限牌面,執行時貼圖",
+    "Window": "建築窗戶,夜間 emissive #FFD58A 強度約 1.6",
+    "SignalRed": "號誌紅燈,亮/滅以 emissive 強度切換",
+    "SignalGreen": "號誌綠燈,亮/滅以 emissive 強度切換",
+    "Glass": "半透明玻璃(alpha blend)",
+    "LightPanel": "燈具自發光",
+    "LampHead": "路燈燈頭自發光",
+    "StationAccent": "月台牆面站名牌底帶(貼站名牌的位置)",
+    "Person0": "旅客衣色,執行時可換色",
+    "Person1": "旅客衣色,執行時可換色",
+    "Person2": "旅客衣色,執行時可換色",
+    "Person3": "旅客衣色,執行時可換色",
+    "Person4": "旅客衣色,執行時可換色",
+    "Person5": "旅客衣色,執行時可換色"
+  },
+  "assets": [
+    {
+      "name": "CabBody",
+      "category": "cab",
+      "description": "駕駛艙殼體與儀表台。原點=駕駛座地板中心;駕駛眼睛見 anchors.eye",
+      "pack": "cab.glb",
+      "part": "parts/CabBody.glb",
+      "materials": [
+        "CabFloor",
+        "CabShell",
+        "CabDark",
+        "CabDesk",
+        "BtnGreen",
+        "BtnRed",
+        "BtnYellow",
+        "Metal",
+        "Seat",
+        "LeverGrip"
+      ],
+      "bounds": {
+        "min": [
+          -1.51,
+          -0.05,
+          -1.5
+        ],
+        "max": [
+          1.51,
+          2.33,
+          1.66
+        ]
+      },
+      "offset": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "MasterLever",
+      "category": "cab",
+      "description": "單柄主控制器手把。原點=樞軸,繞 X 軸轉動(牽引為正、制動為負,每檔約 0.085 rad)",
+      "pack": "cab.glb",
+      "part": "parts/MasterLever.glb",
+      "materials": [
+        "Metal",
+        "LeverGrip"
+      ],
+      "bounds": {
+        "min": [
+          -0.09,
+          0.0,
+          -0.035
+        ],
+        "max": [
+          0.09,
+          0.26,
+          0.035
+        ]
+      },
+      "offset": [
+        -0.45,
+        0.92,
+        -0.75
+      ]
+    },
+    {
+      "name": "SpeedScreen",
+      "category": "cab",
+      "description": "速度表螢幕,材質 Screen;執行時換成動態貼圖(UV 0..1 全幅)",
+      "pack": "cab.glb",
+      "part": "parts/SpeedScreen.glb",
+      "materials": [
+        "Screen"
+      ],
+      "bounds": {
+        "min": [
+          -0.2,
+          0.877,
+          -1.02
+        ],
+        "max": [
+          0.25,
+          0.977,
+          -0.68
+        ]
+      },
+      "offset": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "InfoScreen",
+      "category": "cab",
+      "description": "路線資訊螢幕,材質 Screen;執行時換成動態貼圖(UV 0..1 全幅)",
+      "pack": "cab.glb",
+      "part": "parts/InfoScreen.glb",
+      "materials": [
+        "Screen"
+      ],
+      "bounds": {
+        "min": [
+          0.32,
+          0.877,
+          -1.02
+        ],
+        "max": [
+          0.82,
+          0.977,
+          -0.68
+        ]
+      },
+      "offset": [
+        0.0,
+        0.0,
+        -0.0
+      ]
+    },
+    {
+      "name": "PlatformUnderground",
+      "category": "platform",
+      "description": "地下站月台模組 10 m(含牆、天花、燈帶);軌道中心 x=0,月台在 +X,軌面高 0",
+      "pack": "platform.glb",
+      "part": "parts/PlatformUnderground.glb",
+      "materials": [
+        "Concrete",
+        "PlatformTile",
+        "PlatformEdge",
+        "Tactile",
+        "StationWall",
+        "StationAccent",
+        "Ceiling",
+        "ConcreteDark",
+        "LightPanel"
+      ],
+      "bounds": {
+        "min": [
+          -3.3,
+          -1.0,
+          -5.0
+        ],
+        "max": [
+          7.9,
+          4.8,
+          5.0
+        ]
+      }
+    },
+    {
+      "name": "PlatformOpen",
+      "category": "platform",
+      "description": "地面/高架站月台模組 10 m(含頂棚、欄杆)",
+      "pack": "platform.glb",
+      "part": "parts/PlatformOpen.glb",
+      "materials": [
+        "Concrete",
+        "PlatformTile",
+        "PlatformEdge",
+        "Tactile",
+        "Roof",
+        "LightPanel",
+        "DoorFrame",
+        "Metal"
+      ],
+      "bounds": {
+        "min": [
+          1.6,
+          -1.0,
+          -5.0
+        ],
+        "max": [
+          7.8,
+          4.38,
+          5.0
+        ]
+      }
+    },
+    {
+      "name": "Pillar",
+      "category": "platform",
+      "description": "月台柱 0.6 m 見方,四面可貼柱面站名",
+      "pack": "platform.glb",
+      "part": "parts/Pillar.glb",
+      "materials": [
+        "StationWall",
+        "ConcreteDark"
+      ],
+      "bounds": {
+        "min": [
+          -0.32,
+          1.1,
+          -0.32
+        ],
+        "max": [
+          0.32,
+          4.5,
+          0.32
+        ]
+      }
+    },
+    {
+      "name": "PSDFull",
+      "category": "platform",
+      "description": "全高月台門 10 m",
+      "pack": "platform.glb",
+      "part": "parts/PSDFull.glb",
+      "materials": [
+        "DoorFrame",
+        "Glass"
+      ],
+      "bounds": {
+        "min": [
+          1.68,
+          1.1,
+          -5.0
+        ],
+        "max": [
+          1.8,
+          3.45,
+          5.0
+        ]
+      }
+    },
+    {
+      "name": "PSDHalf",
+      "category": "platform",
+      "description": "半高月台門 10 m",
+      "pack": "platform.glb",
+      "part": "parts/PSDHalf.glb",
+      "materials": [
+        "DoorFrame",
+        "Glass"
+      ],
+      "bounds": {
+        "min": [
+          1.68,
+          1.1,
+          -5.0
+        ],
+        "max": [
+          1.8,
+          2.55,
+          5.0
+        ]
+      }
+    },
+    {
+      "name": "Bench",
+      "category": "platform",
+      "description": "長椅",
+      "pack": "platform.glb",
+      "part": "parts/Bench.glb",
+      "materials": [
+        "BenchWood",
+        "Metal"
+      ],
+      "bounds": {
+        "min": [
+          -0.25,
+          1.1,
+          -1.0
+        ],
+        "max": [
+          0.25,
+          1.95,
+          1.0
+        ]
+      }
+    },
+    {
+      "name": "Person0",
+      "category": "people",
+      "description": "候車旅客(低面數站姿人形)",
+      "pack": "platform.glb",
+      "part": "parts/Person0.glb",
+      "materials": [
+        "Person3",
+        "Person0",
+        "Skin"
+      ],
+      "bounds": {
+        "min": [
+          -0.21,
+          0.0,
+          -0.2
+        ],
+        "max": [
+          0.21,
+          1.515,
+          0.2
+        ]
+      }
+    },
+    {
+      "name": "Person1",
+      "category": "people",
+      "description": "候車旅客(低面數站姿人形)",
+      "pack": "platform.glb",
+      "part": "parts/Person1.glb",
+      "materials": [
+        "Person4",
+        "Person1",
+        "Skin"
+      ],
+      "bounds": {
+        "min": [
+          -0.21,
+          0.0,
+          -0.2
+        ],
+        "max": [
+          0.21,
+          1.605,
+          0.2
+        ]
+      }
+    },
+    {
+      "name": "Person2",
+      "category": "people",
+      "description": "候車旅客(低面數站姿人形)",
+      "pack": "platform.glb",
+      "part": "parts/Person2.glb",
+      "materials": [
+        "Person5",
+        "Person2",
+        "Skin"
+      ],
+      "bounds": {
+        "min": [
+          -0.21,
+          0.0,
+          -0.2
+        ],
+        "max": [
+          0.21,
+          1.695,
+          0.2
+        ]
+      }
+    },
+    {
+      "name": "Person3",
+      "category": "people",
+      "description": "候車旅客(低面數站姿人形)",
+      "pack": "platform.glb",
+      "part": "parts/Person3.glb",
+      "materials": [
+        "Person0",
+        "Person3",
+        "Skin"
+      ],
+      "bounds": {
+        "min": [
+          -0.21,
+          0.0,
+          -0.2
+        ],
+        "max": [
+          0.21,
+          1.515,
+          0.2
+        ]
+      }
+    },
+    {
+      "name": "Person4",
+      "category": "people",
+      "description": "候車旅客(低面數站姿人形)",
+      "pack": "platform.glb",
+      "part": "parts/Person4.glb",
+      "materials": [
+        "Person1",
+        "Person4",
+        "Skin"
+      ],
+      "bounds": {
+        "min": [
+          -0.21,
+          0.0,
+          -0.2
+        ],
+        "max": [
+          0.21,
+          1.605,
+          0.2
+        ]
+      }
+    },
+    {
+      "name": "Person5",
+      "category": "people",
+      "description": "候車旅客(低面數站姿人形)",
+      "pack": "platform.glb",
+      "part": "parts/Person5.glb",
+      "materials": [
+        "Person2",
+        "Person5",
+        "Skin"
+      ],
+      "bounds": {
+        "min": [
+          -0.21,
+          0.0,
+          -0.2
+        ],
+        "max": [
+          0.21,
+          1.695,
+          0.2
+        ]
+      }
+    },
+    {
+      "name": "Building0",
+      "category": "scenery",
+      "description": "建築;窗戶材質 Window(夜間調高自發光)",
+      "pack": "scenery.glb",
+      "part": "parts/Building0.glb",
+      "materials": [
+        "Building0",
+        "ConcreteDark",
+        "Window"
+      ],
+      "bounds": {
+        "min": [
+          -7.3,
+          0.0,
+          -6.3
+        ],
+        "max": [
+          7.3,
+          18.6,
+          6.3
+        ]
+      }
+    },
+    {
+      "name": "Building1",
+      "category": "scenery",
+      "description": "建築;窗戶材質 Window(夜間調高自發光)",
+      "pack": "scenery.glb",
+      "part": "parts/Building1.glb",
+      "materials": [
+        "Building1",
+        "ConcreteDark",
+        "Window"
+      ],
+      "bounds": {
+        "min": [
+          -5.3,
+          0.0,
+          -5.3
+        ],
+        "max": [
+          5.3,
+          36.6,
+          5.3
+        ]
+      }
+    },
+    {
+      "name": "Building2",
+      "category": "scenery",
+      "description": "建築;窗戶材質 Window(夜間調高自發光)",
+      "pack": "scenery.glb",
+      "part": "parts/Building2.glb",
+      "materials": [
+        "Building2",
+        "ConcreteDark",
+        "Window"
+      ],
+      "bounds": {
+        "min": [
+          -9.3,
+          0.0,
+          -7.3
+        ],
+        "max": [
+          9.3,
+          12.6,
+          7.3
+        ]
+      }
+    },
+    {
+      "name": "Building3",
+      "category": "scenery",
+      "description": "建築;窗戶材質 Window(夜間調高自發光)",
+      "pack": "scenery.glb",
+      "part": "parts/Building3.glb",
+      "materials": [
+        "Building3",
+        "ConcreteDark",
+        "Window"
+      ],
+      "bounds": {
+        "min": [
+          -6.3,
+          0.0,
+          -6.3
+        ],
+        "max": [
+          6.3,
+          54.6,
+          6.3
+        ]
+      }
+    },
+    {
+      "name": "Building4",
+      "category": "scenery",
+      "description": "建築;窗戶材質 Window(夜間調高自發光)",
+      "pack": "scenery.glb",
+      "part": "parts/Building4.glb",
+      "materials": [
+        "Building4",
+        "ConcreteDark",
+        "Window"
+      ],
+      "bounds": {
+        "min": [
+          -4.3,
+          0.0,
+          -5.3
+        ],
+        "max": [
+          4.3,
+          9.6,
+          5.3
+        ]
+      }
+    },
+    {
+      "name": "Building5",
+      "category": "scenery",
+      "description": "建築;窗戶材質 Window(夜間調高自發光)",
+      "pack": "scenery.glb",
+      "part": "parts/Building5.glb",
+      "materials": [
+        "Building5",
+        "ConcreteDark",
+        "Window"
+      ],
+      "bounds": {
+        "min": [
+          -10.3,
+          0.0,
+          -8.3
+        ],
+        "max": [
+          10.3,
+          26.6,
+          8.3
+        ]
+      }
+    },
+    {
+      "name": "Tree0",
+      "category": "scenery",
+      "description": "行道樹",
+      "pack": "scenery.glb",
+      "part": "parts/Tree0.glb",
+      "materials": [
+        "Trunk",
+        "Leaf1",
+        "Leaf2"
+      ],
+      "bounds": {
+        "min": [
+          -1.605,
+          0.0,
+          -1.74
+        ],
+        "max": [
+          1.879,
+          5.2,
+          1.618
+        ]
+      }
+    },
+    {
+      "name": "Tree1",
+      "category": "scenery",
+      "description": "行道樹",
+      "pack": "scenery.glb",
+      "part": "parts/Tree1.glb",
+      "materials": [
+        "Trunk",
+        "Leaf2",
+        "Leaf1"
+      ],
+      "bounds": {
+        "min": [
+          -1.996,
+          0.0,
+          -2.027
+        ],
+        "max": [
+          2.075,
+          6.4,
+          1.977
+        ]
+      }
+    },
+    {
+      "name": "Lamp",
+      "category": "scenery",
+      "description": "路燈",
+      "pack": "scenery.glb",
+      "part": "parts/Lamp.glb",
+      "materials": [
+        "Metal",
+        "LampHead"
+      ],
+      "bounds": {
+        "min": [
+          -0.09,
+          0.0,
+          -0.18
+        ],
+        "max": [
+          1.75,
+          7.0,
+          0.18
+        ]
+      }
+    },
+    {
+      "name": "Mast",
+      "category": "trackside",
+      "description": "電車線桿,立於軌道右側 3.2 m,懸臂伸向軌道中心",
+      "pack": "scenery.glb",
+      "part": "parts/Mast.glb",
+      "materials": [
+        "Metal"
+      ],
+      "bounds": {
+        "min": [
+          -3.4,
+          0.0,
+          -0.15
+        ],
+        "max": [
+          0.15,
+          6.8,
+          0.15
+        ]
+      }
+    },
+    {
+      "name": "Pier",
+      "category": "trackside",
+      "description": "高架橋墩(頂面 0 對齊軌面,向下 12 m)",
+      "pack": "scenery.glb",
+      "part": "parts/Pier.glb",
+      "materials": [
+        "Concrete"
+      ],
+      "bounds": {
+        "min": [
+          -3.6,
+          -12.0,
+          -1.4
+        ],
+        "max": [
+          3.6,
+          -0.3,
+          1.4
+        ]
+      }
+    },
+    {
+      "name": "SignalPost",
+      "category": "trackside",
+      "description": "出發號誌桿",
+      "pack": "scenery.glb",
+      "part": "parts/SignalPost.glb",
+      "materials": [
+        "Metal",
+        "CabDark"
+      ],
+      "bounds": {
+        "min": [
+          -0.22,
+          0.0,
+          -0.12
+        ],
+        "max": [
+          0.22,
+          4.4,
+          0.12
+        ]
+      }
+    },
+    {
+      "name": "SignalRedLamp",
+      "category": "trackside",
+      "description": "號誌紅燈(材質 SignalRed,以自發光強度切換亮滅)",
+      "pack": "scenery.glb",
+      "part": "parts/SignalRedLamp.glb",
+      "materials": [
+        "SignalRed"
+      ],
+      "bounds": {
+        "min": [
+          -0.12,
+          3.98,
+          0.11
+        ],
+        "max": [
+          0.12,
+          4.22,
+          0.13
+        ]
+      }
+    },
+    {
+      "name": "SignalGreenLamp",
+      "category": "trackside",
+      "description": "號誌綠燈(材質 SignalGreen)",
+      "pack": "scenery.glb",
+      "part": "parts/SignalGreenLamp.glb",
+      "materials": [
+        "SignalGreen"
+      ],
+      "bounds": {
+        "min": [
+          -0.12,
+          3.58,
+          0.11
+        ],
+        "max": [
+          0.12,
+          3.82,
+          0.13
+        ]
+      }
+    },
+    {
+      "name": "StopMarker",
+      "category": "trackside",
+      "description": "停車位置標,材質 StopFace;執行時貼「停」與編組數(UV 0..1)",
+      "pack": "scenery.glb",
+      "part": "parts/StopMarker.glb",
+      "materials": [
+        "Metal",
+        "StopFace"
+      ],
+      "bounds": {
+        "min": [
+          -0.35,
+          0.0,
+          -0.05
+        ],
+        "max": [
+          0.35,
+          2.2,
+          0.05
+        ]
+      }
+    },
+    {
+      "name": "SpeedLimitSign",
+      "category": "trackside",
+      "description": "速限標誌桿與底板",
+      "pack": "scenery.glb",
+      "part": "parts/SpeedLimitSign.glb",
+      "materials": [
+        "Metal",
+        "StopFace"
+      ],
+      "bounds": {
+        "min": [
+          -0.36,
+          0.0,
+          -0.05
+        ],
+        "max": [
+          0.36,
+          3.11,
+          0.05
+        ]
+      }
+    },
+    {
+      "name": "SpeedLimitFace",
+      "category": "trackside",
+      "description": "速限標誌牌面,材質 LimitFace;執行時貼速限數字(UV 0..1)",
+      "pack": "scenery.glb",
+      "part": "parts/SpeedLimitFace.glb",
+      "materials": [
+        "LimitFace"
+      ],
+      "bounds": {
+        "min": [
+          -0.33,
+          2.42,
+          0.05
+        ],
+        "max": [
+          0.33,
+          3.08,
+          0.065
+        ]
+      }
+    },
+    {
+      "name": "TunnelLight",
+      "category": "trackside",
+      "description": "隧道壁燈",
+      "pack": "scenery.glb",
+      "part": "parts/TunnelLight.glb",
+      "materials": [
+        "LightPanel"
+      ],
+      "bounds": {
+        "min": [
+          -0.06,
+          -0.06,
+          -0.3
+        ],
+        "max": [
+          0.06,
+          0.06,
+          0.3
+        ]
+      }
+    }
+  ]
+}
