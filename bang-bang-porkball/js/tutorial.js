@@ -68,7 +68,9 @@
     {
       title: '防護盾',
       text: '按 <kbd>G</kbd> 花 ' + SHIELD_MP_COST + ' MP 開防護盾,效果跟防爆衣一樣能擋一次爆炸。<br>危急時記得留一點 MP 保命!',
-      setup(s) { s.guard = player.blastGuard; player.mp = Math.max(player.mp, SHIELD_MP_COST); },
+      setup(s) { s.guard = player.blastGuard; },
+      // 上一步踢出的貢丸滑行會一直扣 MP,這裡保證至少夠開一次盾
+      update() { if (player.mp < SHIELD_MP_COST) player.mp = SHIELD_MP_COST; },
       done(s) { return player.blastGuard > s.guard; },
     },
     {
