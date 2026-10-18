@@ -39,3 +39,13 @@ export const PHRASES = {
     zh_handrail: { lang: 'zh', text: '為了您的安全,請緊握扶手。' },
     en_handrail: { lang: 'en', text: 'For your safety, please hold the handrail.' }
 };
+
+/**
+ * 站名/路線名等「名稱」音檔的鍵(瀏覽器與 tools/build-tts.mjs 共用,同一段文字一定得到同一個鍵)。
+ * build-tts 會為預設路網的所有站名、路線名事先產生音檔;玩家自訂的名稱沒有音檔時改用瀏覽器語音。
+ */
+export function nameClipKey(lang, text) {
+    let h = 0x811c9dc5;
+    for (const ch of String(text)) { h ^= ch.codePointAt(0); h = Math.imul(h, 0x01000193) >>> 0; }
+    return `name_${lang}_${h.toString(16).padStart(8, '0')}`;
+}

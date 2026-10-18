@@ -107,6 +107,7 @@ export class OnboardPhase {
     this.g.voice.stopAll();
     this.g.ui.clearBubbles();
     this.g.camera.fov = FOV.normal;
+    this.g.camera.clearViewOffset();
     this.g.camera.updateProjectionMatrix();
   }
 
@@ -118,11 +119,10 @@ export class OnboardPhase {
     this.scenery.group.children.forEach((o) => { if (!o.isLight) o.visible = !on; });
   }
 
-  /** 對話可聽度:不同車廂 0(只顯示字幕);同一節車廂依距離 1 → 0.45。 */
+  /** 對話可聽度:只聽得到同一節車廂(1),別節車廂 0(只顯示字幕)。 */
   _hearing(anchor) {
     const v = anchor.isObject3D ? anchor.getWorldPosition(this._hv) : anchor;
-    if (this.train.local(v.x).k !== this.train.local(this.p.mid).k) return 0;
-    return Math.max(0.45, 1 - Math.abs(v.x - this.p.mid) / 22);
+    return this.train.local(v.x).k === this.train.local(this.p.mid).k ? 1 : 0;
   }
 
   /** 推車附近、同一節車廂中隨機一位坐著的乘客(抱怨用)。 */
@@ -895,32 +895,33 @@ export class OnboardPhase {
       g.voice.talk(`pax_gave_up_${s.gender}`, s.head);
     }
 
-    // 互動提示
-    let prompt = null;
+    // 互動提示:每項一行,同時標示鍵盤按鍵與畫面按鈕
+    const prompt = [];
+    const hint = (key, text) => prompt.push({ key, text });
     if (!this.dialog && !this.p.turning && !wasDialog) {
       const t = this._target();
       const row = this.tickets.some((x) => !x.done) ? this._nearRow() : null;
-      const fHint = row ? ' · <b>F</b> 送預訂便當' : '';
       if (t?.kind === 'incident') {
-        prompt = `<b>E</b> 處理:${t.inc.def.title}`;
+        hint('KeyE', `處理:${t.inc.def.title}`);
         if (inp.wasPressed('KeyE')) this._openIncident(t.inc);
       } else if (t?.kind === 'order') {
-        prompt = `<b>E</b> 服務這位乘客${fHint}`;
+        hint('KeyE', '服務這位乘客');
         if (inp.wasPressed('KeyE')) this._openOrder(t.seat);
       } else if (this.train.inVestibule(this.p.mid)) {
-        prompt = '<b>Space</b> 迴轉推車';
-      } else if (row) prompt = `<b>F</b> 送預訂便當(第 ${row[0].row + 1} 排)`;
+        hint('Space', '迴轉推車');
+      }
+      if (row) hint('KeyF', `送預訂便當(第 ${row[0].row + 1} 排)`);
       if (row && inp.wasPressed('KeyF') && !this.dialog) this._openDeliver(row);
       // 補貨(備餐區 / 停站時的玄關)
       const spot = this._restockSpot();
       if (spot) {
-        prompt = `${prompt ? `${prompt} · ` : ''}<b>R</b> ${spot === 'home' ? '備餐區補貨' : '月台補貨'}`;
+        hint('KeyR', spot === 'home' ? '備餐區補貨' : '月台補貨');
         if (inp.wasPressed('KeyR') && !this.dialog) this._restock(spot);
       }
       // 推銷
       const pt = !t && !this.p.vel ? this._pitchTarget() : null;
       if (pt) {
-        prompt = `${prompt ? `${prompt} · ` : ''}<b>Q</b> 向這位乘客推銷`;
+        hint('KeyQ', '向這位乘客推銷');
         if (inp.wasPressed('KeyQ') && !this.dialog) this._pitch(pt);
       }
     }
@@ -1032,9 +1033,16 @@ export class OnboardPhase {
       // 結帳:第一人稱低頭看結帳機台
       pos = att.clone().add(new THREE.Vector3(0, 1.58, 0)).addScaledVector(dir, 0.1);
       target = this.crew.posWorld().add(new THREE.Vector3(0, -0.02, 0)); // 機台置中;結帳面板改停靠在畫面上方
-      // 直式螢幕(手機)水平視角窄:拉近鏡頭,讓收銀機約佔畫面寬度 85%,按鍵夠大好點
-      const aspect = innerWidth / innerHeight;
-      fov = FOV.pos * (aspect < 0.9 ? THREE.MathUtils.clamp(aspect * 1.25, 0.55, 1) : 1);
+      // 依鏡頭到收銀機的距離,算出剛好容納整台收銀機(畫面上約 0.34 × 0.30 m,含斜看的深度與邊界)的垂直視角:
+      // 寬度以全螢幕寬計(直式手機以寬度為準);高度只算結帳面板「下方」的可用區域,再把畫面往下平移置中
+      const W = innerWidth, H = innerHeight;
+      const top = this._dockBottom();
+      const avail = Math.max(120, H - top - 10);
+      const dist = Math.max(0.3, pos.distanceTo(target));
+      const vByW = 2 * Math.atan((0.17 / dist) / (W / H));
+      const vByH = 2 * Math.atan((0.15 / dist) * (H / avail));
+      fov = THREE.MathUtils.clamp(THREE.MathUtils.radToDeg(Math.max(vByW, vByH)) * 1.08, 14, 80);
+      this._viewShift = (H - avail) / 2;
     } else if (c.mode === 'first') {
       pos = att.clone().add(new THREE.Vector3(0, 1.62, 0)).addScaledVector(dir, 0.12);
       target = pos.clone().addScaledVector(look, 3).add(new THREE.Vector3(0, -0.35 + c.pitch, 0));
@@ -1059,6 +1067,15 @@ export class OnboardPhase {
     cam.rotateZ(Math.sin(this.time * 0.83) * 0.004 * vr);
     this.crew.attendant.visible = !(c.mode === 'first' || checkout);
     if (snap) { cam.fov = fov; cam.updateProjectionMatrix(); } else this._setFov(fov, dt);
+    // 結帳:畫面往下平移,收銀機置中於結帳面板下方
+    if (checkout) cam.setViewOffset(innerWidth, innerHeight, 0, -this._viewShift, innerWidth, innerHeight);
+    else if (cam.view?.enabled) cam.clearViewOffset();
+  }
+
+  /** 結帳面板(停靠在上方時)的底緣 y;沒有時 0。 */
+  _dockBottom() {
+    const el = document.getElementById('dialog');
+    return el && el.classList.contains('dock-top') && !el.classList.contains('hidden') ? el.getBoundingClientRect().bottom : 0;
   }
 
   _updateCamera(dt) {
@@ -1159,16 +1176,16 @@ export class OnboardPhase {
         menu: ITEM_LIST.map((i) => ({ key: i.key, label: i.name, price: i.price, stock: this.stock[i.id] - d.tray.filter((x) => x === i.id).length })),
         tray: d.tray.map((id) => ITEMS[id].name),
         msg: d.msg, msgType: d.msgType, locked: d.lock > 0,
-        footer: '點品項或按 1~6 拿取 · ⌫ 放回 · Enter 交給乘客 · X 告知售完 · Esc 取消',
-        actions: [{ key: 'Enter', label: '交給乘客', primary: true }, { key: 'Backspace', label: '⌫ 放回' }, { key: 'KeyX', label: '告知售完' }, { key: 'Escape', label: '取消' }],
+        footer: '點品項或按 1~6 拿取 · Backspace 放回 · Enter 交給乘客 · X 告知售完 · Esc 取消',
+        actions: [{ key: 'Enter', label: '交給乘客', primary: true }, { key: 'Backspace', label: '放回' }, { key: 'KeyX', label: '告知售完' }, { key: 'Escape', label: '取消' }],
       };
     }
     return {
       title: '心算結帳',
       text: `${d.tray.map((id) => `${ITEMS[id].name} $${ITEMS[id].price}`).join(' + ')}<br>請心算<b>總金額</b>,在結帳機台輸入。`,
       msg: d.msg, msgType: d.msgType, locked: !!d.waitVoice, dock: 'top',
-      footer: d.waitVoice ? '乘客抱怨中……聽完才能重新輸入(列車仍在行駛!)' : '點收銀機按鍵或用數字鍵輸入金額 · ⌫ 修改 · Enter 確認',
-      actions: [{ key: 'Backspace', label: '⌫' }, { key: 'Enter', label: '確認金額', primary: true }],
+      footer: d.waitVoice ? '乘客抱怨中……聽完才能重新輸入(列車仍在行駛!)' : '點收銀機按鍵或用數字鍵輸入金額 · Backspace 刪除 · Enter 確認',
+      actions: [{ key: 'Backspace', label: '刪除' }, { key: 'Enter', label: '確認金額', primary: true }],
     };
   }
 

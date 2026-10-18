@@ -18,6 +18,7 @@ const POS_X = -0.33;     // 結帳機台在推車上的位置
 const POS_TILT = 0.38;   // 朝服勤員傾斜(rad)
 export const POS_KEYS = ['1', '2', '3', '4', '5', '⌫', '6', '7', '8', '9', '0', '⏎'];
 const KEYS = POS_KEYS;
+const KEY_LABEL = { '⌫': '刪除', '⏎': '確認' };
 
 const font = '"Noto Sans TC","Microsoft JhengHei",sans-serif';
 
@@ -128,10 +129,11 @@ export class CartCrew {
       c.roundRect(x + 6, y + 6, kw - 12, kh - 12, 12);
       c.fill();
       c.fillStyle = hot || k === '⏎' || k === '⌫' ? '#fff' : '#1a1a1a';
-      c.font = 'bold 50px "Segoe UI",sans-serif';
+      // 功能鍵以中文標示(⌫ = 刪除、⏎ = 確認)
+      c.font = k === '⌫' || k === '⏎' ? `bold 34px ${font}` : 'bold 50px "Segoe UI",sans-serif';
       c.textAlign = 'center';
       c.textBaseline = 'middle';
-      c.fillText(k, x + kw / 2, y + kh / 2 + 2);
+      c.fillText(KEY_LABEL[k] || k, x + kw / 2, y + kh / 2 + 2);
     });
     c.textAlign = 'left';
     this.posKeysTex.needsUpdate = true;

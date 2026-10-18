@@ -366,3 +366,22 @@ kbd { display: inline-block; min-width: 20px; text-align: center; background: #e
 .seg button { border: 0; padding: 9px 14px; font: 700 14px var(--font); background: transparent; color: var(--muted); cursor: pointer; }
 .seg button.on { background: var(--accent); color: #111; }
 .pause-card .settings .seg { justify-content: space-between; }
+
+/* 操作面板開著時收起移動/動作按鈕(面板內有自己的按鈕) */
+#hud.dialog-open .t-pad, #hud.dialog-open .t-acts { display: none; }
+/* 操作提示:每項一行,鍵盤按鍵 + 畫面按鈕 */
+.prompt { text-align: left; }
+.p-line { display: flex; align-items: center; gap: 6px; line-height: 1.9; }
+.prompt i { font-style: normal; font-size: 12px; font-weight: 700; padding: 0 7px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.45); color: #fff; margin-right: 4px; white-space: nowrap; }
+.pause-card .settings .seg { grid-column: 1 / -1; }
+
+/* 說明視窗(首次教學、任務說明):高度 80%,內容區可捲動 */
+.card.tall { height: 80vh; max-height: 80vh; display: flex; flex-direction: column; overflow: hidden; }
+.card.tall .tall-body, .card.brief.tall > p, .card.brief.tall > table { flex: 0 0 auto; }
+.card.tall .tall-body { flex: 1; overflow-y: auto; min-height: 0; }
+.card.brief.tall { overflow-y: auto; }
+.card.tall .actions { margin-top: auto; padding-top: 12px; }
+.tut-keys td, .tut-keys th { padding-top: 6px; padding-bottom: 6px; }
+.tut-btn { font-style: normal; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 10px; border: 1px solid var(--line); background: rgba(255,255,255,0.08); white-space: nowrap; }
+
+.seg button { flex: 1; }

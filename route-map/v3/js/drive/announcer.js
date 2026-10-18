@@ -2,10 +2,10 @@
  * announcer.js
  * 車內廣播:把一段廣播拆成依序播放的片段
  *   { clip: 'zh_next' }       固定用語 → Azure TTS 預先產生的 mp3(assets/audio);缺檔時改用瀏覽器語音念 PHRASES 文字
- *   { say: '台北車站', lang } 站名/路線名(玩家輸入)→ 瀏覽器/作業系統內建語音即時合成(Web Speech API)
+ *   { say: '台北車站', lang } 站名/路線名 → 有事先產生的名稱音檔(預設路網)就播放,否則瀏覽器內建語音即時合成
  *   { chime: 'arrive' }       提示音(WebAudio 合成,無需音檔)
  */
-import { PHRASES, LANG_TAG } from './phrases.js';
+import { PHRASES, LANG_TAG, nameClipKey } from './phrases.js';
 
 const AUDIO_BASE = 'assets/audio/';
 
@@ -31,8 +31,9 @@ export class Announcer {
             const r = await fetch(AUDIO_BASE + 'manifest.json', { cache: 'no-cache' });
             if (r.ok) this.manifest = await r.json();
         } catch { /* 沒有音檔時全部改用瀏覽器語音 */ }
-        // 預先載入
+        // 固定用語預先載入;名稱音檔(數百個)用到時才載入
         Object.entries(this.manifest?.files || {}).forEach(([k, f]) => {
+            if (k.startsWith('name_')) return;
             const a = new Audio(AUDIO_BASE + f.file);
             a.preload = 'auto';
             this.cache.set(k, a);
@@ -107,7 +108,9 @@ export class Announcer {
     }
 
     _clip(key) {
-        const a = this.cache.get(key);
+        let a = this.cache.get(key);
+        const f = !a && this.manifest?.files?.[key];
+        if (f) { a = new Audio(AUDIO_BASE + f.file); this.cache.set(key, a); }
         if (!a) {
             const ph = PHRASES[key];
             return ph ? this._say(ph.text, ph.lang) : Promise.resolve();
@@ -124,6 +127,9 @@ export class Announcer {
     }
 
     _say(text, lang) {
+        // 有事先產生的名稱音檔就播放(預設路網的站名、路線名)
+        const key = text && nameClipKey(lang, text);
+        if (key && this.manifest?.files?.[key]) return this._clip(key);
         if (typeof speechSynthesis === 'undefined' || !text) return Promise.resolve();
         return new Promise(res => {
             const u = new SpeechSynthesisUtterance(text);
@@ -278,10 +284,13 @@ function enName(st) {
 function transferParts(tr, lang) {
     if (!tr || (!tr.inside.length && !tr.outside.length)) return [];
     const out = [];
-    const names = (lines) => lines.map(l => lang === 'zh' ? l.name : (l.code ? `${l.code} line` : l.name)).join(lang === 'zh' ? '、' : ', ');
     const en = lang === 'en';
-    if (tr.inside.length) out.push({ clip: `${lang}_transfer` }, { say: names(tr.inside), lang: en && tr.inside.some(l => !l.code) ? 'zh' : lang, en });
-    if (tr.outside.length) out.push({ clip: `${lang}_out_transfer` }, { say: names(tr.outside), lang: en && tr.outside.some(l => !l.code) ? 'zh' : lang, en });
+    // 每條路線名分開念(才能各自使用事先產生的名稱音檔)
+    const names = (lines) => lines.map((l, i) => (lang === 'zh' || !l.code)
+        ? { say: l.name, lang: 'zh', en, gap: i < lines.length - 1 ? 60 : 120 }
+        : { say: `${l.code} line`, lang: 'en', en, gap: i < lines.length - 1 ? 60 : 120 });
+    if (tr.inside.length) out.push({ clip: `${lang}_transfer` }, ...names(tr.inside));
+    if (tr.outside.length) out.push({ clip: `${lang}_out_transfer` }, ...names(tr.outside));
     return out;
 }
 

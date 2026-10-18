@@ -284,6 +284,12 @@ class Game {
       onCurtains: () => this.toggleCurtains(),
       muted: this.muted,
       onMute: () => this.toggleMute(),
+      firstPerson: this.phase?.cam?.mode === 'first',
+      onView: () => {
+        const c = this.phase?.cam;
+        if (c) c.mode = c.mode === 'first' ? 'third' : 'first';
+        return c?.mode === 'first';
+      },
       onHelp: () => this.ui.tutorial(() => this._pauseMenu()),
     });
   }

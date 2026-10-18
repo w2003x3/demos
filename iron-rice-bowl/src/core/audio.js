@@ -111,7 +111,9 @@ export class Voice {
     this.muted = false;
     this.announceQueue = [];
     this.announcing = null;
-    this.talking = null;
+    this.talks = new Set();   // 進行中的對話(可多段同時)
+    this.speaking = 0;        // 正在發聲的對話音檔數(廣播依此降低音量)
+    this.announceAudio = null;
     /**
      * 對話的可聽度:(anchor) => 0~1,由遊戲階段設定(例:不同車廂 = 0)。
      * 0 時只顯示字幕不出聲;廣播不受影響(全車都聽得到)。
@@ -146,34 +148,26 @@ export class Voice {
 
   stopAll() {
     this.announceQueue.length = 0;
-    for (const h of [this.announcing, this.talking]) h?.stop();
-    this.announcing = this.talking = null;
+    this.announcing?.stop();
+    this.announcing = null;
+    for (const h of [...this.talks]) h.stop();
+    this.talks.clear();
   }
 
   /**
-   * 對話台詞(新的會打斷舊的);ids 可為陣列(依序念出)。
+   * 對話台詞:每段各自播放,可與其他對話、廣播同時進行(不互相打斷);ids 為陣列時同一段內依序念出。
    * anchor:說話者的 THREE.Object3D,UI 用來把漫畫對話框貼在人物頭上。
    */
   talk(ids, anchor = null, onEnd = null) {
-    // 整段都聽不到(別節車廂):只出字幕,不打斷附近正在說的話
-    const list = [].concat(ids);
-    if (this.hearing && list.every((it) => {
-      const a = (typeof it === 'string' ? anchor : it.anchor ?? anchor);
-      return a && this.hearing(a) <= 0.01;
-    })) {
-      this._playSeq(list, { channel: 'talk', anchor }, () => onEnd?.());
-      return;
-    }
-    this.talking?.stop();
     let h = null; // 台詞不存在時 onEnd 可能同步觸發,故先宣告
     h = this._playSeq([].concat(ids), { channel: 'talk', anchor }, () => {
-      if (this.talking === h) this.talking = null;
+      this.talks.delete(h);
       onEnd?.();
     });
-    this.talking = h;
+    if (h.running) this.talks.add(h);
   }
 
-  /** 廣播(排隊播放),UI 以 LED 跑馬燈顯示。 */
+  /** 廣播(彼此排隊播放,但不受對話影響),UI 以 LED 跑馬燈顯示。 */
   announce(ids) {
     this.announceQueue.push([].concat(ids));
     if (!this.announcing) this._nextAnnounce();
@@ -185,42 +179,58 @@ export class Voice {
     this.announcing = this._playSeq(ids, { channel: 'announce' }, () => this._nextAnnounce());
   }
 
+  /** 有對話正在發聲時廣播降為 75%,否則 100%(對話恆為 100%)。 */
+  _duck() {
+    if (this.announceAudio) this.announceAudio.volume = this.speaking > 0 ? 0.75 : 1;
+  }
+
   _playSeq(ids, meta, onEnd) {
     let stopped = false;
     let cur = null;
+    const h = { running: true, stop: () => { stopped = true; h.running = false; cur?.stop(); } };
     const run = (i) => {
       if (stopped) return;
-      if (i >= ids.length) { onEnd(); return; }
+      if (i >= ids.length) { h.running = false; onEnd(); return; }
       // 項目可為 'id' 或 { id, anchor }(同一段對話中換人說話)
       const it = ids[i];
       const m = typeof it === 'string' ? meta : { ...meta, anchor: it.anchor ?? meta.anchor };
       cur = this._play(typeof it === 'string' ? it : it.id, m, () => run(i + 1));
     };
     run(0);
-    return { stop: () => { stopped = true; cur?.stop(); } };
+    return h;
   }
 
   _play(id, meta, done) {
     const line = this.lines.get(id);
     if (!line) { console.warn('[voice] 未定義台詞', id); done(); return null; }
     this.onSubtitle?.({ ...meta, role: line.role, label: ROLE_LABEL[line.role] || '', text: line.text });
-    const gain = meta.channel === 'talk' && meta.anchor && this.hearing ? this.hearing(meta.anchor) : 1;
-    if (this.muted || gain <= 0.01) {
+    // 別節車廂的對話聽不到(只有字幕)
+    const audible = !(meta.channel === 'talk' && meta.anchor && this.hearing && this.hearing(meta.anchor) <= 0.01);
+    if (this.muted || !audible) {
       const t = setTimeout(done, 400 + line.text.length * 120);
       return { stop: () => clearTimeout(t) };
     }
     if (this.files.has(id)) {
       const a = new Audio(`${this.base}/${id}.mp3`);
-      a.volume = Math.min(1, gain);
-      a.onended = done;
-      a.onerror = done;
-      a.play().catch(done);
-      return { stop: () => { a.onended = a.onerror = null; a.pause(); } };
+      const talk = meta.channel === 'talk';
+      let live = true;
+      const end = () => {
+        if (!live) return;
+        live = false;
+        a.onended = a.onerror = null;
+        if (talk) { this.speaking--; this._duck(); } else if (this.announceAudio === a) this.announceAudio = null;
+      };
+      if (talk) { this.speaking++; this._duck(); } else { this.announceAudio = a; this._duck(); }
+      a.onended = () => { end(); done(); };
+      a.onerror = () => { end(); done(); };
+      a.play().catch(() => { end(); done(); });
+      return { stop: () => { end(); a.pause(); } };
     }
-    return this._speak(line, done, gain);
+    return this._speak(line, done);
   }
 
-  _speak(line, done, gain = 1) {
+  /** 備援:瀏覽器語音(無法同時發聲,會依序念出);正式版本請產生 Azure 音檔。 */
+  _speak(line, done) {
     if (!('speechSynthesis' in window)) {
       const t = setTimeout(done, 400 + line.text.length * 120);
       return { stop: () => clearTimeout(t) };
@@ -235,7 +245,6 @@ export class Voice {
     const pct = (s) => (s ? parseFloat(s) / 100 : 0);
     u.pitch = 1 + pct(cfg.pitch);
     u.rate = 1 + pct(cfg.rate);
-    u.volume = Math.min(1, gain);
     let finished = false;
     const fin = () => { if (!finished) { finished = true; done(); } };
     u.onend = fin;
@@ -243,6 +252,6 @@ export class Voice {
     speechSynthesis.speak(u);
     // 保險:部分瀏覽器不觸發 onend
     const guard = setTimeout(fin, 1500 + line.text.length * 260);
-    return { stop: () => { clearTimeout(guard); finished = true; speechSynthesis.cancel(); } };
+    return { stop: () => { clearTimeout(guard); finished = true; } };
   }
 }
