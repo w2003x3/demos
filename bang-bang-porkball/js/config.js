@@ -134,9 +134,9 @@ const MEATBALLS = [
   },
   {
     id: 4, key: '小', name: '小貢丸', color: '#e67e22', glow: '#a85710',
-    behavior: 'cluster', // 需三顆相連才會爆炸
+    behavior: 'cluster', // 三顆相連會立刻一起爆(單顆照常倒數)
     cluster: 3,
-    desc: '需三顆相連才爆炸',
+    desc: '三顆相連立刻一起爆',
   },
   {
     id: 5, key: '菇', name: '香菇貢丸', color: '#8e6e53', glow: '#5c4632',
@@ -286,9 +286,12 @@ function computeFuse() {
   return lerp(3.6, 1.0, tempNorm() * 0.7 + humNorm() * 0.3);
 }
 
-// 發霉所需時間:濕度為主、溫度為輔。若此值 < 引信,貢丸會在爆炸前先發霉
-function computeMoldTime() {
-  return lerp(4.6, 0.9, humNorm() * 0.75 + tempNorm() * 0.25);
+// 地上的道具會壞掉:新鮮期過後「發霉」(變綠,吃到會中黴毒),再過 MOLD_STAGE 秒就消失
+// 新鮮期:濕度為主、溫度為輔,越濕越熱壞得越快;食物比工具/裝備更容易壞
+const MOLD_STAGE = 6;
+function itemFreshTime(key) {
+  const base = lerp(24, 9, humNorm() * 0.75 + tempNorm() * 0.25);
+  return ITEMS[key] ? base : base * 1.6;
 }
 
 // 隨機產生一場的天氣

@@ -79,6 +79,7 @@
       </label>
       <div id="stat-weather" class="pill"></div>
       <a class="icon-btn" href="index.html">🟩 2D版</a>
+      <button id="btn-sound" class="icon-btn" type="button" title="音效/音樂">🔊</button>
       <button id="btn-help" class="icon-btn" type="button">❓ 說明</button>
     </div>
   </header>
@@ -121,7 +122,7 @@
             <button id="btn-start" class="big primary">🎮 開始對戰</button>
             <button id="btn-tutorial" class="big" type="button">🎓 新手教學</button>
             <button id="btn-guide" class="big" type="button">📖 玩法說明</button>
-            <button class="big" disabled>🌐 多人連線(開發中)</button>
+            <button id="btn-online" class="big" type="button">🌐 多人連線</button>
             <p class="mini">🔵 你 + 2 名 AI 隊友 vs 🔴 3 名 AI・限時 2 分鐘<br>拖曳旋轉視角・滾輪縮放・點地圖移動</p>
           </div>
         </div>
@@ -191,6 +192,7 @@
 </div>
 
 <script src="js/config.js"></script>
+<script src="js/audio.js"></script>
 <script src="js/net.js"></script>
 <script src="js/game.js"></script>
 <script src="js/controls.js"></script>

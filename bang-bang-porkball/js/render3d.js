@@ -911,7 +911,7 @@
     for (const m of meatballs) if (m.owner === f && !m.exploded && !m.eaten) owned++;
     if (!f.alive) {
       if (u.state !== 'dead') { u.state = 'dead'; playAct(u, 'Death01', { once: true, fade: 0.1 }); }
-    } else if ((gameState === 'win' && f.team === player.team) || (gameState === 'lose' && f.team !== player.team)) {
+    } else if ((gameState === 'win' && f.team === 'blue') || (gameState === 'lose' && f.team === 'red')) {
       if (u.state !== 'dance') { u.state = 'dance'; playAct(u, 'Dance_Loop', { fade: 0.3 }); }
     } else {
       if (f.hp < u.lastHp) {                       // 被炸到:受擊反應
@@ -1062,7 +1062,7 @@
     }
   }
   function syncPets() {
-    syncSet(petCache, player ? player.pets.filter((p) => p.alive) : [],
+    syncSet(petCache, player ? allPets().filter((p) => p.alive) : [],
       (p) => makeVoxelPet(p.def.id),
       (p, g) => {
         const x = W2(p.x), z = W2(p.y);
@@ -1101,6 +1101,13 @@
     }
     g.userData.shadow = blobShadow(0.6);
     g.add(g.userData.shadow);
+    // 發霉:綠色黴菌光暈(平常隱藏)
+    const mold = new THREE.Mesh(new THREE.SphereGeometry(0.32, 14, 10), new THREE.MeshBasicMaterial({
+      color: 0x8bc34a, transparent: true, opacity: 0.45, depthWrite: false, toneMapped: false }));
+    mold.position.y = 0.3;
+    mold.visible = false;
+    g.add(mold);
+    g.userData.mold = mold;
     if (RARE.has(it.key)) {
       const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({
         color: it.key === 'luckybag' ? 0xff5252 : 0xffd54f, toneMapped: false,
@@ -1126,6 +1133,12 @@
         u.ring.rotation.z = elapsed * 2;
         u.ring.material.opacity = 0.5 + 0.3 * Math.sin(elapsed * 6);
       }
+      // 發霉:綠色光暈、慢慢縮小,快消失時閃爍
+      const rot = it.moldy ? Math.max(0, Math.min(1, (it.age - it.fresh) / MOLD_STAGE)) : 0;
+      u.mold.visible = !!it.moldy;
+      if (it.moldy) u.mold.material.opacity = 0.35 + 0.15 * Math.sin(elapsed * 5);
+      g.scale.setScalar(1 - rot * 0.35);
+      g.visible = !(rot > 0.7 && Math.floor(elapsed * 8) % 2 === 0);
     });
   }
 
@@ -1436,13 +1449,11 @@
     if (c < 0 || r < 0 || c >= COLS || r >= ROWS) return;
     const now = performance.now();
     if (now - tap3d.t < 350 && tap3d.c === c && tap3d.r === r) {
-      placeMeatball(player);
+      tapCell(c, r, true);  // 點兩下:放貢丸
       tap3d = { t: 0, c: -1, r: -1 };
     } else {
       tap3d = { t: now, c, r };
-      if (isFloor(c, r)) {
-        player.autoPath = aiPath(player, (cc, rr) => cc === c && rr === r, 64, 0);
-      }
+      tapCell(c, r, false); // 點一下:走過去
     }
   });
 

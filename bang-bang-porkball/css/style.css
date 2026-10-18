@@ -546,3 +546,27 @@ button.big:disabled { opacity: .45; cursor: not-allowed; }
 .tut-btns.small { justify-content: flex-end; margin-top: 4px; }
 .tut-btns.small .icon-btn { font-size: 12px; padding: 2px 8px; }
 .tut-btns .big { width: auto; margin: 0; }
+
+/* ===== 多人連線大廳(js/net.js) ===== */
+.online-panel { max-width: 380px; }
+.online-panel .logo { font-size: 26px; }
+.ol-code { letter-spacing: .15em; color: var(--blue-dark); }
+.ol-field { display: flex; align-items: center; gap: 8px; justify-content: center; font-weight: 700; margin-bottom: 10px; }
+.ol-field input, .ol-join input, .ol-cfg select {
+  font: inherit; font-weight: 700; color: var(--ink);
+  border: 2px solid var(--wood); border-radius: 8px; padding: 6px 8px; background: #fff;
+}
+.ol-field input { width: 160px; }
+.ol-join { display: flex; gap: 8px; margin-top: 10px; }
+.ol-join input { flex: 1; min-width: 0; text-transform: uppercase; letter-spacing: .15em; text-align: center; }
+.ol-join .big { width: auto; margin: 0; padding-left: 18px; padding-right: 18px; }
+.ol-status { min-height: 1.4em; font-size: 13px; font-weight: 700; color: var(--green-dark); margin: 10px 0 6px; }
+.ol-status.err { color: var(--red-dark); }
+.ol-players { list-style: none; margin: 12px 0 4px; padding: 0; text-align: left; }
+.ol-players li { display: flex; align-items: center; gap: 8px; padding: 5px 10px; margin-bottom: 4px; border-radius: 8px; background: #fffaf0; border: 2px solid var(--panel2); }
+.ol-players li.team-blue { border-color: #9fd3ff; }
+.ol-players li.team-red { border-color: #ffb3ad; }
+.ol-players em { font-style: normal; font-size: 11px; color: #fff; background: var(--wood); border-radius: 999px; padding: 0 7px; }
+.ol-cfg { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; font-weight: 700; }
+.ol-cfg label { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.ol-result { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
