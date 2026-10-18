@@ -244,7 +244,7 @@ function buildSnapshot() {
     })),
     m: meatballs.filter((m) => !m.exploded && !m.eaten).map((m) => ({
       i: nid(m), x: Math.round(m.x), y: Math.round(m.y), d: m.def.id, o: nid(m.owner), pw: m.power,
-      fu: r1(m.fuse), mo: m.moldy ? 1 : 0, hp: Math.round(m.hp), mv: m.moving ? 1 : 0, h: m.held ? 1 : 0,
+      fu: r1(m.fuse), mo: m.moldy ? 1 : 0, hp: Math.round(m.hp), mv: m.moving ? 1 : 0, h: m.held ? 1 : 0, ar: m.armed ? 1 : 0,
     })),
     it: items.filter((it) => !it.dead).map((it) => ({ i: nid(it), x: Math.round(it.x), y: Math.round(it.y), k: it.key,
       a: r1(it.age), fr: it.fresh === Infinity ? -1 : r1(it.fresh) })),
@@ -332,7 +332,7 @@ const guest = {
     }, (m, d, fresh) => {
       this.target(m, d, fresh);
       m.owner = this.fighters.get(d.o) || m.owner;
-      m.power = d.pw; m.fuse = d.fu; m.moldy = !!d.mo; m.hp = d.hp; m.moving = !!d.mv; m.held = !!d.h;
+      m.power = d.pw; m.fuse = d.fu; m.moldy = !!d.mo; m.hp = d.hp; m.moving = !!d.mv; m.held = !!d.h; m.armed = !!d.ar;
       m._nid = d.i;
     });
     this.meatballs = ms.map;
@@ -399,7 +399,7 @@ const guest = {
     wildCritters.forEach(ease);
     for (const ex of explosions) ex.t -= dt;
     explosions = explosions.filter((ex) => ex.t > 0);
-    for (const m of meatballs) if (!m.moving) m.fuse -= dt; // 快爆時閃白
+    for (const m of meatballs) if (!m.moving && !isDormant(m)) m.fuse -= dt; // 快爆時閃白
     particles = particles.filter((p) => { p.life -= dt; p.y += p.vy * dt; return p.life > 0; });
     danger = computeDanger();
     updateHud();

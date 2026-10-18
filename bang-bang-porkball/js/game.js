@@ -172,7 +172,7 @@ let danger = null;
 function computeDanger() {
   const d = Array.from({ length: ROWS }, () => Array(COLS).fill(Infinity));
   for (const m of meatballs) {
-    if (m.exploded || m.eaten) continue;
+    if (m.exploded || m.eaten || isDormant(m)) continue;
     for (const cl of blastCells(m.col, m.row, m.power, m.def.behavior === 'pierce')) {
       if (cl.r >= 0 && cl.c >= 0 && cl.r < ROWS && cl.c < COLS) {
         d[cl.r][cl.c] = Math.min(d[cl.r][cl.c], Math.max(0, m.fuse));
@@ -606,6 +606,7 @@ function explodeMeatball(m) {
     for (const other of meatballs) {
       if (!other.exploded && other.col === cell.c && other.row === cell.r) {
         other.fuse = Math.min(other.fuse, 0.05);
+        other.armed = true; // 小貢丸被波及也會跟著爆
       }
     }
     for (const it of items) {
@@ -678,6 +679,9 @@ function snackDrop() {
   return pick(pool);
 }
 
+// 小貢丸:未滿三顆相連前不會自己爆(引信不倒數),被其他爆炸波及才會跟著爆
+function isDormant(m) { return m.def.behavior === 'cluster' && !m.armed; }
+
 // 小貢丸:檢查是否有 N 顆相連(上下左右),相連才一起引爆
 function checkClusters() {
   const smalls = meatballs.filter(
@@ -706,7 +710,7 @@ function checkClusters() {
       }
     }
     if (group.length >= need) {
-      group.forEach((g) => (g.fuse = Math.min(g.fuse, 0.05)));
+      group.forEach((g) => { g.fuse = Math.min(g.fuse, 0.05); g.armed = true; });
     }
   }
 }
@@ -903,7 +907,7 @@ function useSlingshot(p) {
     meatballs.push(m);
   }
   if (hit) {
-    m.fuse = 0.02; // 命中人物 → 立刻爆炸
+    m.fuse = 0.02; m.armed = true; // 命中人物 → 立刻爆炸
     spawnText(tileCenter(spot.c), tileCenter(spot.r) - 12, '🏹命中!', '#ff8a80');
   } else {
     spawnText(tileCenter(spot.c), tileCenter(spot.r) - 12, '🏹射出', '#ffd54f');
@@ -1417,7 +1421,7 @@ function update(dt) {
     if (m.eaten) continue;             // 已被寵物吃掉,等待移除
     if (!m.held) updateMovingMeatball(m, dt); // 手持中不滑行(但仍會變質、引信倒數)
     m.age += dt;
-    if (!m.moving) m.fuse -= dt;
+    if (!m.moving && !isDormant(m)) m.fuse -= dt; // 未滿三顆的小貢丸不倒數
     if (m.fuse <= 0) explodeMeatball(m);
   }
 

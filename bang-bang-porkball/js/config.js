@@ -134,9 +134,9 @@ const MEATBALLS = [
   },
   {
     id: 4, key: '小', name: '小貢丸', color: '#e67e22', glow: '#a85710',
-    behavior: 'cluster', // 三顆相連會立刻一起爆(單顆照常倒數)
+    behavior: 'cluster', // 三顆相連才會爆;未滿三顆不會自爆,被其他爆炸波及才跟著爆
     cluster: 3,
-    desc: '三顆相連立刻一起爆',
+    desc: '三顆相連才爆,被波及也會爆',
   },
   {
     id: 5, key: '菇', name: '香菇貢丸', color: '#8e6e53', glow: '#5c4632',
