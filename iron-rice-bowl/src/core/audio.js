@@ -85,6 +85,105 @@ export class Sfx {
     }
   }
 
+  /** 車外聲音的共用輸出:經低通濾波(在車廂內聽,隔著車體較悶) */
+  _outside() {
+    if (!this.outsideBus) {
+      const f = this.ctx.createBiquadFilter();
+      f.type = 'lowpass';
+      f.frequency.value = 1800;
+      f.connect(this.master);
+      this.outsideBus = f;
+    }
+    return this.outsideBus;
+  }
+
+  /** 列車喇叭(自強號雙音氣笛);count = 鳴響次數(1 長鳴或 2 短鳴) */
+  horn(count = 1) {
+    if (!this.ctx) return;
+    const out = this._outside();
+    const t0 = this.ctx.currentTime + 0.05;
+    const len = count > 1 ? 0.45 : 1.3;
+    for (let k = 0; k < count; k++) {
+      const st = t0 + k * (len + 0.22);
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0, st);
+      g.gain.linearRampToValueAtTime(0.16, st + 0.06);
+      g.gain.setValueAtTime(0.16, st + len - 0.12);
+      g.gain.linearRampToValueAtTime(0, st + len);
+      g.connect(out);
+      // 兩個音高(約小三度)的鋸齒波,微微失諧讓聲音較厚
+      for (const f of [311, 313.5, 370, 372]) {
+        const o = this.ctx.createOscillator();
+        o.type = 'sawtooth';
+        o.frequency.setValueAtTime(f * 0.985, st);
+        o.frequency.linearRampToValueAtTime(f, st + 0.08);
+        o.connect(g);
+        o.start(st);
+        o.stop(st + len + 0.05);
+      }
+    }
+  }
+
+  /** 平交道警鈴「噹、噹」:由遠而近再遠去(約 dur 秒),經過時音高略降(都卜勒) */
+  crossing(dur = 5) {
+    if (!this.ctx) return;
+    const out = this._outside();
+    const t0 = this.ctx.currentTime + 0.05;
+    const step = 0.42;
+    for (let i = 0, t = 0; t < dur; i++, t += step) {
+      const u = t / dur;                          // 0 → 1:接近 → 經過 → 遠離
+      const vol = Math.sin(Math.PI * u) ** 1.6 * 0.13;
+      const doppler = u < 0.5 ? 1.04 : 0.95;
+      const base = (i % 2 ? 680 : 760) * doppler; // 兩個鈴交替
+      const st = t0 + t;
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(vol, st);
+      g.gain.exponentialRampToValueAtTime(0.0005, st + 0.38);
+      g.connect(out);
+      // 鈴的非諧波泛音
+      for (const [m, a] of [[1, 1], [2.32, 0.45], [3.9, 0.25]]) {
+        const o = this.ctx.createOscillator();
+        const og = this.ctx.createGain();
+        o.frequency.value = base * m;
+        og.gain.value = a;
+        o.connect(og).connect(g);
+        o.start(st);
+        o.stop(st + 0.4);
+      }
+    }
+  }
+
+  /** 嬰兒哭聲(合成):一陣陣「哇——」,音高起伏、帶顫音;vol 依距離 */
+  babyCry(dur = 4, vol = 0.1) {
+    if (!this.ctx) return;
+    const t0 = this.ctx.currentTime + 0.05;
+    const bp = this.ctx.createBiquadFilter();
+    bp.type = 'bandpass'; bp.frequency.value = 1300; bp.Q.value = 1.4;
+    bp.connect(this.master);
+    for (let t = 0; t < dur;) {
+      const len = 0.7 + Math.random() * 0.6;
+      const st = t0 + t;
+      const o = this.ctx.createOscillator();
+      o.type = 'sawtooth';
+      const f = 430 + Math.random() * 80;
+      o.frequency.setValueAtTime(f * 0.9, st);
+      o.frequency.linearRampToValueAtTime(f * 1.15, st + len * 0.3);
+      o.frequency.linearRampToValueAtTime(f * 0.8, st + len);
+      const lfo = this.ctx.createOscillator(), lg = this.ctx.createGain();
+      lfo.frequency.value = 7; lg.gain.value = 14;
+      lfo.connect(lg).connect(o.frequency);
+      const g = this.ctx.createGain();
+      g.gain.setValueAtTime(0, st);
+      g.gain.linearRampToValueAtTime(vol, st + 0.08);
+      g.gain.setValueAtTime(vol, st + len - 0.15);
+      g.gain.linearRampToValueAtTime(0, st + len);
+      o.connect(g).connect(bp);
+      o.start(st); lfo.start(st);
+      o.stop(st + len + 0.05); lfo.stop(st + len + 0.05);
+      t += len + 0.25 + Math.random() * 0.35; // 換氣
+    }
+  }
+
   chime() { [659, 523, 587, 392].forEach((f, i) => this._tone(f, 0.9, { delay: i * 0.38, gain: 0.12 })); }
   blip() { this._tone(880, 0.08, { type: 'triangle', gain: 0.1 }); }
   ok() { this._tone(660, 0.12, { gain: 0.14 }); this._tone(990, 0.18, { gain: 0.14, delay: 0.1 }); }
@@ -98,7 +197,7 @@ export class Sfx {
 const VOICE_ALIASES = { HsiaoChen: ['曉臻', '晓臻'], YunJhe: ['雲哲', '云哲'], HsiaoYu: ['曉雨', '晓雨'] };
 
 const ROLE_LABEL = {
-  attendant: '服勤員', passengerM: '乘客', passengerF: '乘客', passengerF2: '乘客', child: '小朋友', grandma: '阿嬤',
+  attendant: '服勤員', passengerM: '乘客', passengerF: '乘客', passengerF2: '乘客', child: '小朋友', grandma: '阿嬤', grandma2: '阿嬤',
   conductor: '列車廣播', conductorEn: '列車廣播', station: '車站廣播', stationEn: '車站廣播',
 };
 

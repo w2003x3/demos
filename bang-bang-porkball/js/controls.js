@@ -21,6 +21,8 @@
   const close = document.getElementById('btn-help-close');
   if (modal && open) {
     open.addEventListener('click', () => modal.classList.remove('hidden'));
+    const guideBtn = document.getElementById('btn-guide'); // 開始畫面的「玩法說明」
+    if (guideBtn) guideBtn.addEventListener('click', () => { modal.classList.remove('hidden'); modal.querySelector('.modal-panel').scrollTop = 0; });
     if (close) close.addEventListener('click', () => modal.classList.add('hidden'));
     modal.addEventListener('click', (e) => {
       if (e.target === modal) modal.classList.add('hidden'); // 點背景關閉

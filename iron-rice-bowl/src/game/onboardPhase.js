@@ -5,6 +5,7 @@ import { TRAIN_TYPES } from '../config/trains.js';
 import { STATIONS } from '../config/stations.js';
 import { ITEMS, ITEM_LIST } from '../config/items.js';
 import { INCIDENTS } from '../config/incidents.js';
+import { AMBIENT_KIDS, AMBIENT_GRANDMA_CHATS } from '../config/voice.js';
 import { rng, Tex } from '../core/textures.js';
 import { cloneWithColors } from '../core/assets.js';
 import { TrainSet } from '../world/trainset.js';
@@ -168,6 +169,17 @@ export class OnboardPhase {
     r.s += ds;
     r.clackAcc += ds;
     if (r.clackAcc > 25) { r.clackAcc = 0; if (r.v > 3) this.g.sfx.clack(r.v / vmax); }
+    // 行駛途中隨機:列車喇叭、經過平交道(速度夠快時)
+    r.outsideT = (r.outsideT ?? 12 + this.R() * 15) - dt;
+    if (r.outsideT <= 0) {
+      r.outsideT = 18 + this.R() * 30;
+      if (r.v > vmax * 0.4) {
+        const x = this.R();
+        if (x < 0.35) this.g.sfx.horn(this.R() < 0.5 ? 1 : 2);
+        else if (x < 0.75) this.g.sfx.crossing(4 + this.R() * 3);
+        else { this.g.sfx.horn(2); setTimeout(() => this.g.sfx.crossing(5), 900); } // 鳴笛後通過平交道
+      }
+    }
     if (!r.announced && rem < vmax * 22) {
       r.announced = true;
       const st = this.stops[r.leg + 1];
@@ -958,9 +970,33 @@ export class OnboardPhase {
     return null;
   }
 
-  /** 定時事件:窗簾拉下時乘客抱怨;停站時推車卡在走道被抱怨擋道。 */
+  /** 定時事件:車廂環境聲;窗簾拉下時乘客抱怨;停站時推車卡在走道被抱怨擋道。 */
   _updateEvents(dt) {
     const g = this.g;
+    // 車廂環境聲:只出現在玩家所在的車廂(小孩吵鬧、嬰兒哭、阿婆聊台積電)
+    this.ambientT = (this.ambientT ?? 15 + this.R() * 10) - dt;
+    if (this.ambientT <= 0) {
+      this.ambientT = 22 + this.R() * 25;
+      const x = this.R();
+      if (x < 0.35) {
+        const seat = this._nearbySeat(10);
+        if (seat) g.voice.talk(`amb_kid_${(this.R() * AMBIENT_KIDS.length) | 0}`, seat.head);
+      } else if (x < 0.6) {
+        const seat = this._nearbySeat(12);
+        if (seat) {
+          g.sfx.babyCry(3 + this.R() * 3, Math.max(0.04, 0.12 - Math.abs(seat.x - this.p.mid) * 0.007));
+          g.ui.bubble({ text: '哇——哇——(嬰兒在哭)', anchor: seat.head, label: '嬰兒' });
+        }
+      } else {
+        // 兩位相鄰座位的阿婆聊天
+        const a = this._nearbySeat(10);
+        const b = a && this.pax.seats.find((s) => s.occupied && s !== a && s.car === a.car && s.row === a.row);
+        if (a && b) {
+          const c = (this.R() * AMBIENT_GRANDMA_CHATS.length) | 0;
+          g.voice.talk(AMBIENT_GRANDMA_CHATS[c].map(([role], i) => ({ id: `amb_gma_${c}_${i}`, anchor: role === 'grandma' ? a.head : b.head })));
+        }
+      }
+    }
     if (g.settings.curtains) {
       this.curtainTimer -= dt;
       if (this.curtainTimer <= 0) {

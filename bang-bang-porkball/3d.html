@@ -119,6 +119,8 @@
               <button type="button" class="mapbtn" data-map="night">🏮 夜市</button>
             </div>
             <button id="btn-start" class="big primary">🎮 開始對戰</button>
+            <button id="btn-tutorial" class="big" type="button">🎓 新手教學</button>
+            <button id="btn-guide" class="big" type="button">📖 玩法說明</button>
             <button class="big" disabled>🌐 多人連線(開發中)</button>
             <p class="mini">🔵 你 + 2 名 AI 隊友 vs 🔴 3 名 AI・限時 2 分鐘<br>拖曳旋轉視角・滾輪縮放・點地圖移動</p>
           </div>
@@ -163,6 +165,7 @@
 <div id="help-modal" class="modal hidden">
   <div class="modal-panel">
     <button id="btn-help-close" class="icon-btn close" type="button">✕ 關閉</button>
+    <div id="guide"></div>
     <h2>3D 視角操作</h2>
     <ul class="help">
       <li>🖱️ <b>左鍵拖曳 / 單指滑動</b>:旋轉視角(繞 XYZ 環繞)</li>
@@ -184,11 +187,6 @@
       <li><kbd>K</kbd>/<kbd>L</kbd> 放出/收起 🐭/🪳 · <kbd>R</kbd> 重新開始</li>
     </ul>
 
-    <h2>遊戲規則</h2>
-    <ul class="help">
-      <li>規則與 2D 版完全相同(同一套遊戲引擎)</li>
-      <li>詳細道具/貢丸/寵物說明請見 <a href="index.html" style="color:#ffd54f">2D 版</a> 說明</li>
-    </ul>
   </div>
 </div>
 
@@ -204,5 +202,7 @@
 <script src="vendor/GLTFLoader.js"></script>
 <script src="vendor/SkeletonUtils.js"></script>
 <script src="js/render3d.js"></script>
+<script src="js/guide.js"></script>
+<script src="js/tutorial.js"></script>
 </body>
 </html>

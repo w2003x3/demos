@@ -56,6 +56,8 @@
               <button type="button" class="mapbtn" data-map="night">🏮 夜市</button>
             </div>
             <button id="btn-start" class="big primary">🎮 開始對戰</button>
+            <button id="btn-tutorial" class="big" type="button">🎓 新手教學</button>
+            <button id="btn-guide" class="big" type="button">📖 玩法說明</button>
             <button class="big" disabled>🌐 多人連線(開發中)</button>
             <p class="mini">🔵 你 + 2 名 AI 隊友 vs 🔴 3 名 AI・限時 2 分鐘<br>炸光敵隊獲勝;時間到比存活人數</p>
           </div>
@@ -100,6 +102,7 @@
 <div id="help-modal" class="modal hidden">
   <div class="modal-panel">
     <button id="btn-help-close" class="icon-btn close" type="button">✕ 關閉</button>
+    <div id="guide"></div>
     <h2>操作說明</h2>
     <ul class="help">
       <li>🖱️ 點地圖一下=自動走過去 · 點兩下=放貢丸(滑鼠/觸控皆可)</li>
@@ -115,69 +118,6 @@
       <li><kbd>R</kbd> 隨時重新開始</li>
     </ul>
 
-    <h2>地圖元素</h2>
-    <ul class="help">
-      <li>🧱 石磚牆 → 不可破壞</li>
-      <li>📦 木箱 → 炸掉 60% 掉<b>裝備/防護</b></li>
-      <li>🗑️ 垃圾桶 → 炸掉 90% 掉<b>食用道具</b></li>
-      <li>🌿 草叢 → 可走過;40% 驚動野生🐭/🪳偷襲一下,可炸掉變草地</li>
-    </ul>
-
-    <h2>食用道具</h2>
-    <ul class="help">
-      <li>🍄 香菇 速度+ · 🍠 芋頭 HP上限+</li>
-      <li>🌿 香菜 MP上限+ · 🌶️ 辣椒 威力+</li>
-      <li>🥬 白蘿蔔 免疫力+(負面狀態變短)</li>
-      <li>🧂 胡椒粉 丟擲距離+ · 🍢 竹籤 可放貢丸數+</li>
-      <li>🍄 金針菇 自己貢丸時效+(死亡噴等量)</li>
-      <li>🦑 墨魚 減輕黑畫面(會自己游走)</li>
-    </ul>
-
-    <h2>台灣小吃神器(稀有!)</h2>
-    <ul class="help">
-      <li>🧧 福袋 → <b>全能力直接達頂</b>(超稀有)</li>
-      <li>🍗 雞排 → HP 補滿 · 🍡 豬血糕 → MP 補滿</li>
-      <li>🧋 早餐店奶茶 → 速度達頂 · 🧋 珍奶 → 貢丸數達頂</li>
-      <li>🥡 臭豆腐 → 貢丸威力達頂</li>
-      <li>💡 各地圖名產不同:公園=奶茶、菜市場=雞排/豬血糕、夜市=珍奶/臭豆腐</li>
-    </ul>
-
-    <h2>地圖</h2>
-    <ul class="help">
-      <li>🌳 公園:草地、石牆、木箱、草叢</li>
-      <li>🥬 菜市場:磁磚地、紅白棚攤位、蔬菜箱、菜堆(垃圾桶較多)</li>
-      <li>🏮 夜市:柏油地、亮燈攤車、摺疊桌、紙箱堆</li>
-    </ul>
-
-    <h2>裝備 / 防護</h2>
-    <ul class="help">
-      <li>🦺 防爆衣 → 抵免一次爆炸波</li>
-      <li>😷 N95口罩 → 抵免一次中黴毒</li>
-    </ul>
-
-    <h2>貢丸個性</h2>
-    <ul class="help">
-      <li>貢丸=單純爆 · 撒尿牛丸=踢出反彈</li>
-      <li>爆漿貢丸=火焰穿牆(最大)· 小貢丸=需三顆相連(最小)</li>
-      <li>香菇/芋頭/香菜/麻辣=爆炸噴對應道具</li>
-      <li>墨魚貢丸=炸到短暫黑畫面 + 噴墨魚</li>
-    </ul>
-
-    <h2>寵物 🐭🪳</h2>
-    <ul class="help">
-      <li>可各自<b>放出/收起</b>(K / L),放出後自動啃貢丸</li>
-      <li>老鼠咬擊高、蟑螂低;有 HP,昏倒需復活道具</li>
-      <li>⚠️ 🧀老鼠藥、🧴蟑螂藥 會引誘對應寵物去咬 → 身亡</li>
-    </ul>
-
-    <h2>隊伍對戰</h2>
-    <ul class="help">
-      <li>🔵 藍隊(你 + 隊友)對 🔴 紅隊</li>
-      <li>⏱️ 限時內炸光敵隊獲勝;時間到比存活人數</li>
-      <li>有友軍傷害,別炸到隊友</li>
-    </ul>
-
-    <p class="tip">🌡️溫度、💧濕度越高,貢丸(食物)時效越短、引信越快;爆炸前若先發霉,被炸到會中黴毒(每秒扣 HP)。免疫力越高負面狀態越短。💧 MP 會隨時間緩慢回復。</p>
   </div>
 </div>
 
@@ -185,5 +125,7 @@
 <script src="js/net.js"></script>
 <script src="js/game.js"></script>
 <script src="js/controls.js"></script>
+<script src="js/guide.js"></script>
+<script src="js/tutorial.js"></script>
 </body>
 </html>

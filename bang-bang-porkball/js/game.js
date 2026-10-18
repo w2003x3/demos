@@ -550,6 +550,7 @@ function spawnText(x, y, text, color) {
 //  放置 / 引爆貢丸
 // ====================================================================
 function placeMeatball(p) {
+  if (!p.alive) return; // 倒下後不能再放貢丸
   if (p.bombsPlaced() >= p.maxBombs) return;
   const c = p.col, r = p.row;
   // 該格已有貢丸則不放
@@ -935,7 +936,7 @@ function deployPet(p, id) {
   const s = p.petState[id];
   if (!s) return;
   if (s.status === 'dead') {
-    spawnText(p.x, p.y - TS * 0.5, s.def.emoji + '已昏倒,需復活道具', '#ff8a80');
+    spawnText(p.x, p.y - TS * 0.5, s.def.emoji + '已昏倒,本場無法再放出', '#ff8a80');
     return;
   }
   if (s.status === 'out') { recallPet(p, id); return; } // 再按一次=收起
@@ -1004,7 +1005,7 @@ function updateWildCritters(dt) {
 function updatePets(dt) {
   for (const pet of player.pets) {
     pet.tickPoison(dt);
-    if (pet.alive && player.alive) pet.update(dt);
+    if (pet.alive) pet.update(dt); // 主人倒下後,放出中的寵物仍繼續啃貢丸
   }
   for (const pet of player.pets) {
     if (!pet.alive) {
@@ -1063,9 +1064,18 @@ window.addEventListener('keydown', (ev) => {
   if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) {
     ev.preventDefault();
   }
-  if (k === 'r') { startMatch(); return; } // 隨時可立即重新開始
+  if (k === 'r') { // 隨時可立即重新開始(教學中=重來這一步)
+    if (window.tutorial && tutorial.active) tutorial.retry(); else startMatch();
+    return;
+  }
   if (k === 'enter' && gameState !== 'playing') { startMatch(); return; }
   if (gameState !== 'playing') return;
+  // 倒下後只能放出/收起還活著的寵物
+  if (!player.alive) {
+    if (k === 'k') deployPet(player, 'rat');
+    if (k === 'l') deployPet(player, 'roach');
+    return;
+  }
   // 選擇貢丸 1~9
   if (k >= '1' && k <= '9') {
     player.selected = parseInt(k, 10);
@@ -1091,6 +1101,7 @@ window.addEventListener('keyup', (ev) => {
 
 // 玩家為「格子制」移動:一次走一整格,永遠對齊格線,方便轉彎不卡住
 function readPlayerInput(dt) {
+  if (!player.alive) return; // 倒下後不能移動
   // 想走的方向 = 最近按住的移動鍵
   let want = null;
   for (let i = moveStack.length - 1; i >= 0; i--) {
@@ -1405,6 +1416,9 @@ function update(dt) {
   bots.forEach((e) => { if (!e.alive && e.deathT === undefined) e.deathT = 0.4; });
   bots.forEach((e) => { if (e.deathT !== undefined) e.deathT -= dt; });
   bots = bots.filter((e) => e.alive || e.deathT > 0);
+
+  // 新手教學:由 tutorial.js 接手關卡進度,不計時、不判勝負
+  if (window.tutorial && tutorial.active) { tutorial.update(dt); updateHud(); return; }
 
   // 限時隊伍勝負判定
   matchTime -= dt;
@@ -1755,7 +1769,8 @@ function refreshActionButtons() {
     actionBtns = list && list.length ? Array.from(list) : [];
   }
   if (!actionBtns.length) return;
-  const playing = gameState === 'playing' && player && player.alive;
+  const inMatch = gameState === 'playing' && !!player;
+  const playing = inMatch && player.alive;
   const t = playing ? player.tools : {};
   // 共用的情境判定(都很便宜,每幀跑沒問題)
   const aheadMb = playing && scanAhead(player).length > 0;          // 面向方向有貢丸
@@ -1776,8 +1791,9 @@ function refreshActionButtons() {
     'q': playing && t.vacuum > 0 && aheadMb,                        // 吸塵器:有工具+前方有丸
     'f': playing && t.garbage > 0 && aheadMb,                       // 垃圾車:有工具+前方有丸
     'v': playing && t.slippers > 0 && petNear,                      // 藍白拖:有拖鞋+附近有寵物
-    'k': playing && player.petState.rat && player.petState.rat.status !== 'dead',
-    'l': playing && player.petState.roach && player.petState.roach.status !== 'dead',
+    // 寵物:倒下後仍可放出/收起還活著的寵物
+    'k': inMatch && player.petState.rat && player.petState.rat.status !== 'dead',
+    'l': inMatch && player.petState.roach && player.petState.roach.status !== 'dead',
     'r': true,                                                      // 重來:永遠可用
   };
   for (const b of actionBtns) {
@@ -1827,6 +1843,7 @@ function refreshSelector() {
 //  初始化 / 重新開始
 // ====================================================================
 function restart() {
+  if (window.tutorial) tutorial.stop(); // 任何重新開局都會結束教學
   generateMap();
   randomizeWeather();
   weatherT = 0;
@@ -1852,9 +1869,7 @@ function restart() {
   }
   gameState = 'playing';
   elapsed = 0;
-  // 預設兩隻寵物都放出(可用 K / L 收起再放出)
-  deployPet(player, 'rat');
-  deployPet(player, 'roach');
+  // 寵物預設收著,用 K / L 放出
   buildRoster();
   updateHud();
 }

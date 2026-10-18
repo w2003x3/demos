@@ -16,6 +16,7 @@ export const VOICES = {
   passengerF2: { voice: 'zh-TW-HsiaoChenNeural', lang: 'zh-TW', pitch: '+4%' },
   child:       { voice: 'zh-TW-HsiaoYuNeural', lang: 'zh-TW', pitch: '+25%', rate: '+10%' },
   grandma:     { voice: 'zh-TW-HsiaoChenNeural', lang: 'zh-TW', pitch: '-15%', rate: '-12%' },
+  grandma2:    { voice: 'zh-TW-HsiaoYuNeural', lang: 'zh-TW', pitch: '-18%', rate: '-10%' },
   conductor:   { voice: 'zh-TW-YunJheNeural', lang: 'zh-TW', rate: '-5%' },
   conductorEn: { voice: 'en-US-GuyNeural', lang: 'en-US', rate: '-5%' },
   station:     { voice: 'zh-TW-YunJheNeural', lang: 'zh-TW', rate: '-8%' },
@@ -78,12 +79,35 @@ const INCIDENT_VOICE = {
   phone: ['passengerM', '喂?對啦,我在火車上啦!'],
 };
 
+// 車廂環境聲(行駛中隨機出現在玩家所在的車廂):小孩吵鬧;兩位阿婆聊天(依序對話)
+export const AMBIENT_KIDS = [
+  '媽媽,我們到了沒有啦?',
+  '哥哥搶我的玩具!還給我啦!',
+  '我要吃餅乾!我要吃餅乾!',
+  '哇!外面有火車耶!好快喔!',
+  '我要坐靠窗的位子啦!',
+];
+export const AMBIENT_GRANDMA_CHATS = [
+  [['grandma', '欸,你有沒有看新聞?台積電又大漲了耶!'],
+   ['grandma2', '真的喔?我孫子叫我要趕快去買!'],
+   ['grandma', '對啊,現在不買,等一下又漲上去了啦!'],
+   ['grandma2', '那我下車就去證券行問看看。']],
+  [['grandma2', '我上禮拜買一張台積電,已經賺一台機車了啦!'],
+   ['grandma', '哇,你好厲害!那我也要買兩張!'],
+   ['grandma2', '要快喔,大家都在搶啦!']],
+  [['grandma', '我女兒說台積電明天還會再漲。'],
+   ['grandma2', '那我們退休金都拿去買好了!'],
+   ['grandma', '哈哈,買了就不要賣,傳給孫子!']],
+];
+
 /** 產生所有台詞(含依車站、品項、狀況展開的動態台詞)。 */
 export function buildVoiceLines() {
   const lines = [];
   const add = (id, role, text) => lines.push({ id, role, text });
 
   for (const [k, t] of Object.entries(ATTENDANT_LINES)) add(`att_${k}`, 'attendant', t);
+  AMBIENT_KIDS.forEach((t, i) => add(`amb_kid_${i}`, 'child', t));
+  AMBIENT_GRANDMA_CHATS.forEach((chat, c) => chat.forEach(([role, t], i) => add(`amb_gma_${c}_${i}`, role, t)));
   for (const [k, t] of Object.entries(CONDUCTOR_LINES)) add(`conductor_${k}`, 'conductor', t);
   for (const [k, t] of Object.entries(PASSENGER_LINES)) {
     add(`pax_${k}_m`, 'passengerM', t);

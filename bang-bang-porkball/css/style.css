@@ -493,3 +493,56 @@ button.big:disabled { opacity: .45; cursor: not-allowed; }
   box-shadow: none;
   cursor: default;
 }
+
+/* ===== 遊戲機制說明(js/guide.js) ===== */
+.guide-steps { margin: 0 0 4px 20px; font-size: 13px; line-height: 1.7; }
+.guide-steps li { margin-bottom: 2px; }
+#guide details {
+  margin: 8px 0;
+  border: 2px solid var(--panel2);
+  border-radius: 10px;
+  background: #fffaf0;
+}
+#guide summary {
+  cursor: pointer;
+  padding: 7px 10px;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--red-dark);
+  list-style-position: inside;
+}
+#guide details[open] summary { border-bottom: 2px dashed var(--panel2); }
+#guide details > :not(summary) { margin: 6px 10px 8px; }
+.guide-list { list-style: none; font-size: 13px; line-height: 1.5; }
+.guide-list li { display: grid; grid-template-columns: 8.5em 1fr; gap: 8px; padding: 3px 0; border-bottom: 1px dotted #ecd9b0; }
+.guide-list li:last-child { border-bottom: none; }
+.guide-list b { color: var(--ink); white-space: nowrap; }
+.guide-note { font-size: 12px; color: var(--ink-soft); line-height: 1.5; }
+@media (max-width: 480px) {
+  .guide-list li { grid-template-columns: 1fr; gap: 0; }
+}
+
+/* ===== 新手教學提示(js/tutorial.js) ===== */
+.tutorial-banner {
+  position: absolute;
+  top: 10px; left: 50%;
+  transform: translateX(-50%);
+  width: min(560px, calc(100% - 20px));
+  z-index: 7;
+  padding: 10px 14px 8px;
+  background: rgba(255, 246, 226, .96);
+  border: 3px solid var(--wood);
+  border-radius: 14px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .3);
+  color: var(--ink);
+}
+.tutorial-banner.hidden { display: none; }
+.tut-head { font-weight: 800; font-size: 15px; color: var(--red-dark); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.tut-num { background: var(--red); color: #fff; border-radius: 999px; padding: 0 9px; font-size: 12px; }
+.tut-flash { color: var(--green-dark); font-size: 13px; }
+.tut-text { font-size: 13px; line-height: 1.6; margin-top: 4px; }
+.tut-text kbd { background: #fff; border: 2px solid var(--wood); border-radius: 5px; padding: 0 5px; font-size: 12px; font-weight: 700; }
+.tut-btns { display: flex; gap: 8px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+.tut-btns.small { justify-content: flex-end; margin-top: 4px; }
+.tut-btns.small .icon-btn { font-size: 12px; padding: 2px 8px; }
+.tut-btns .big { width: auto; margin: 0; }
