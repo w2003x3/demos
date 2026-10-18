@@ -570,3 +570,8 @@ button.big:disabled { opacity: .45; cursor: not-allowed; }
 .ol-cfg { display: flex; flex-direction: column; gap: 6px; margin: 10px 0; font-weight: 700; }
 .ol-cfg label { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .ol-result { display: flex; flex-direction: column; gap: 8px; margin-top: 6px; }
+
+/* ===== 寫實圖示(動作按鈕、左側面板) ===== */
+.act-img { width: 30px; height: 30px; object-fit: contain; display: block; margin: 0 auto 1px; filter: drop-shadow(0 1px 1px rgba(0,0,0,.25)); }
+.act.disabled .act-img { filter: grayscale(1); }
+.hud-ico { width: 18px; height: 18px; object-fit: contain; vertical-align: -4px; margin-right: 1px; }

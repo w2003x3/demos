@@ -11,13 +11,15 @@ canvas.height = H;
 // ---------- 2D 圖片資產(由 3D 寫實模型渲染,見 tools/sprites/)----------
 // 貢丸 id(1~13)對應的圖檔名
 const MB_SPRITE = Array.from({ length: 13 }, (_, i) => 'mb_' + (i + 1));
-// 各主題的地圖物件圖:有多款時依格子座標固定挑一款(外圈用 wall,內部柱子用 solid)
+// 各主題的地圖物件圖:有多款時依格子座標固定挑一款(外圈用 wall,左右兩側用轉 90° 的 wallSide,內部柱子用 solid)
 const TILE_SPRITES = {
   park:   { floor: ['floor1', 'floor2'], wall: ['wall'], solid: ['stone'], brick: ['crate', 'crate2'],
             trash: ['trashcan'], bush: ['bush', 'bush2'] },
-  market: { floor: ['market_floor1', 'market_floor2'], wall: ['market_wall', 'market_wall2'], solid: ['market_stall'],
+  market: { floor: ['market_floor1', 'market_floor2'], wall: ['market_wall', 'market_wall2'],
+            wallSide: ['market_wall_side', 'market_wall2_side'], solid: ['market_stall'],
             brick: ['market_crate', 'market_crate2', 'market_crate3'], trash: ['market_trash'], bush: ['market_pile'] },
-  night:  { floor: ['night_floor1', 'night_floor2'], wall: ['night_wall', 'night_wall2'], solid: ['night_stall'],
+  night:  { floor: ['night_floor1', 'night_floor2'], wall: ['night_wall', 'night_wall2'],
+            wallSide: ['night_wall_side', 'night_wall2_side'], solid: ['night_stall'],
             brick: ['night_table', 'night_table2'], trash: ['night_trash'], bush: ['night_boxes'] },
 };
 // 地圖物件圖是 1 格寬、1.25 格高(65° 俯視);畫的時候把格子深度拉回正方形
@@ -1696,7 +1698,8 @@ function draw() {
       const t = grid[r][c];
       if (t === TILE.EMPTY) continue;
       const edge = r === 0 || c === 0 || r === ROWS - 1 || c === COLS - 1;
-      const list = t === TILE.SOLID ? (edge ? ts.wall : ts.solid)
+      const side = (c === 0 || c === COLS - 1) && r !== 0 && r !== ROWS - 1; // 左右兩側(不含四角)
+      const list = t === TILE.SOLID ? (side && ts.wallSide ? ts.wallSide : edge ? ts.wall : ts.solid)
         : t === TILE.BRICK ? ts.brick : t === TILE.TRASH ? ts.trash : ts.bush;
       spriteRect('tiles/' + pickVar(list, c, r), c * TS, (r + 1) * TS - tallH, TS, tallH);
     }
@@ -1947,6 +1950,15 @@ function updateRoster() {
 // ====================================================================
 //  HUD
 // ====================================================================
+// 小圖示(寫實道具圖)與「內容有變才更新」的 innerHTML(每幀呼叫也不會一直重建 DOM)
+const hudIcon = (path) => `<img class="hud-ico" src="assets/${path}.webp" alt="">`;
+const hudCache = {};
+function setHtml(id, html) {
+  if (hudCache[id] === html) return;
+  hudCache[id] = html;
+  const el = document.getElementById(id);
+  if (el) el.innerHTML = html;
+}
 function updateHud() {
   const bar = (cur, max, color) =>
     `<div class="bar"><div class="fill" style="width:${(cur / max) * 100}%;background:${color}"></div></div>`;
@@ -1960,14 +1972,12 @@ function updateHud() {
     `🍢 竹籤 ${player.bombsPlaced()}/${player.maxBombs}`;
   document.getElementById('stat-weather').textContent =
     `${theme().icon}${theme().name} 🌡️${Math.round(env.temp)}°C 💧${Math.round(env.humidity)}%`;
-  const petEl = document.getElementById('stat-pet');
   const mark = { out: '放出', stored: '收起', dead: '昏倒' };
-  petEl.textContent = '寵物 ' + Object.values(player.petState)
-    .map((s) => `${s.def.emoji}${mark[s.status]}`).join(' ');
+  setHtml('stat-pet', '寵物 ' + Object.values(player.petState)
+    .map((s) => `${hudIcon('pets/' + s.def.id)}${mark[s.status]}`).join(' '));
   const t = player.tools;
-  document.getElementById('stat-tools').textContent =
-    `🧹${t.vacuum || 0} 🚛${t.garbage || 0} 🩴${t.slippers || 0} ` +
-    `🥢${t.tongs || 0} 🧤${t.glove || 0} 🏹${t.slingshot || 0}`;
+  setHtml('stat-tools', ['vacuum', 'garbage', 'slippers', 'tongs', 'glove', 'slingshot']
+    .map((k) => `${hudIcon('items/' + k)}${t[k] || 0}`).join(' '));
   document.getElementById('stat-guard').textContent =
     `🛡️${player.blastGuard} 😷${player.moldGuard} 🦠免疫${player.immunity.toFixed(1)}`;
   const poisonEl = document.getElementById('stat-poison');
