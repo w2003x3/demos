@@ -16,7 +16,7 @@ const sites = [
   { out: '3d-box', src: '3D紙箱', files: ['index.html', 'app.js', 'styles.css'] },
   { out: 'zhu-ying-tai', src: '注英台', files: ['index.html', 'styles.css', 'app.js', 'data'] },
   { out: 'muse-ripple', src: '一詞春水', build: true },
-  { out: 'bang-bang-porkball', src: '20260613爆爆丸', files: ['index.html', '3d.html', 'css', 'js', 'assets', 'models'], exclude: /[\\/]models[\\/](Duck\.glb|models\.js)$|[\\/]assets[\\/]preview\.html$/ },
+  { out: 'bang-bang-porkball', src: '20260613爆爆丸', files: ['index.html', '3d.html', 'css', 'js', 'assets', 'models', 'vendor'], exclude: /[\\/]models[\\/](Duck\.glb|models\.js)$|[\\/]assets[\\/]preview\.html$/ },
 ];
 
 for (const s of sites) {
