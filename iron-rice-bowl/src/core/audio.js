@@ -221,6 +221,8 @@ export class Voice {
      * 0 時只顯示字幕不出聲;廣播不受影響(全車都聽得到)。
      */
     this.hearing = null;
+    /** 播放來源:both 預錄音檔優先(缺檔用瀏覽器發音)/ files 只用預錄 / browser 只用瀏覽器發音 */
+    this.mode = 'both';
   }
 
   async init() {
@@ -312,7 +314,12 @@ export class Voice {
       const t = setTimeout(done, 400 + line.text.length * 120);
       return { stop: () => clearTimeout(t) };
     }
-    if (this.files.has(id)) {
+    const useFile = this.mode !== 'browser' && this.files.has(id);
+    if (!useFile && this.mode === 'files') { // 只用預錄但缺檔:只顯示字幕
+      const t = setTimeout(done, 400 + line.text.length * 120);
+      return { stop: () => clearTimeout(t) };
+    }
+    if (useFile) {
       const a = new Audio(`${this.base}/${id}.mp3`);
       const talk = meta.channel === 'talk';
       let live = true;

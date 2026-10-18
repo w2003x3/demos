@@ -156,13 +156,13 @@ export class UI {
       </div>
       <div class="menu-foot">
         <button id="help-btn" class="ghost">📖 操作說明</button>
-        <button id="mute-btn" class="ghost">${info.muted ? '🔇 已靜音' : '🔊 聲音開'}</button>
+        ${`<div class="seg seg-sound" id="sound-seg"><span>🔊 聲音</span>${[['both', '預錄優先'], ['files', '只用預錄'], ['browser', '瀏覽器發音'], ['mute', '靜音']].map(([v, t]) => `<button data-c="${v}" class="${info.sound === v ? 'on' : ''}">${t}</button>`).join('')}</div>`}
         <button id="quality-btn" class="ghost">畫質:${esc(info.quality)}</button>
         ${`<div class="seg" id="curtain-seg"><span>🪟 窗簾</span><button data-v="0" class="${info.curtains ? '' : 'on'}">拉開</button><button data-v="1" class="${info.curtains ? 'on' : ''}">拉下</button></div>`}
         <span class="muted-txt">語音來源:${esc(info.voice)}</span>
       </div>`, 'menu');
     s.querySelectorAll('.mission:not(.locked)').forEach((b) => b.addEventListener('click', () => onPick(missions[+b.dataset.i])));
-    $('#mute-btn', s).addEventListener('click', (e) => { e.target.textContent = onToggleMute() ? '🔇 已靜音' : '🔊 聲音開'; });
+    this._bindChoice($('#sound-seg', s), info.onSound);
     $('#quality-btn', s).addEventListener('click', (e) => { e.target.textContent = `畫質:${info.onQuality()}`; });
     this._bindSeg($('#curtain-seg', s), () => info.curtains, info.onCurtains, (v) => { info.curtains = v; });
     $('#help-btn', s).addEventListener('click', () => info.onHelp());
@@ -196,7 +196,7 @@ export class UI {
         <button class="ghost" id="b-quality">畫質:${esc(st.quality || '')}</button>
         ${`<div class="seg" id="b-curtain"><span>🪟 窗簾</span><button data-v="0" class="${st.curtains ? '' : 'on'}">拉開</button><button data-v="1" class="${st.curtains ? 'on' : ''}">拉下</button></div>`}
         <div class="seg" id="b-view"><span>🎥 視角</span><button data-v="0" class="${st.firstPerson ? '' : 'on'}">第三人稱</button><button data-v="1" class="${st.firstPerson ? 'on' : ''}">第一人稱</button></div>
-        <button class="ghost" id="b-mute">${st.muted ? '🔇 已靜音' : '🔊 聲音開'}</button>
+        ${`<div class="seg seg-sound" id="b-sound"><span>🔊 聲音</span>${[['both', '預錄優先'], ['files', '只用預錄'], ['browser', '瀏覽器發音'], ['mute', '靜音']].map(([v, t]) => `<button data-c="${v}" class="${st.sound === v ? 'on' : ''}">${t}</button>`).join('')}</div>`}
         <button class="ghost" id="b-help">📖 操作說明</button>
       </div>
       <p class="muted-txt">拉下窗簾:不繪製窗外景色、減少效能消耗;但乘客可能抱怨看不到風景並客訴。<br>畫質:陰影與解析度立即生效,車內燈光種類於下一趟任務生效。</p>
@@ -206,8 +206,18 @@ export class UI {
     $('#b-quality', s).addEventListener('click', (e) => { e.target.textContent = `畫質:${st.onQuality()}`; });
     this._bindSeg($('#b-curtain', s), () => st.curtains, st.onCurtains, (v) => { st.curtains = v; });
     this._bindSeg($('#b-view', s), () => st.firstPerson, st.onView, (v) => { st.firstPerson = v; });
-    $('#b-mute', s).addEventListener('click', (e) => { e.target.textContent = st.onMute() ? '🔇 已靜音' : '🔊 聲音開'; });
+    this._bindChoice($('#b-sound', s), st.onSound);
     $('#b-help', s).addEventListener('click', () => st.onHelp());
+  }
+
+  /** 多選一(data-c):點選即套用並標示目前選項。 */
+  _bindChoice(el, onPick) {
+    el.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-c]');
+      if (!b) return;
+      onPick(b.dataset.c);
+      el.querySelectorAll('button[data-c]').forEach((x) => x.classList.toggle('on', x === b));
+    });
   }
 
   /** 兩段式開關:點未選取的一邊才切換(onToggle 回傳切換後狀態)。 */

@@ -56,12 +56,13 @@ class Game {
     this.ui = new UI(document.getElementById('ui'));
     this.ui.bindInput(this.input);
     // 遊戲中可切換的設定(窗簾);存在瀏覽器
-    this.settings = { curtains: false, ...load(SETTINGS_KEY, {}) };
+    this.settings = { curtains: false, voiceMode: 'both', ...load(SETTINGS_KEY, {}) };
     this.voice = new Voice(VOICE_BASE, (s) => {
       if (s.channel === 'announce') this.ui.announce(s.label, s.text);
       else this.ui.bubble({ text: s.text, label: s.label, anchor: s.anchor });
     });
     this.muted = false;
+    this.voice.mode = this.settings.voiceMode;
     let q = 'medium';
     try { q = localStorage.getItem(QUALITY_KEY) || q; } catch { /* 無法讀取 → 預設 */ }
     this.setQuality(QUALITY[q] ? q : 'medium');
@@ -129,6 +130,8 @@ class Game {
     const name = (id) => (c.knows(id) ? rankById(id).title : '？？？');
     this.ui.menu(list, {
       muted: this.muted,
+      sound: this.soundChoice(),
+      onSound: (c) => this.setSound(c),
       quality: this.quality.label,
       onQuality: () => this.cycleQuality(),
       curtains: this.settings.curtains,
@@ -178,6 +181,17 @@ class Game {
     save(SETTINGS_KEY, this.settings);
     this.phase?.applySettings?.();
     return this.settings.curtains;
+  }
+
+  /** 聲音選項:both 預錄優先 / files 只用預錄 / browser 只用瀏覽器發音 / mute 靜音 */
+  soundChoice() { return this.muted ? 'mute' : this.settings.voiceMode; }
+
+  setSound(c) {
+    if (c === 'mute') { if (!this.muted) this.toggleMute(); return; }
+    this.settings.voiceMode = c;
+    this.voice.mode = c;
+    save(SETTINGS_KEY, this.settings);
+    if (this.muted) this.toggleMute();
   }
 
   toggleMute() {
@@ -282,8 +296,8 @@ class Game {
       onQuality: () => this.cycleQuality(),
       curtains: this.settings.curtains,
       onCurtains: () => this.toggleCurtains(),
-      muted: this.muted,
-      onMute: () => this.toggleMute(),
+      sound: this.soundChoice(),
+      onSound: (c) => this.setSound(c),
       firstPerson: this.phase?.cam?.mode === 'first',
       onView: () => {
         const c = this.phase?.cam;
