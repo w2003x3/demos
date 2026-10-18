@@ -2058,6 +2058,8 @@ function buildSelector() {
     selectorLast = -1; // 強制刷新
     refreshSelector();
   });
+  selectorLast = -1; // 按鈕剛建立:強制刷新一次(夜市限定依地圖顯示/隱藏)
+  refreshSelector();
 }
 
 // 依 player.selected 更新按鈕高亮與說明(狀態沒變就不動 DOM)
