@@ -32,6 +32,8 @@ const ITEMS = {
   enoki:    { name: '金針菇', emoji: '🍄‍🟫', desc: '自己貢丸時效 +', color: '#ffe0b2' },
   // 墨魚:會自行小範圍移動;食用後減輕被墨魚貢丸炸到的黑畫面
   squid:    { name: '墨魚', emoji: '🦑', desc: '減輕黑畫面', color: '#455a64' },
+  // 黑豬肉:只會在 1 號一般貢丸爆炸時隨機噴出;吃下後下一顆一定是黑豬肉貢丸
+  blackpork: { name: '黑豬肉', emoji: '🥩', desc: '下一顆變成追蹤敵人的黑豬肉貢丸', color: '#6d3a3a' },
 
   // ===== 台灣小吃神器(稀有,直接把數值拉滿)=====
   luckybag:  { name: '福袋',       emoji: '🧧', desc: '全能力直接達頂!', color: '#e53935' },
@@ -84,6 +86,9 @@ function applyItem(p, key) {
       break;
     case 'squid':    // 墨魚:減輕被墨魚貢丸炸到的黑畫面
       p.inkEaten = (p.inkEaten || 0) + 1;
+      break;
+    case 'blackpork': // 黑豬肉:下一顆貢丸變成黑豬肉貢丸(只有一顆)
+      p.porkNext = true;
       break;
 
     // ===== 台灣小吃神器 =====
@@ -163,7 +168,36 @@ const MEATBALLS = [
     behavior: 'ink', drop: 'squid', // 噴出墨魚,並讓被炸者短暫看不到畫面
     desc: '炸到會短暫黑畫面、噴墨魚',
   },
+  // ===== 特殊貢丸(不在 1~9 選單裡)=====
+  {
+    id: 10, key: '黑', name: '黑豬肉貢丸', color: '#3b2b2b', glow: '#4a1414',
+    behavior: 'homing', special: true, // 吃黑豬肉後的下一顆:彈跳追蹤敵人
+    desc: '自動彈跳追蹤敵人,碰到就爆',
+  },
+  // ===== 夜市限定(按 O / P 選)=====
+  {
+    id: 11, key: '腸', name: '香腸', color: '#c2412a', glow: '#7a2414',
+    behavior: 'normal', axis: 'v', night: true, hotkey: 'o',
+    desc: '爆炸只往上下;放在米腸旁會被包成大腸包小腸',
+  },
+  {
+    id: 12, key: '米', name: '米腸', color: '#eadcc0', glow: '#a58b5a',
+    behavior: 'normal', axis: 'h', night: true, hotkey: 'p',
+    desc: '爆炸只往左右;旁邊放香腸會包成大腸包小腸',
+  },
+  {
+    id: 13, key: '包', name: '大腸包小腸', color: '#d9b48a', glow: '#8a4a24',
+    behavior: 'square', special: true, // 香腸 + 米腸合體
+    desc: '3×3 方格爆炸,無視柱子',
+  },
 ];
+
+// 黑豬肉:1 號貢丸爆炸時噴出的機率;黑豬肉貢丸多給的引信秒數、每次彈跳間隔
+const BLACKPORK_DROP = 0.18;
+const PORK_FUSE_BONUS = 2.0;
+const PORK_HOP_TIME = 0.28;   // 一次彈跳的飛行時間
+const PORK_HOP_GAP = 0.18;    // 落地後停頓
+
 
 function meatballById(id) {
   return MEATBALLS.find((m) => m.id === id);
@@ -292,6 +326,11 @@ const MOLD_STAGE = 6;
 function itemFreshTime(key) {
   const base = lerp(24, 9, humNorm() * 0.75 + tempNorm() * 0.25);
   return ITEMS[key] ? base : base * 1.6;
+}
+
+// 小貢丸(未滿三顆、還沒啟動時)放太久會發霉分解:越潮濕越快,8~16 秒
+function computeMiniDecay() {
+  return lerp(16, 8, humNorm());
 }
 
 // 隨機產生一場的天氣

@@ -10,7 +10,8 @@ canvas.height = H;
 
 // ---------- SVG 像素資產 ----------
 // 貢丸 id(1~9)對應的 sprite 檔名
-const MB_SPRITE = ['gongwan', 'pee', 'lava', 'mini', 'mushroom', 'taro', 'cilantro', 'spicy', 'squid'];
+const MB_SPRITE = ['gongwan', 'pee', 'lava', 'mini', 'mushroom', 'taro', 'cilantro', 'spicy', 'squid',
+  'blackpork', 'sausage', 'ricesausage', 'bigwrap'];
 const ASSET_LIST = {
   tiles: ['floor1', 'floor2', 'stone', 'crate', 'trashcan', 'bush',
           'market_floor1', 'market_floor2', 'market_stall', 'market_crate', 'market_pile', 'market_trash',
@@ -19,7 +20,7 @@ const ASSET_LIST = {
   items: ['mushroom', 'taro', 'cilantro', 'chili', 'skewer', 'radish', 'pepper', 'enoki',
           'squid', 'blastsuit', 'mask', 'ratbait', 'roachbait', 'vacuum', 'garbage',
           'slippers', 'tongs', 'glove', 'slingshot',
-          'luckybag', 'chicken', 'bloodcake', 'milktea', 'boba', 'tofu'],
+          'luckybag', 'chicken', 'bloodcake', 'milktea', 'boba', 'tofu', 'blackpork'],
   pets: ['rat', 'roach'],
   characters: ['player', 'ally', 'enemy'],
 };
@@ -173,7 +174,7 @@ function computeDanger() {
   const d = Array.from({ length: ROWS }, () => Array(COLS).fill(Infinity));
   for (const m of meatballs) {
     if (m.exploded || m.eaten || isDormant(m)) continue;
-    for (const cl of blastCells(m.col, m.row, m.power, m.def.behavior === 'pierce')) {
+    for (const cl of meatballCells(m)) {
       if (cl.r >= 0 && cl.c >= 0 && cl.r < ROWS && cl.c < COLS) {
         d[cl.r][cl.c] = Math.min(d[cl.r][cl.c], Math.max(0, m.fuse));
       }
@@ -339,6 +340,8 @@ class Meatball {
     this.vx = 0; this.vy = 0; this.moving = false;
     this.held = false; // 是否被食物夾夾著
     this.bouncesLeft = def.bounces || 0;
+    if (def.behavior === 'cluster') this.decay = computeMiniDecay(); // 未啟動的小貢丸會發霉分解
+    if (def.behavior === 'homing') { this.hopT = 0.5; this.hop = null; this.jump = 0; }
   }
   get col() { return toCol(this.x); }
   get row() { return toRow(this.y); }
@@ -566,15 +569,60 @@ function placeMeatball(p) {
   const c = p.col, r = p.row;
   // 該格已有貢丸則不放
   if (meatballs.some((m) => m.col === c && m.row === r)) return;
-  const def = meatballById(p.selected);
-  meatballs.push(new Meatball(c, r, def, p));
+  // 吃過黑豬肉:這一顆一定是黑豬肉貢丸,放完恢復原本的選擇
+  const pork = !!p.porkNext;
+  let def = pork ? meatballById(10) : meatballById(p.selected);
+  if (def.night && !nightFoodAllowed()) def = meatballById(1); // 夜市限定只能在夜市用
+  const m = new Meatball(c, r, def, p);
+  if (pork) { p.porkNext = false; m.fuse += PORK_FUSE_BONUS; spawnText(p.x, p.y - TS * 0.6, '🥩黑豬肉貢丸出動!', '#ff8a80'); }
+  meatballs.push(m);
   sfx('place', p.x, p.y);
+  if (def.night) checkWrap(m);
+  if (p === player) updateHud();
+}
+
+// 某顆貢丸爆炸會波及的格子(依種類:十字 / 只垂直 / 只水平 / 3×3)
+function meatballCells(m) {
+  const c = m.col, r = m.row;
+  if (m.def.behavior === 'square') { // 大腸包小腸:3×3 方格,無視柱子
+    const cells = [];
+    for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
+      const cc = c + dc, rr = r + dr;
+      if (cc >= 0 && rr >= 0 && cc < COLS && rr < ROWS) cells.push({ c: cc, r: rr });
+    }
+    return cells;
+  }
+  return blastCells(c, r, m.power, m.def.behavior === 'pierce', m.def.axis);
+}
+
+// 夜市限定的香腸/米腸能不能用(夜市地圖,或教學示範時)
+function nightFoodAllowed() {
+  return currentMapId === 'night' || !!(window.tutorial && tutorial.active && tutorial.nightOK);
+}
+
+// 香腸放在米腸旁(或反過來):香腸被米腸包住 → 大腸包小腸,引信重新計時
+function checkWrap(m) {
+  const want = m.def.id === 11 ? 12 : 11;
+  const other = meatballs.find((o) => o !== m && o.def.id === want && !o.exploded && !o.eaten &&
+    !o.moving && !o.held && Math.abs(o.col - m.col) + Math.abs(o.row - m.row) === 1);
+  if (!other) return;
+  const rice = m.def.id === 12 ? m : other;
+  const saus = rice === m ? other : m;
+  // 香腸被吸進米腸 → 在米腸的位置換成一顆新的大腸包小腸(引信重新計時,算在完成合體的人身上)
+  saus.eaten = true;
+  rice.eaten = true;
+  const wrap = new Meatball(rice.col, rice.row, meatballById(13), m.owner);
+  meatballs.push(wrap);
+  spawnText(rice.x, rice.y - TS * 0.6, '🌭大腸包小腸!', '#ffb74d');
+  sfx('boing', rice.x, rice.y);
 }
 
 // 計算某位置爆炸會波及的格子(共用:實際爆炸 + AI 危險預測)
-function blastCells(c, r, power, pierce) {
+// axis:'v' 只往上下、'h' 只往左右(夜市香腸/米腸)
+function blastCells(c, r, power, pierce, axis) {
   const cells = [{ c, r }];
-  const dirs = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  const dirs = axis === 'v' ? [[0, 1], [0, -1]] : axis === 'h' ? [[1, 0], [-1, 0]]
+    : [[1, 0], [-1, 0], [0, 1], [0, -1]];
   for (const [dc, dr] of dirs) {
     for (let i = 1; i <= power; i++) {
       const nc = c + dc * i, nr = r + dr * i;
@@ -596,7 +644,7 @@ function explodeMeatball(m) {
   if (m.exploded) return;
   m.exploded = true;
   const c = m.col, r = m.row;
-  const cells = blastCells(c, r, m.power, m.def.behavior === 'pierce');
+  const cells = meatballCells(m);
   sfx(m.def.behavior === 'ink' ? 'splat' : 'boom', m.x, m.y);
 
   // 第一階段:連鎖引爆 + 摧毀爆炸範圍內「既有」道具
@@ -652,6 +700,17 @@ function explodeMeatball(m) {
       '噴出' + ITEMS[m.def.drop].name + '!', ITEMS[m.def.drop].color);
   }
 
+  // 1 號一般貢丸:隨機噴出黑豬肉
+  if (m.def.id === 1 && Math.random() < BLACKPORK_DROP) {
+    const open = cells.filter(
+      (cl) => grid[cl.r][cl.c] === TILE.EMPTY &&
+        !items.some((it) => !it.dead && it.col === cl.c && it.row === cl.r)
+    );
+    const spot = open.length ? open[rand(open.length)] : { c, r };
+    spawnItem(spot.c, spot.r, 'blackpork');
+    spawnText(tileCenter(spot.c), tileCenter(spot.r) - 10, '噴出黑豬肉🥩!', '#ff8a80');
+  }
+
   explosions.push({
     cells,
     t: EXPLOSION_TIME,
@@ -677,6 +736,51 @@ function snackDrop() {
   const pool = [];
   for (const k of SNACKS) for (let i = 0; i < (w[k] || 1); i++) pool.push(k);
   return pick(pool);
+}
+
+// 黑豬肉貢丸:一格一格彈跳追蹤最近的敵人,前面有障礙就跳過去;碰到敵人立刻爆
+function updateHoming(m, dt) {
+  if (m.hop) {                         // 飛行中
+    m.hop.t += dt;
+    const k = Math.min(1, m.hop.t / PORK_HOP_TIME);
+    m.x = m.hop.x0 + (m.hop.x1 - m.hop.x0) * k;
+    m.y = m.hop.y0 + (m.hop.y1 - m.hop.y0) * k;
+    m.jump = Math.sin(Math.PI * k) * (m.hop.far ? 1.4 : 0.8);
+    if (k >= 1) {
+      m.hop = null; m.jump = 0; m.hopT = PORK_HOP_GAP;
+      if (fighters().some((f) => f.alive && f.team !== m.owner.team && f.col === m.col && f.row === m.row)) {
+        m.fuse = Math.min(m.fuse, 0.02);
+      }
+    }
+    return;
+  }
+  m.hopT -= dt;
+  if (m.hopT > 0) return;
+  let target = null, best = Infinity;
+  for (const f of fighters()) {
+    if (!f.alive || f.team === m.owner.team) continue;
+    const d = Math.abs(f.col - m.col) + Math.abs(f.row - m.row);
+    if (d < best) { best = d; target = f; }
+  }
+  if (!target) { m.hopT = 0.5; return; }
+  if (best === 0) { m.fuse = Math.min(m.fuse, 0.02); return; }
+  const dx = Math.sign(target.col - m.col), dy = Math.sign(target.row - m.row);
+  // 先走距離較遠的方向;走不了再試另一個方向
+  const tries = Math.abs(target.col - m.col) >= Math.abs(target.row - m.row)
+    ? [[dx, 0], [0, dy]] : [[0, dy], [dx, 0]];
+  const free = (c, r) => isFloor(c, r) && !meatballs.some((o) => o !== m && !o.exploded && !o.eaten && o.col === c && o.row === r);
+  for (const [sx, sy] of tries) {
+    if (!sx && !sy) continue;
+    for (const n of [1, 2]) {          // 前面擋住就跳過一格
+      const nc = m.col + sx * n, nr = m.row + sy * n;
+      if (free(nc, nr)) {
+        m.hop = { t: 0, x0: m.x, y0: m.y, x1: tileCenter(nc), y1: tileCenter(nr), far: n === 2 };
+        sfx('boing', m.x, m.y);
+        return;
+      }
+    }
+  }
+  m.hopT = 0.3; // 四周都跳不過去,等一下再試
 }
 
 // 小貢丸:未滿三顆相連前不會自己爆(引信不倒數),被其他爆炸波及才會跟著爆
@@ -1127,9 +1231,13 @@ function playerAction(p, k) {
     if (k === 'l') deployPet(p, 'roach');
     return;
   }
-  // 選擇貢丸 1~9
+  // 選擇貢丸 1~9;夜市限定 O 香腸、P 米腸
   if (k >= '1' && k <= '9') {
     p.selected = parseInt(k, 10);
+    if (p === player) updateHud();
+  }
+  if ((k === 'o' || k === 'p') && nightFoodAllowed()) {
+    p.selected = k === 'o' ? 11 : 12;
     if (p === player) updateHud();
   }
   if (k === ' ') placeMeatball(p);
@@ -1422,6 +1530,11 @@ function update(dt) {
     if (!m.held) updateMovingMeatball(m, dt); // 手持中不滑行(但仍會變質、引信倒數)
     m.age += dt;
     if (!m.moving && !isDormant(m)) m.fuse -= dt; // 未滿三顆的小貢丸不倒數
+    if (m.def.behavior === 'homing' && !m.held) updateHoming(m, dt);
+    if (isDormant(m)) {                // 小貢丸放太久:發霉 → 分解消失(不會爆)
+      if (!m.moldy && m.age >= m.decay - 2.5) { m.moldy = true; spawnText(m.x, m.y - TS * 0.5, '發霉了🦠', '#7cb342'); }
+      if (m.age >= m.decay) { m.eaten = true; spawnText(m.x, m.y - TS * 0.5, '分解消失', '#9ccc65'); continue; }
+    }
     if (m.fuse <= 0) explodeMeatball(m);
   }
 
@@ -1632,7 +1745,7 @@ function drawItem(it) {
 
 function drawMeatball(m) {
   const wob = Math.sin(elapsed * 8) * 2;
-  const x = m.x, y = m.y - (m.held ? TS * 0.5 : 0) + wob; // 手持時抬高 + 上下浮動
+  const x = m.x, y = m.y - (m.held ? TS * 0.5 : 0) - (m.jump || 0) * TS * 0.6 + wob; // 手持/跳起時抬高 + 上下浮動
   const r = TS * 0.36;
   // 陰影
   ctx.fillStyle = 'rgba(0,0,0,0.25)';
@@ -1901,35 +2014,45 @@ let selectorLast = -1;
 function buildSelector() {
   const sel = document.getElementById('selector');
   if (!sel || !sel.querySelectorAll) return;
-  sel.innerHTML = MEATBALLS.map((m) => `
-    <button type="button" class="mbtn" data-id="${m.id}" title="${m.name}:${m.desc}">
+  sel.innerHTML = MEATBALLS.filter((m) => !m.special).map((m) => `
+    <button type="button" class="mbtn${m.night ? ' night-only' : ''}" data-id="${m.id}" title="${m.name}:${m.desc}${m.night ? '(夜市限定)' : ''}">
       <img src="assets/meatballs/${MB_SPRITE[m.id - 1]}.svg" alt="${m.name}">
-      <b>${m.id}</b>
+      <b>${m.hotkey ? m.hotkey.toUpperCase() : m.id}</b>
     </button>`).join('');
   sel.addEventListener('click', (ev) => {
     const btn = ev.target && ev.target.closest ? ev.target.closest('.mbtn') : null;
     if (!btn) return;
-    if (NET.role === 'guest') NET.sendKey(btn.dataset.id);
-    player.selected = +btn.dataset.id;
+    const def = meatballById(+btn.dataset.id);
+    const key = def.hotkey || String(def.id);
+    if (NET.role === 'guest') NET.sendKey(key);
+    else playerAction(player, key);
     selectorLast = -1; // 強制刷新
     refreshSelector();
   });
 }
 
-// 依 player.selected 更新按鈕高亮與說明(選擇沒變就不動 DOM)
+// 依 player.selected 更新按鈕高亮與說明(狀態沒變就不動 DOM)
 function refreshSelector() {
-  if (!player || selectorLast === player.selected) return;
-  selectorLast = player.selected;
+  if (!player) return;
+  const night = nightFoodAllowed();
+  const stateKey = player.selected + (player.porkNext ? 'p' : '') + (night ? 'n' : '');
+  if (selectorLast === stateKey) return;
+  selectorLast = stateKey;
   const sel = document.getElementById('selector');
   if (sel && sel.querySelectorAll) {
     sel.querySelectorAll('.mbtn').forEach((b) => {
-      if (b.classList) b.classList.toggle('active', +b.dataset.id === player.selected);
+      if (b.classList) {
+        b.classList.toggle('active', +b.dataset.id === player.selected);
+        if (b.classList.contains('night-only')) b.style.display = night ? '' : 'none';
+      }
     });
   }
   const descEl = document.getElementById('mb-desc');
   if (descEl) {
     const cur = meatballById(player.selected);
-    descEl.textContent = `${cur.name} — ${cur.desc}`;
+    descEl.textContent = player.porkNext
+      ? '🥩 下一顆:黑豬肉貢丸(會追蹤敵人)'
+      : `${cur.name} — ${cur.desc}`;
   }
 }
 

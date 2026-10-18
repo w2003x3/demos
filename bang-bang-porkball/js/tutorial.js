@@ -137,6 +137,20 @@
       done(s) { return player.inkEaten > s.ink; },
     },
 
+    {
+      title: '🥩 黑豬肉貢丸',
+      text: '1 號一般貢丸爆炸時偶爾會噴出 🥩 <b>黑豬肉</b>。先吃掉它,再放一顆貢丸:<br>這顆會變成<b>黑豬肉貢丸</b>,自己彈跳追蹤敵人(擋住就跳過去),碰到就爆。放完會恢復原本選的貢丸。',
+      setup(s) { s.item = put(7, 9, 'blackpork'); s.dummy = dummy(11, 11); },
+      done(s) { return !s.dummy.alive; },
+    },
+    {
+      title: '🏮 夜市限定:大腸包小腸',
+      text: '夜市地圖才有:<kbd>O</kbd> 香腸(只往上下炸)、<kbd>P</kbd> 米腸(只往左右炸)。<br>先按 <kbd>P</kbd> 放米腸,走開一格再按 <kbd>O</kbd> 在旁邊放香腸:香腸會被包成<b>大腸包小腸</b>,3×3 範圍、無視柱子!',
+      setup(s) { T.nightOK = true; bots = []; buildRoster(); },
+      update(s) { watchBalls(s, [13]); },
+      done(s) { return [...(s.seen || [])].some((m) => m.exploded); },
+    },
+
     // ---------- 食物、小吃、防護 ----------
     {
       title: '其他食物',
@@ -346,6 +360,7 @@
     },
     stop() {
       T.active = false;
+      T.nightOK = false;
       if (banner) banner.classList.add('hidden');
     },
     quitToMenu() {

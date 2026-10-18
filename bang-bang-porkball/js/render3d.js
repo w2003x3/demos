@@ -725,11 +725,129 @@
 
   // ---------- 貢丸:寫實貢丸(各口味配料)+ 竹籤引信火花;快爆閃白、發霉變綠 ----------
   const ballCache = new Map();
-  const BALL_R = { 3: 0.46, 4: 0.26 };
+  const BALL_R = { 3: 0.46, 4: 0.26, 10: 0.4, 11: 0.36, 12: 0.38, 13: 0.4 };
+
+  // ---------- 新增的特殊貢丸/道具:用基本幾何組出 3D 模型 ----------
+  const std = (color, rough = 0.55, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: rough, ...extra });
+  const sphereGeo = new THREE.SphereGeometry(0.5, 24, 16);
+  const cylGeo = new THREE.CylinderGeometry(0.5, 0.5, 1, 20, 1);
+  const coneGeo4 = new THREE.ConeGeometry(0.5, 1, 4);
+  function part(geo, mat, sx, sy, sz, x, y, z) {
+    const mesh = new THREE.Mesh(geo, mat);
+    mesh.scale.set(sx, sy, sz);
+    mesh.position.set(x, y, z);
+    mesh.castShadow = true;
+    return mesh;
+  }
+  // 腸子:圓柱 + 兩端半球;axis 'z' 沿上下方向(香腸)、'x' 沿左右方向(米腸)
+  function sausageBody(len, rad, color, axis) {
+    const grp = new THREE.Group();
+    const mat = std(color, 0.45);
+    const tube = part(cylGeo, mat, rad * 2, len, rad * 2, 0, 0, 0);
+    grp.add(tube);
+    grp.add(part(sphereGeo, mat, rad * 2, rad * 2, rad * 2, 0, len / 2, 0));
+    grp.add(part(sphereGeo, mat, rad * 2, rad * 2, rad * 2, 0, -len / 2, 0));
+    if (axis === 'z') grp.rotation.x = Math.PI / 2; else grp.rotation.z = Math.PI / 2;
+    grp.userData.mat = mat;
+    grp.userData.tube = tube;
+    return grp;
+  }
+  function fuseTip(g, x, y, z) { // g:customMeatball 內層群組
+    const wick = part(cylGeo, std(0x8d6e63, 0.8), 0.05, 0.22, 0.05, x, y, z);
+    wick.rotation.z = -0.5;
+    g.add(wick);
+    const s = new THREE.Sprite(new THREE.SpriteMaterial({ map: sparkTex, transparent: true,
+      blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false }));
+    s.position.set(x + 0.06, y + 0.11, z);
+    g.add(s);
+    g.userData.spark = s;
+  }
+  // 回傳 { group, body }:body 是會被「發霉變綠」改色的主體
+  function customMeatball(id) {
+    const g = new THREE.Group();
+    if (id === 10) {            // 黑豬肉貢丸:黑色小豬頭
+      const body = part(sphereGeo, std(0x1c1212, 0.4), 1, 0.95, 1, 0, 0, 0);
+      g.add(body);
+      const pink = std(0xe39a9a, 0.5);
+      const snout = part(cylGeo, pink, 0.36, 0.14, 0.28, 0, -0.05, 0.47);
+      snout.rotation.x = Math.PI / 2;
+      g.add(snout);
+      const dark = std(0x1a1010, 0.6);
+      g.add(part(sphereGeo, dark, 0.06, 0.08, 0.04, -0.07, -0.05, 0.55));
+      g.add(part(sphereGeo, dark, 0.06, 0.08, 0.04, 0.07, -0.05, 0.55));
+      const white = std(0xffffff, 0.3);
+      g.add(part(sphereGeo, white, 0.13, 0.13, 0.08, -0.18, 0.13, 0.41));
+      g.add(part(sphereGeo, white, 0.13, 0.13, 0.08, 0.18, 0.13, 0.41));
+      g.add(part(sphereGeo, dark, 0.07, 0.07, 0.05, -0.18, 0.13, 0.46));
+      g.add(part(sphereGeo, dark, 0.07, 0.07, 0.05, 0.18, 0.13, 0.46));
+      const ear = std(0x2b1f1f, 0.6);
+      const e1 = part(coneGeo4, ear, 0.22, 0.26, 0.12, -0.27, 0.44, 0.05); e1.rotation.z = 0.5; g.add(e1);
+      const e2 = part(coneGeo4, ear, 0.22, 0.26, 0.12, 0.27, 0.44, 0.05); e2.rotation.z = -0.5; g.add(e2);
+      fuseTip(g, 0, 0.5, -0.05);
+      return { group: g, body };
+    }
+    if (id === 11) {            // 香腸:沿上下方向,紅色帶烤痕
+      const sg = sausageBody(1.1, 0.26, 0xc2412a, 'z');
+      g.add(sg);
+      const mark = std(0x5d1a0e, 0.8);
+      for (const z of [-0.3, 0, 0.3]) {
+        const m = part(new THREE.BoxGeometry(1, 1, 1), mark, 0.34, 0.03, 0.05, 0, 0.255, z);
+        m.rotation.y = 0.6; g.add(m);
+      }
+      fuseTip(g, 0, 0.3, -0.62);
+      return { group: g, body: sg.userData.tube };
+    }
+    if (id === 12) {            // 米腸:沿左右方向,米白色帶米粒
+      const rg = sausageBody(1.1, 0.3, 0xeadcc0, 'x');
+      g.add(rg);
+      const grain = std(0xffffff, 0.35);
+      for (let i = 0; i < 10; i++) {
+        const a = (i / 10) * Math.PI * 2, x = -0.5 + (i % 5) * 0.25;
+        g.add(part(sphereGeo, grain, 0.08, 0.05, 0.05, x, Math.sin(a) * 0.29, Math.cos(a) * 0.29));
+      }
+      fuseTip(g, 0.62, 0.3, 0);
+      return { group: g, body: rg.userData.tube };
+    }
+    if (id === 13) {            // 大腸包小腸:米腸剖開夾香腸 + 酸菜
+      const bun = sausageBody(1.15, 0.3, 0xeadcc0, 'x');
+      bun.scale.set(1, 1, 0.8);
+      bun.position.y = -0.1;
+      g.add(bun);
+      const sg = sausageBody(1.0, 0.18, 0xc2412a, 'x');
+      sg.position.set(0, 0.2, 0);
+      g.add(sg);
+      const green = std(0x4caf50, 0.6);
+      for (const x of [-0.35, -0.1, 0.15, 0.38]) g.add(part(new THREE.BoxGeometry(1, 1, 1), green, 0.12, 0.04, 0.1, x, 0.36, (x * 7) % 0.1));
+      fuseTip(g, 0.66, 0.25, 0);
+      return { group: g, body: bun.userData.tube };
+    }
+    return null;
+  }
+  // 黑豬肉(道具):一塊帶黑皮的豬肉
+  function customItemModel(key) {
+    if (key !== 'blackpork') return null;
+    const g = new THREE.Group();
+    const meat = part(sphereGeo, std(0xc95b5b, 0.5), 0.62, 0.26, 0.44, 0, 0.16, 0);
+    const fat = part(sphereGeo, std(0xf5e6d8, 0.4), 0.64, 0.12, 0.46, 0, 0.27, 0);
+    const skin = part(sphereGeo, std(0x2b1f1f, 0.6), 0.6, 0.08, 0.42, 0, 0.33, 0);
+    g.add(meat, fat, skin);
+    const bone = part(cylGeo, std(0xfff8e1, 0.35), 0.07, 0.3, 0.07, 0.34, 0.17, 0);
+    bone.rotation.z = Math.PI / 2;
+    g.add(bone);
+    g.add(part(sphereGeo, std(0xfff8e1, 0.35), 0.11, 0.11, 0.11, 0.49, 0.17, 0));
+    g.scale.setScalar(0.9);
+    return g;
+  }
+
   function makeMeatball(m) {
     const g = new THREE.Group();
-    const model = propModel('mb_' + m.def.id);
-    let body = null;
+    const custom = customMeatball(m.def.id);
+    const model = custom ? null : propModel('mb_' + m.def.id);
+    let body = custom ? custom.body : null;
+    if (custom) {
+      g.add(custom.group);
+      if (custom.group.userData.spark) g.userData.spark = custom.group.userData.spark;
+    }
     if (model) {
       model.traverse((c) => {
         if (c.isMesh && /^meat_/.test(c.material.name)) { c.material = c.material.clone(); body = c; }
@@ -764,10 +882,11 @@
     syncSet(ballCache, list, makeMeatball, (m, g) => {
       const r = (BALL_R[m.def.id] || 0.36) * 2;
       const bob = Math.sin(elapsed * 8) * 0.03;
-      const lift = m.held ? 0.7 : 0;
+      const lift = (m.held ? 0.7 : 0) + (m.jump || 0) * 0.9; // 手持舉高、黑豬肉彈跳
       g.scale.set(r, r, r);
       g.position.set(W2(m.x), 0.5 * r + bob + lift, W2(m.y));
-      g.rotation.y = elapsed * 0.6; // 慢慢轉,增加生命感
+      // 慢慢轉,增加生命感;香腸/米腸/大腸包小腸固定方向,一眼看出爆炸方向
+      g.rotation.y = (m.def.axis || m.def.behavior === 'square') ? 0 : elapsed * 0.6;
       g.userData.shadow.position.y = (0.012 - g.position.y) / r; // 影子貼地(抵銷彈跳與舉起高度)
       const u = g.userData;
       u.flash.visible = m.fuse < 0.6 && Math.floor(m.fuse * 12) % 2 === 0;
@@ -1085,7 +1204,7 @@
   const RARE = new Set(['luckybag', 'chicken', 'bloodcake', 'milktea', 'boba', 'tofu']);
   function makeItem(it) {
     const g = new THREE.Group();
-    const model = propModel('it_' + it.key);
+    const model = customItemModel(it.key) || propModel('it_' + it.key);
     if (model) {
       model.scale.setScalar(1.2);
       const pivot = new THREE.Group();

@@ -20,7 +20,7 @@ const ONLINE_SERVER = (() => {
 })();
 
 const SNAP_INTERVAL = 1 / 15;   // 房主送快照的間隔(秒)
-const ACTION_KEYS = new Set([' ', 'e', 'j', 'q', 'f', 'g', 'v', 'z', 'x', 'c', 'k', 'l',
+const ACTION_KEYS = new Set([' ', 'e', 'j', 'q', 'f', 'g', 'v', 'z', 'x', 'c', 'k', 'l', 'o', 'p',
   '1', '2', '3', '4', '5', '6', '7', '8', '9']);
 
 const NET = {
@@ -237,14 +237,14 @@ function buildSnapshot() {
       x: Math.round(f.x), y: Math.round(f.y), d: [f.dir.x, f.dir.y], mv: f.mvTarget ? 1 : 0,
       hp: f.hp, mh: f.maxHp, mp: Math.round(f.mp), mm: f.maxMp, pw: f.power, sp: f.speed, mb: f.maxBombs,
       al: f.alive ? 1 : 0, iv: r1(f.invuln), bt: r1(f.blindT), pt: r1(f.poisonT),
-      bg: f.blastGuard, mg: f.moldGuard, im: r1(f.immunity), se: f.selected, ie: f.inkEaten,
+      bg: f.blastGuard, mg: f.moldGuard, im: r1(f.immunity), se: f.selected, ie: f.inkEaten, pk: f.porkNext ? 1 : 0,
       to: f.isHuman ? f.tools : undefined,
       ps: f.isHuman ? { rat: f.petState.rat.status, roach: f.petState.roach.status } : undefined,
       hd: f.held ? nid(f.held) : 0, dt: f.deathT !== undefined ? r1(f.deathT) : undefined,
     })),
     m: meatballs.filter((m) => !m.exploded && !m.eaten).map((m) => ({
       i: nid(m), x: Math.round(m.x), y: Math.round(m.y), d: m.def.id, o: nid(m.owner), pw: m.power,
-      fu: r1(m.fuse), mo: m.moldy ? 1 : 0, hp: Math.round(m.hp), mv: m.moving ? 1 : 0, h: m.held ? 1 : 0, ar: m.armed ? 1 : 0,
+      fu: r1(m.fuse), mo: m.moldy ? 1 : 0, hp: Math.round(m.hp), mv: m.moving ? 1 : 0, h: m.held ? 1 : 0, ar: m.armed ? 1 : 0, jp: m.jump ? r1(m.jump) : 0,
     })),
     it: items.filter((it) => !it.dead).map((it) => ({ i: nid(it), x: Math.round(it.x), y: Math.round(it.y), k: it.key,
       a: r1(it.age), fr: it.fresh === Infinity ? -1 : r1(it.fresh) })),
@@ -312,7 +312,7 @@ const guest = {
       f.mvTarget = d.mv ? { x: f.tx, y: f.ty } : null;
       f.hp = d.hp; f.maxHp = d.mh; f.mp = d.mp; f.maxMp = d.mm; f.power = d.pw; f.speed = d.sp; f.maxBombs = d.mb;
       f.alive = !!d.al; f.invuln = d.iv; f.blindT = d.bt; f.poisonT = d.pt;
-      f.blastGuard = d.bg; f.moldGuard = d.mg; f.immunity = d.im; f.selected = d.se; f.inkEaten = d.ie;
+      f.blastGuard = d.bg; f.moldGuard = d.mg; f.immunity = d.im; f.selected = d.se; f.inkEaten = d.ie; f.porkNext = !!d.pk;
       if (d.to) f.tools = d.to;
       if (d.ps && f.petState.rat) { f.petState.rat.status = d.ps.rat; f.petState.roach.status = d.ps.roach; }
       f.heldId = d.hd;
@@ -332,7 +332,8 @@ const guest = {
     }, (m, d, fresh) => {
       this.target(m, d, fresh);
       m.owner = this.fighters.get(d.o) || m.owner;
-      m.power = d.pw; m.fuse = d.fu; m.moldy = !!d.mo; m.hp = d.hp; m.moving = !!d.mv; m.held = !!d.h; m.armed = !!d.ar;
+      m.power = d.pw; m.fuse = d.fu; m.moldy = !!d.mo; m.hp = d.hp; m.moving = !!d.mv; m.held = !!d.h; m.armed = !!d.ar; m.jump = d.jp || 0;
+      if (m.def.id !== d.d) m.def = meatballById(d.d); // 香腸+米腸合體會換種類
       m._nid = d.i;
     });
     this.meatballs = ms.map;
