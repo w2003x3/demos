@@ -39,7 +39,8 @@ export function stepTrain(t, spec, dt, limitKmh = spec.vmax) {
     const ev = {};
     // ATP:超過限速 2 km/h 自動常用最大制動,降到限速 −5 km/h 以下解除
     const vKmh = t.v * 3.6;
-    if (!t.atp && vKmh > limitKmh + 2) { t.atp = true; ev.atpOn = true; }
+    if (!isFinite(limitKmh)) { if (t.atp) { t.atp = false; ev.atpOff = true; } }   // ATP 切除
+    else if (!t.atp && vKmh > limitKmh + 2) { t.atp = true; ev.atpOn = true; }
     else if (t.atp && vKmh < limitKmh - 5) { t.atp = false; ev.atpOff = true; }
 
     let notch = t.notch;

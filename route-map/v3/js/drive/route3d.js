@@ -162,10 +162,38 @@ export function curveSpeed(r, latA = 0.85) {
 }
 
 /**
+ * 車站直線化:路網圖的折線常在車站處轉向,圓弧化後彎道會穿過月台(直的月台模組凸進彎道)。
+ * 對每個「在轉角上」的車站,沿兩段方向的平分線拉出長 2×(half + 圓弧切線長)的直線段(車站在正中央),
+ * 原本的轉角拆成月台兩端外側的兩個小轉角。半段長度不超過相鄰線段的 40%。
+ */
+export function straightenStations(pts, stopPts, half, radius = 0) {
+    const isStop = (p) => stopPts.some(q => q && Math.hypot(q.x - p.x, q.z - p.z) < 0.5);
+    const out = [pts[0]];
+    for (let i = 1; i < pts.length - 1; i++) {
+        const a = out[out.length - 1], b = pts[i], c = pts[i + 1];
+        if (!isStop(b)) { out.push(b); continue; }
+        const l1 = Math.hypot(b.x - a.x, b.z - a.z), l2 = Math.hypot(c.x - b.x, c.z - b.z);
+        const u = { x: (b.x - a.x) / l1, z: (b.z - a.z) / l1 }, v = { x: (c.x - b.x) / l2, z: (c.z - b.z) / l2 };
+        if (u.x * v.x + u.z * v.z > 0.99995) { out.push(b); continue; }   // 幾乎直線
+        let d = { x: u.x + v.x, z: u.z + v.z };
+        const dl = Math.hypot(d.x, d.z);
+        if (dl < 1e-6) { out.push(b); continue; }                          // 折返
+        d = { x: d.x / dl, z: d.z / dl };
+        // 兩端各轉一半角度;圓弧切線長 r·tan(θ/4) 也要留在月台區外
+        const theta = Math.acos(Math.max(-1, Math.min(1, u.x * v.x + u.z * v.z)));
+        const h = Math.min(half + radius * Math.tan(theta / 4), l1 * 0.4, l2 * 0.4);
+        out.push({ x: b.x - d.x * h, z: b.z - d.z * h }, { ...b }, { x: b.x + d.x * h, z: b.z + d.z * h });
+    }
+    out.push(pts[pts.length - 1]);
+    return dedupe(out);
+}
+
+/**
  * 建立駕駛路線。
  * @param {Array<{lat,lng}>} pathLL 沿路線的折線(含車站點)
  * @param {Array<{id, idx}>} stops 車站與其在 pathLL 的索引(依行駛順序)
- * @param {object} opts { radius 轉彎半徑(m), scale 距離比例, lead 起點前延伸, tail 終點後延伸, vmax(km/h) }
+ * @param {object} opts { radius 轉彎半徑(m), scale 距離比例, lead 起點前延伸, tail 終點後延伸, vmax(km/h),
+ *                        straight 車站前後各維持直線的長度(m,月台不在彎道上)}
  */
 export function buildDriveRoute(pathLL, stops, opts = {}) {
     const radius = opts.radius || 300;
@@ -177,6 +205,7 @@ export function buildDriveRoute(pathLL, stops, opts = {}) {
     const stopPts = stops.map(st => pts[st.idx]);
     pts = dedupe(pts);
     if (pts.length < 2) throw new Error('路線太短,無法行駛');
+    if (opts.straight) pts = straightenStations(pts, stopPts, opts.straight, radius);
 
     // 起訖兩端延伸(起點前讓列車停在第一站月台、終點後給冒進空間)
     const ext = (p, q, d) => { const l = Math.hypot(p.x - q.x, p.z - q.z) || 1; return { x: p.x + (p.x - q.x) / l * d, z: p.z + (p.z - q.z) / l * d }; };

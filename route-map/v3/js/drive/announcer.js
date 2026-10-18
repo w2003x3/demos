@@ -153,6 +153,41 @@ export class Announcer {
         });
     }
 
+    /** 自訂車內廣播:提示音 + 即時合成語音(全英文時用英文聲音);跑馬燈顯示同一段文字 */
+    announceText(text) {
+        const lang = /^[\x00-\x7F\s]+$/.test(text) ? 'en' : 'zh';
+        this.announce([{ chime: 'depart' }, { say: text, lang }], `車內廣播:${text}`);
+    }
+
+    /** 事故音效:金屬撞擊與摩擦(wall 撞牆、fall 墜落、off 衝出軌道) */
+    crash(kind) {
+        const ctx = this._audioCtx();
+        if (!ctx || this.muted) return;
+        const t0 = ctx.currentTime;
+        const dur = kind === 'off' ? 2.6 : 1.8;
+        const len = Math.floor(ctx.sampleRate * dur);
+        const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+        const d = buf.getChannelData(0);
+        for (let i = 0; i < len; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / len, 1.6);
+        const src = ctx.createBufferSource();
+        src.buffer = buf;
+        const bp = ctx.createBiquadFilter();
+        bp.type = 'bandpass'; bp.frequency.value = kind === 'wall' ? 900 : 1400; bp.Q.value = 0.7;
+        const g = ctx.createGain();
+        g.gain.setValueAtTime(0.9 * this.volume, t0);
+        src.connect(bp).connect(g).connect(ctx.destination);
+        src.start(t0);
+        // 低頻撞擊聲(墜落時延後到落地)
+        const thud = (at, f) => {
+            const o = ctx.createOscillator(), og = ctx.createGain();
+            o.frequency.setValueAtTime(f, at); o.frequency.exponentialRampToValueAtTime(30, at + 0.6);
+            og.gain.setValueAtTime(0.0001, at); og.gain.exponentialRampToValueAtTime(0.9 * this.volume, at + 0.02); og.gain.exponentialRampToValueAtTime(0.0001, at + 0.8);
+            o.connect(og).connect(ctx.destination); o.start(at); o.stop(at + 0.9);
+        };
+        thud(t0, 110);
+        if (kind === 'fall') thud(t0 + 1.25, 80);
+    }
+
     /** 提示音:arrive(三音下行)、depart(兩音上行)、door(關門警示嗶聲) */
     _chime(kind) {
         const ctx = this._audioCtx();

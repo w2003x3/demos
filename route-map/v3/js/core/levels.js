@@ -3,6 +3,7 @@
  * 車站層級(平面/地下/高架)與路線出土段(純運算,編輯器、地圖與駕駛模式共用)。
  *
  * - station.level:'auto' | 'ground' | 'underground' | 'elevated';auto 依路線類型決定
+ * - station.lineLevels:{ lineId: level } 該站在特定路線的層級(轉乘站各線不同時),優先於 level
  * - line.portals:{ '<站A>|<站B>': t } 相鄰兩站層級不同時,變換(出土/入地/上高架)的位置。
  *   鍵為兩站 id 排序後以 | 相連,t 為「自鍵中第一站起算」佔站間距離的比例(0–1),預設 0.5。
  */
@@ -23,7 +24,8 @@ export const LEVEL_HEIGHT = { underground: -11, ground: 0, elevated: 9 };
 export const PORTAL_DEFAULT = 0.5;
 
 export function stationLevel(station, line) {
-    const lv = station?.level;
+    // 轉乘站在不同路線可能不同層級(例:忠孝復興 板南線地下、文湖線高架):station.lineLevels[lineId] 優先
+    const lv = (line && station?.lineLevels?.[line.id]) || station?.level;
     if (lv && lv !== 'auto' && LEVEL_HEIGHT[lv] !== undefined) return lv;
     return LINE_DEFAULT_LEVEL[line?.type] || 'ground';
 }

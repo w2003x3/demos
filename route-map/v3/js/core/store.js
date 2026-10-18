@@ -209,6 +209,7 @@ class Store {
         ['name', 'sub', 'kind', 'status', 'level', 'labelPos'].forEach(k => {
             if (props[k] !== undefined) s[k] = props[k];
         });
+        if (props.level !== undefined) delete s.lineLevels;   // 手動設定層級時,改為各線一致
         this._changed();
     }
 
@@ -219,6 +220,7 @@ class Store {
             ['kind', 'status', 'level', 'labelPos'].forEach(k => {
                 if (props[k] !== undefined) s[k] = props[k];
             });
+            if (props.level !== undefined) delete s.lineLevels;   // 手動設定層級時,改為各線一致
         });
         this._changed();
     }

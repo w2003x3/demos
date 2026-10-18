@@ -14,7 +14,7 @@ import { openModal } from '../ui/modal.js';
 import { toast } from '../ui/toast.js';
 import { renderSign, stationSignData } from '../signs/sign-render.js';
 import { svgToCanvas } from '../signs/sign-raster.js';
-import { buildDriveRoute, suggestScale, nextLimit, applyProfile } from './route3d.js';
+import { buildDriveRoute, suggestScale, nextLimit, applyProfile, poseAt } from './route3d.js';
 import { stationLevel, getPortal, LEVEL_HEIGHT } from '../core/levels.js';
 import { TRAIN_SPECS, createTrain, stepTrain, notchLabel, suggestNotch, gradeStop, atoNotch } from './physics.js';
 import { Announcer, scriptDeparture, scriptArrival, scriptDoorsClosing } from './announcer.js';
@@ -69,6 +69,7 @@ export async function openDriveSetup(ctx) {
             </div>
             <div class="toggle-row"><span>英文廣播</span><label class="switch"><input type="checkbox" id="dv-en" ${prev.english !== false ? 'checked' : ''}><span></span></label></div>
             <div class="toggle-row"><span>駕駛輔助(建議制動檔位、限速預告)</span><label class="switch"><input type="checkbox" id="dv-assist" ${prev.assist !== false ? 'checked' : ''}><span></span></label></div>
+            <div class="toggle-row"><span>ATP 列車自動防護(關閉時超速不會自動制動,彎道過速可能出軌)</span><label class="switch"><input type="checkbox" id="dv-atp" ${prev.atp !== false ? 'checked' : ''}><span></span></label></div>
             <p class="hint" id="dv-info"></p>
             <p class="hint">廣播常用詞:${esc(announcer.sourceLabel)};站名與路線名使用瀏覽器/作業系統內建語音即時合成。
                 沿途站名牌、柱面站名、方向指標使用「指標設計」的樣式。</p>
@@ -78,6 +79,7 @@ export async function openDriveSetup(ctx) {
                 <tr><td><kbd>N</kbd></td><td>回到惰行</td><td><kbd>R</kbd></td><td>重播廣播</td></tr>
                 <tr><td>滑鼠拖曳</td><td>環顧(雙擊回正)</td><td><kbd>M</kbd> / <kbd>Esc</kbd></td><td>靜音 / 暫停選單</td></tr>
                 <tr><td><kbd>V</kbd></td><td>視角:駕駛室 / 第三人稱 / 車外追蹤 / 車側 / 空拍</td><td><kbd>A</kbd></td><td>自動駕駛開關</td></tr>
+                <tr><td><kbd>T</kbd></td><td>ATP 開/關</td><td><kbd>B</kbd></td><td>車內廣播(輸入文字或語音)</td></tr>
                 <tr><td>主控制器</td><td colspan="3">按住握把上下拖曳(滑鼠或手指),或點刻度直接換檔;手動操作會解除自動駕駛</td></tr>
             </table>
         </div>`,
@@ -105,7 +107,7 @@ export async function openDriveSetup(ctx) {
                     $('#dv-scale').innerHTML = opt({ 1: '實際距離' }, 1);
                     return;
                 }
-                const r = buildDriveRoute(leg.pathLL, leg.stops, { radius: spec.radius, vmax: spec.vmax, lead: spec.platform + 80 });
+                const r = buildDriveRoute(leg.pathLL, leg.stops, { radius: spec.radius, vmax: spec.vmax, lead: spec.platform + 80, straight: spec.platform / 2 + 40 });
                 const len = r.stations[r.stations.length - 1].s - r.stations[0].s;
                 const sug = suggestScale(r);
                 const scales = { 1: `實際距離(${(len / 1000).toFixed(1)} km)` };
@@ -124,10 +126,10 @@ export async function openDriveSetup(ctx) {
                     lineId, fromId: $('#dv-from').value, toId: $('#dv-to').value,
                     env: $('#dv-env').value, time: $('#dv-time').value, side: $('#dv-side').value,
                     scale: parseFloat($('#dv-scale').value) || 1, tol: parseFloat($('#dv-tol').value) || 1, quality: $('#dv-quality').value,
-                    english: $('#dv-en').checked, assist: $('#dv-assist').checked
+                    english: $('#dv-en').checked, assist: $('#dv-assist').checked, atp: $('#dv-atp').checked
                 };
                 if (!planLeg(ctx.view, c.lineId, c.fromId, c.toId)) { toast('起訖站相同(非環狀線)或路段無法行駛', { warn: true }); return; }
-                sessionStorage.setItem('drive-setup', JSON.stringify({ env: c.env, time: c.time, side: c.side, tol: c.tol, quality: c.quality, english: c.english, assist: c.assist }));
+                sessionStorage.setItem('drive-setup', JSON.stringify({ env: c.env, time: c.time, side: c.side, tol: c.tol, quality: c.quality, english: c.english, assist: c.assist, atp: c.atp }));
                 announcer.unlock();
                 close(c);
             };
@@ -249,7 +251,7 @@ async function startDrive(ctx, cfg, announcer) {
     const spec = TRAIN_SPECS[line.type] || TRAIN_SPECS.metro;
     const side = cfg.side === 'auto' ? (line.type === 'metro' ? 'left' : 'right') : cfg.side;
     const leg = planLeg(ctx.view, cfg.lineId, cfg.fromId, cfg.toId);
-    const route = buildDriveRoute(leg.pathLL, leg.stops, { radius: spec.radius, scale: cfg.scale, vmax: spec.vmax, lead: spec.platform + 80, tail: 400 });
+    const route = buildDriveRoute(leg.pathLL, leg.stops, { radius: spec.radius, scale: cfg.scale, vmax: spec.vmax, lead: spec.platform + 80, tail: 400, straight: spec.platform / 2 + 40 });
     // 高程剖面:各站層級(或全線統一)→ 軌面高度;相鄰兩站不同時依路線的出土段位置銜接
     const levelOf = (id) => cfg.env === 'auto' ? stationLevel(store.getStation(id), line) : cfg.env;
     const levels = route.stations.map(rs => levelOf(rs.id));
@@ -362,6 +364,8 @@ class DriveSession {
         this.screenTimer = 0;
         this.firstDeparture = true;
         this.timeScale = 1; // 測試用:自動化測試在低幀率環境下加速模擬
+        this.atpOn = o.cfg.atp !== false;   // ATP 列車自動防護(可在設定或介面關閉)
+        this.crash = null;                  // 出軌事故(ATP 關閉時彎道過速)
         this.departOk = (st) => !(st.idx === this.target - 1 && this.phase === 'dwell' && this.doors !== 'closed');
         this.buildHud();
         this.bind();
@@ -375,8 +379,24 @@ class DriveSession {
         this.announcer.english = this.cfg.english;
         this.announcer.onState = (on, label) => {
             const c = this.el.querySelector('[data-caption]');
-            if (c) { c.hidden = !on; c.textContent = label || ''; }
+            if (!c) return;
+            const t = c.querySelector('[data-caption-text]');
+            // 廣播結束後跑馬燈至少要完整捲過一輪才收起
+            clearTimeout(this._marqueeHide);
+            if (!on) { this._marqueeHide = setTimeout(() => { c.hidden = true; t.textContent = ''; }, Math.max(0, (this._marqueeUntil || 0) - performance.now())); return; }
+            c.hidden = false;
+            if (t.textContent !== (label || '')) {
+                t.textContent = label || '';
+                // LED 跑馬燈:由右往左捲動,速度固定(約每秒 110 px)
+                t.style.animation = 'none';
+                void t.offsetWidth;
+                const secs = Math.max(6, (t.scrollWidth + c.clientWidth) / 110);
+                t.style.animationDuration = `${secs}s`;
+                t.style.animation = '';
+                this._marqueeUntil = performance.now() + secs * 1000;
+            }
         };
+        this.setAtp(this.atpOn, true);
     }
 
     // ------------------------------------------------------------------
@@ -397,10 +417,17 @@ class DriveSession {
                     <div><small>${esc(L.name)}・${esc(this.spec.name)} ${this.spec.cars} 節</small><b>往 ${esc(term.name)}</b></div></div>
                 <div class="dv-next"><small data-next-label>下一站</small><b data-next-name></b><span data-next-sub></span><em data-next-dist></em></div>
             </div>
-            <div class="dv-top-center"><div class="dv-clock" data-clock>00:00</div><div class="dv-msg" data-msg hidden></div></div>
+            <div class="dv-top-center">
+                <div class="dv-marquee" data-caption hidden><span data-caption-text></span></div>
+                <div class="dv-clock" data-clock>00:00</div><div class="dv-msg" data-msg hidden></div>
+                <div class="dv-pa" data-pa hidden>
+                    <textarea data-pa-text maxlength="140" rows="2" placeholder="輸入要廣播的內容(例:本列車因號誌故障暫停,請旅客稍候)"></textarea>
+                    <div class="dv-pa-row"><button class="btn" data-pa-mic title="用麥克風說話,轉成文字">🎤 語音輸入</button><span class="grow"></span>
+                        <button class="btn" data-pa-cancel>取消</button><button class="btn btn-primary" data-pa-send>📢 播出</button></div>
+                </div>
+            </div>
             <button class="dv-route-toggle" data-cmd="route" title="站序">☰</button>
             <div class="dv-route" data-route>${this.stations.map((s, i) => `<div class="dv-rs" data-rs="${i}"><i></i><span>${esc(s.name)}</span><em data-rs-grade="${i}"></em></div>`).join('')}</div>
-            <div class="dv-caption" data-caption hidden></div>
             <div class="dv-console" data-console>
                 <div class="cs-unit cs-mc" title="主控制器:按住握把上下拖曳(或點刻度)換檔">
                     <div class="mc-label">主控制器</div>
@@ -440,6 +467,8 @@ class DriveSession {
                     <button class="pb view" data-cmd="view" title="切換視角(V)"><span>🎥</span><small data-view-txt>駕駛室</small></button>
                     <button class="pb eb" data-cmd="eb" title="緊急制動(E)"><span></span><small>緊急制動</small></button>
                     <button class="pb pause" data-cmd="pause" title="暫停(Esc)"><span>❚❚</span><small>暫停</small></button>
+                    <button class="pb atp-btn" data-cmd="atp" title="ATP 列車自動防護開/關(T)"><span>🛡</span><small data-atp-txt>ATP 開</small></button>
+                    <button class="pb pa-btn" data-cmd="pa" title="車內廣播(B)"><span>📢</span><small>廣播</small></button>
                 </div>
             </div>
             <div class="dv-pause" data-pause hidden></div>`;
@@ -528,6 +557,8 @@ class DriveSession {
                 ato: () => this.setAto(!this.ato),
                 view: () => this.cycleView(),
                 pause: () => this.togglePause(),
+                atp: () => this.setAtp(!this.atpOn),
+                pa: () => this.openPA(),
                 route: () => this.hud.classList.toggle('show-route')
             }[b.dataset.cmd];
             if (act && (!this.finished || b.dataset.cmd === 'route')) act();
@@ -538,6 +569,123 @@ class DriveSession {
         this.ato = !!on;
         this.train.atoStop = false;
         this.flash(on ? '自動駕駛(ATO)啟動:自動加減速、停車與開關門' : '自動駕駛解除,改為手動駕駛', 2.5);
+    }
+
+    /** ATP 開/關:關閉後超速不會自動制動,彎道過速可能出軌 */
+    setAtp(on, quiet = false) {
+        this.atpOn = !!on;
+        if (!on) { this.train.atp = false; }
+        const b = this.q('[data-cmd="atp"]');
+        b?.classList.toggle('off', !on);
+        const tx = this.q('[data-atp-txt]');
+        if (tx) tx.textContent = on ? 'ATP 開' : 'ATP 關';
+        if (!quiet) this.flash(on ? 'ATP 已投入:超速時自動制動' : 'ATP 已切除:超速不會自動制動,彎道過速可能出軌!', 3, !on);
+    }
+
+    // ---- 車內廣播:輸入文字(或麥克風語音輸入)→ 即時合成語音播出,跑馬燈同步 ----
+    openPA() {
+        const p = this.q('[data-pa]');
+        if (!p.hidden) { this.closePA(); return; }
+        p.hidden = false;
+        const ta = p.querySelector('[data-pa-text]');
+        ta.focus();
+        if (!this._paBound) {
+            this._paBound = true;
+            p.querySelector('[data-pa-send]').onclick = () => this.sendPA();
+            p.querySelector('[data-pa-cancel]').onclick = () => this.closePA();
+            const mic = p.querySelector('[data-pa-mic]');
+            const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+            if (!SR) { mic.disabled = true; mic.title = '此瀏覽器不支援語音輸入(請用 Chrome 或 Edge)'; }
+            mic.onclick = () => {
+                if (this._rec) { this._rec.stop(); return; }
+                const rec = this._rec = new SR();
+                rec.lang = 'zh-TW';
+                rec.interimResults = true;
+                rec.continuous = false;
+                const base = ta.value;
+                rec.onresult = (e) => { ta.value = base + Array.from(e.results).map(r => r[0].transcript).join(''); };
+                rec.onend = () => { this._rec = null; mic.classList.remove('rec'); mic.textContent = '🎤 語音輸入'; };
+                rec.onerror = (e) => { this.flash(`語音輸入失敗:${e.error === 'not-allowed' ? '未允許使用麥克風' : e.error}`, 3, true); };
+                mic.classList.add('rec');
+                mic.textContent = '● 錄音中…(再按一次停止)';
+                try { rec.start(); } catch { this._rec = null; }
+            };
+        }
+    }
+
+    closePA() {
+        const p = this.q('[data-pa]');
+        p.hidden = true;
+        this._rec?.stop();
+    }
+
+    sendPA() {
+        const ta = this.q('[data-pa-text]');
+        const text = ta.value.trim();
+        if (!text) { ta.focus(); return; }
+        this.announcer.unlock();
+        this.announcer.announceText(text);
+        this.flash('車內廣播播出中', 2);
+        ta.value = '';
+        this.closePA();
+    }
+
+    /** ATP 用的限速:前方較低限速依常用制動減速度換算成「現在」允許的速度(提早制動,不會衝進彎道) */
+    atpLimit(t, current) {
+        const nl = nextLimit(this.route, t.s, 900);
+        if (nl.next >= current) return current;
+        const b = this.spec.brake * 0.75;
+        const allow = Math.sqrt((nl.next / 3.6) ** 2 + 2 * b * Math.max(0, nl.at - t.s)) * 3.6;
+        return Math.min(current, Math.max(nl.next, allow));
+    }
+
+    /** 彎道過速出軌:高架墜落地面、地下(隧道/引道)撞擊牆壁、平面衝出軌道 → 遊戲結束 */
+    derail(limit) {
+        const t = this.train, s = t.s;
+        const kind0 = this.world._kindAt(s);
+        const h = this.route.ys ? this.route.ys[Math.min(this.route.ys.length - 1, Math.round(s))] : 0;
+        const kind = kind0 === 'tunnel' || kind0 === 'station-under' || kind0 === 'trough' ? 'wall' : (kind0 === 'viaduct' && h > 2.6) ? 'fall' : 'off';
+        // 離心方向:彎道外側
+        const a = poseAt(this.route, s), b = poseAt(this.route, s + 15);
+        const turn = b.tx * -a.tz + b.tz * a.tx;   // 前方切線在左右方向的分量
+        const out = turn > 0 ? -1 : 1;
+        this.crash = { kind, out, s0: s, v0: t.v, t: 0, h, limit, vKmh: t.v * 3.6, shown: false };
+        this.world.crashFx = this.crash;
+        this.setAto(false);
+        this.announcer.stop();
+        this.announcer.stopBuzzer?.();
+        this.announcer.crash(kind);
+        this.flash({ fall: '出軌!列車自高架墜落', wall: '出軌!列車撞擊隧道壁', off: '出軌!列車衝出軌道' }[kind], 6, true);
+        this.el.classList.add('dv-crash');
+    }
+
+    /** 事故動畫期間列車沿軌道滑行的里程 */
+    crashStep(dt) {
+        const c = this.crash;
+        c.t += dt;
+        const stopT = c.kind === 'wall' ? 0.8 : c.kind === 'fall' ? 1.6 : 2.6;
+        const u = Math.min(c.t, stopT);
+        this.train.s = c.s0 + c.v0 * (u - u * u / (2 * stopT)) * (c.kind === 'fall' ? 0.7 : 1);
+        this.train.v = Math.max(0, c.v0 * (1 - c.t / stopT));
+        if (c.t > 3.2 && !c.shown) { c.shown = true; this.gameOver(); }
+    }
+
+    gameOver() {
+        this.finished = true;
+        const c = this.crash;
+        const title = { fall: '列車於高架段出軌,墜落地面', wall: '列車於地下段出軌,撞擊隧道壁', off: '列車於平面段出軌,衝出軌道' }[c.kind];
+        const p = this.q('[data-pause]');
+        p.hidden = false;
+        p.onclick = (e) => {
+            const b = e.target.closest('[data-p]');
+            if (b?.dataset.p === 'restart') this.restart();
+            else if (b?.dataset.p === 'exit') this.exit();
+        };
+        p.innerHTML = `<div class="dv-card wide dv-gameover"><h3>出軌事故・遊戲結束</h3>
+            <p class="dv-go-title">${esc(title)}</p>
+            <p class="hint">彎道限速 ${c.limit} km/h,事故時速度 ${Math.round(c.vKmh)} km/h(超過 ${Math.round(c.vKmh - c.limit)} km/h)。
+                ATP 切除時,進彎前務必依限速預告提早減速。</p>
+            <div style="display:flex;gap:8px;margin-top:14px"><button class="btn btn-primary" data-p="restart">從起站重新開始</button><span class="grow" style="flex:1"></span><button class="btn" data-p="exit">回到路網 <kbd>Esc</kbd></button></div></div>`;
     }
 
     cycleView() {
@@ -741,6 +889,12 @@ class DriveSession {
     bind() {
         this.onKey = (e) => {
             if (document.querySelector('.modal-overlay')) return;
+            if (e.target.closest?.('[data-pa]')) {           // 廣播輸入框:Esc 關閉、Ctrl+Enter 播出,其餘按鍵不當快捷鍵
+                if (e.key === 'Escape') { e.preventDefault(); this.closePA(); }
+                else if (e.key === 'Enter' && (e.ctrlKey || !e.shiftKey)) { e.preventDefault(); this.sendPA(); }
+                e.stopPropagation();
+                return;
+            }
             this.announcer.unlock();
             const k = e.key.toLowerCase();
             const handled = () => { e.preventDefault(); e.stopPropagation(); };
@@ -759,6 +913,8 @@ class DriveSession {
             else if (k === 'c') { handled(); this.world.look.yaw = 0; this.world.look.pitch = -0.07; }
             else if (k === 'v') { handled(); this.cycleView(); }
             else if (k === 'a') { handled(); this.setAto(!this.ato); }
+            else if (k === 't') { handled(); this.setAtp(!this.atpOn); }
+            else if (k === 'b') { handled(); this.openPA(); }
         };
         this.onKeyUp = (e) => { if (e.key.toLowerCase() === 'h') this.announcer.horn(false); };
         window.addEventListener('keydown', this.onKey, true);
@@ -805,9 +961,11 @@ class DriveSession {
         if (!session || session !== this) return;
         const dt = Math.min(0.1, (now - this.last) / 1000) * this.timeScale;
         this.last = now;
-        if (!this.paused && !this.finished) {
+        if (this.crash) {
+            if (!this.paused) this.crashStep(dt);
+        } else if (!this.paused && !this.finished) {
             const sub = Math.max(1, Math.ceil(dt / (1 / 120)));
-            for (let i = 0; i < sub; i++) this.step(dt / sub);
+            for (let i = 0; i < sub; i++) { this.step(dt / sub); if (this.crash) break; }
             this.time += dt;
         }
         this.screenTimer -= dt;
@@ -842,8 +1000,10 @@ class DriveSession {
         }
         const limit = nextLimit(this.route, t.s, 1).current;
         if (this.ato) this.atoStep(limit);
-        const ev = stepTrain(t, this.spec, dt, limit);
+        const ev = stepTrain(t, this.spec, dt, this.atpOn ? this.atpLimit(t, limit) : Infinity);
         if (ev.atpOn) this.flash(`ATP 超速制動(限速 ${limit})`, 3, true);
+        // 彎道過速出軌(彎道限速低於列車最高速;超過約 1.35 倍 + 5 km/h)
+        if (limit < this.spec.vmax && t.v * 3.6 > limit * 1.35 + 5) { this.derail(limit); return; }
 
         if (this.phase !== 'run') return;
         const st = this.stations[this.target];
