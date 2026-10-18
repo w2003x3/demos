@@ -154,13 +154,13 @@ export class UI {
         <button id="help-btn" class="ghost">📖 操作說明</button>
         <button id="mute-btn" class="ghost">${info.muted ? '🔇 已靜音' : '🔊 聲音開'}</button>
         <button id="quality-btn" class="ghost">畫質:${esc(info.quality)}</button>
-        <button id="curtain-btn" class="ghost">${info.curtains ? '🪟 窗簾:拉下' : '🪟 窗簾:拉開'}</button>
+        ${`<div class="seg" id="curtain-seg"><span>🪟 窗簾</span><button data-v="0" class="${info.curtains ? '' : 'on'}">拉開</button><button data-v="1" class="${info.curtains ? 'on' : ''}">拉下</button></div>`}
         <span class="muted-txt">語音來源:${esc(info.voice)}</span>
       </div>`, 'menu');
     s.querySelectorAll('.mission:not(.locked)').forEach((b) => b.addEventListener('click', () => onPick(missions[+b.dataset.i])));
     $('#mute-btn', s).addEventListener('click', (e) => { e.target.textContent = onToggleMute() ? '🔇 已靜音' : '🔊 聲音開'; });
     $('#quality-btn', s).addEventListener('click', (e) => { e.target.textContent = `畫質:${info.onQuality()}`; });
-    $('#curtain-btn', s).addEventListener('click', (e) => { e.target.textContent = info.onCurtains() ? '🪟 窗簾:拉下' : '🪟 窗簾:拉開'; });
+    this._bindSeg($('#curtain-seg', s), () => info.curtains, info.onCurtains, (v) => { info.curtains = v; });
     $('#help-btn', s).addEventListener('click', () => info.onHelp());
     $('#reset-btn', s).addEventListener('click', () => { if (confirm('確定要重置職涯紀錄?')) onResetCareer(); });
   }
@@ -198,7 +198,7 @@ export class UI {
     const s = this.showScreen(`<div class="card center pause-card"><h2>暫停</h2>
       <div class="settings">
         <button class="ghost" id="b-quality">畫質:${esc(st.quality || '')}</button>
-        <button class="ghost" id="b-curtain">${st.curtains ? '🪟 窗簾:拉下' : '🪟 窗簾:拉開'}</button>
+        ${`<div class="seg" id="b-curtain"><span>🪟 窗簾</span><button data-v="0" class="${st.curtains ? '' : 'on'}">拉開</button><button data-v="1" class="${st.curtains ? 'on' : ''}">拉下</button></div>`}
         <button class="ghost" id="b-mute">${st.muted ? '🔇 已靜音' : '🔊 聲音開'}</button>
         <button class="ghost" id="b-help">📖 操作說明</button>
       </div>
@@ -207,9 +207,20 @@ export class UI {
     $('#b-resume', s).addEventListener('click', onResume);
     $('#b-quit', s).addEventListener('click', onQuit);
     $('#b-quality', s).addEventListener('click', (e) => { e.target.textContent = `畫質:${st.onQuality()}`; });
-    $('#b-curtain', s).addEventListener('click', (e) => { e.target.textContent = st.onCurtains() ? '🪟 窗簾:拉下' : '🪟 窗簾:拉開'; });
+    this._bindSeg($('#b-curtain', s), () => st.curtains, st.onCurtains, (v) => { st.curtains = v; });
     $('#b-mute', s).addEventListener('click', (e) => { e.target.textContent = st.onMute() ? '🔇 已靜音' : '🔊 聲音開'; });
     $('#b-help', s).addEventListener('click', () => st.onHelp());
+  }
+
+  /** 兩段式開關:點未選取的一邊才切換(onToggle 回傳切換後狀態)。 */
+  _bindSeg(el, get, onToggle, set) {
+    el.addEventListener('click', (e) => {
+      const b = e.target.closest('button[data-v]');
+      if (!b || (b.dataset.v === '1') === !!get()) return;
+      const v = onToggle();
+      set(v);
+      el.querySelectorAll('button').forEach((x) => x.classList.toggle('on', (x.dataset.v === '1') === v));
+    });
   }
 
   /**
@@ -384,6 +395,9 @@ export class UI {
     // 結帳時面板停靠在上方、側邊面板收起,不遮住收銀機
     el.classList.toggle('dock-top', v.dock === 'top');
     hud.classList.toggle('docked', v.dock === 'top');
+    // 停靠位置直接寫在元素上(不依賴樣式檔,避免瀏覽器快取舊樣式時面板被撐高蓋住收銀機)
+    el.style.bottom = v.dock === 'top' ? 'auto' : '';
+    el.style.top = v.dock === 'top' ? `${Math.round($('#marquee', this.root).getBoundingClientRect().bottom + 8)}px` : '';
     const parts = [`<div class="d-title">${esc(v.title)}</div>`, `<div class="d-text">${v.text}</div>`];
     if (v.menu) {
       parts.push(`<div class="d-menu">${v.menu.map((m) => `<button class="d-item ${m.stock <= 0 ? 'out' : ''}" data-key="Digit${m.key}"><kbd>${m.key}</kbd>${esc(m.label)}<small>$${m.price} · 剩 ${m.stock}</small></button>`).join('')}</div>`);

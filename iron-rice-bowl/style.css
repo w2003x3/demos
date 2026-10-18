@@ -231,9 +231,12 @@ kbd { display: inline-block; min-width: 20px; text-align: center; background: #e
 .reason { text-align: center; color: #ffb0a0; }
 .big-stars { text-align: center; font-size: 44px; color: #ffc240; letter-spacing: 6px; margin: 4px 0 12px; }
 
+/* 中等寬度:跑馬燈放最上方整列,兩側面板排在其下 */
 @media (max-width: 1100px) {
-  .led { top: 230px; width: calc(100vw - 28px); }
+  .led { top: 6px; left: 6px; right: 6px; width: auto; min-width: 0; transform: none; height: 40px; }
+  .hud-left, .hud-right { top: 54px; }
   .hud-left, .hud-right { width: calc(50vw - 21px); }
+  #toasts { top: 60px; }
 }
 
 /* ===================================================================== 觸控 / 點擊操作 */
@@ -254,7 +257,7 @@ kbd { display: inline-block; min-width: 20px; text-align: center; background: #e
 .t-btn.primary { background: rgba(240,138,36,0.75); color: #111; font-size: 26px; }
 .t-btn.primary small { color: #222; }
 .t-btn.fast { background: rgba(200,60,40,0.55); }
-.t-top { position: absolute; right: 270px; top: 14px; display: flex; gap: 6px; }
+.t-top { position: absolute; right: 14px; bottom: 202px; display: flex; gap: 6px; }
 .t-mini { width: 40px; height: 40px; border-radius: 10px; border: 1px solid rgba(255,255,255,0.22); background: rgba(14,18,26,0.7); color: #fff; font-size: 18px; cursor: pointer; }
 
 /* 操作面板:可點擊的選項與動作鈕 */
@@ -332,7 +335,7 @@ kbd { display: inline-block; min-width: 20px; text-align: center; background: #e
   .t-btn { width: 54px; height: 50px; font-size: 17px; }
   .t-pad .t-btn { width: 58px; }
   .t-btn.primary { font-size: 22px; }
-  .t-top { right: 8px; top: auto; bottom: 232px; flex-direction: column; }
+  .t-top { right: 6px; bottom: 166px; }
   .prompt { bottom: 220px; font-size: 13px; max-width: 70vw; text-align: center; }
   .dialog { bottom: 52px; width: calc(100vw - 12px); max-height: 56vh; overflow-y: auto; padding: 10px 12px; z-index: 2; }
   .dialog.dock-top { top: 6px; max-height: 34vh; }
@@ -356,3 +359,10 @@ kbd { display: inline-block; min-width: 20px; text-align: center; background: #e
   .pause-card .settings { grid-template-columns: 1fr; }
   .menu-foot { flex-wrap: wrap; justify-content: center; }
 }
+
+/* 兩段式開關(亮起 = 目前狀態) */
+.seg { display: inline-flex; align-items: center; gap: 0; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; background: rgba(255,255,255,0.06); }
+.seg span { padding: 0 10px; font-size: 14px; color: var(--muted); }
+.seg button { border: 0; padding: 9px 14px; font: 700 14px var(--font); background: transparent; color: var(--muted); cursor: pointer; }
+.seg button.on { background: var(--accent); color: #111; }
+.pause-card .settings .seg { justify-content: space-between; }

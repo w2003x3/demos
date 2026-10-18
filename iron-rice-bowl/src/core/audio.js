@@ -132,7 +132,12 @@ export class Voice {
     }
   }
 
-  get source() { return this.files.size ? `Azure TTS 音檔 ${this.files.size} 句` : '瀏覽器語音(尚未產生 Azure 音檔)'; }
+  get source() {
+    if (this.files.size) return `微軟 Azure 語音音檔 ${this.files.size} 句(雲哲・曉臻・曉雨)`;
+    const ms = ['HsiaoChen', 'YunJhe', 'HsiaoYu'].filter((n) => this.synthVoices?.some((v) => v.name.includes(n)));
+    return ms.length ? `瀏覽器內建微軟語音(${ms.map((n) => ({ HsiaoChen: '曉臻', YunJhe: '雲哲', HsiaoYu: '曉雨' }[n])).join('・')})`
+      : '瀏覽器語音(未偵測到微軟曉臻/雲哲/曉雨,建議用 Edge 瀏覽器開啟)';
+  }
 
   setMuted(m) {
     this.muted = m;
