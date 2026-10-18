@@ -27,7 +27,8 @@ export class CartCrew {
     this.group = new THREE.Group();
     this.cart = assets.cart.clone(true);
     this.cart.position.x = CREW.half;
-    this.attendant = assets.attendant.clone(true);
+    // 有 rail-assets 時用寫實餐服員(推車姿勢、制服),否則用 Blender 人偶
+    this.attendant = (assets.crew?.attendant || assets.attendant).clone(true);
     this.attendant.position.x = -CREW.half;
     this.head = new THREE.Object3D();
     this.head.position.set(-CREW.half, 1.98, 0);

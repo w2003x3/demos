@@ -1,4 +1,5 @@
 // 坐著的乘客:以 InstancedMesh 繪製(每個材質一次 draw call),並管理「想買東西」的狀態與頭上圖示。
+// 有 rail-assets 寫實人物時用它們的坐姿(每個人物變體一組 InstancedMesh);否則用簡易人偶並隨機換衣服顏色。
 import * as THREE from 'three';
 import { makeInstanced } from '../core/assets.js';
 import { Tex } from '../core/textures.js';
@@ -12,7 +13,7 @@ const PALETTE = {
 const pick = (a, R) => a[(R() * a.length) | 0];
 
 export class Passengers {
-  constructor(assets, train, R, castShadow = true) {
+  constructor(assets, train, R, castShadow = true, realistic = true) {
     this.R = R;
     this.train = train;
     this.seats = train.seats.map((s, i) => ({
@@ -20,8 +21,13 @@ export class Passengers {
       gender: 'm', head: new THREE.Vector3(s.x - 0.19, 1.3, s.z),
     }));
     this.group = new THREE.Group();
-    this.parts = makeInstanced(assets.passengerSit, this.seats.length, { colorSlots: Object.keys(PALETTE), shadow: castShadow });
-    this.parts.forEach((p) => this.group.add(p));
+    // 寫實人物:面向 -Z → 轉成面向 +X(車廂前進方向)
+    this.people = realistic ? assets.people : null;
+    this.facing = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), this.people ? -Math.PI / 2 : 0);
+    this.kinds = this.people
+      ? this.people.map((v) => ({ v, parts: makeInstanced(v.sit, this.seats.length, { shadow: castShadow }) }))
+      : [{ v: null, parts: makeInstanced(assets.passengerSit, this.seats.length, { colorSlots: Object.keys(PALETTE), shadow: castShadow }) }];
+    this.kinds.forEach((k) => k.parts.forEach((p) => this.group.add(p)));
     this.iconTex = Tex.bubble('🍱');
     this.iconPool = [];
   }
@@ -33,26 +39,30 @@ export class Passengers {
     seat.pitched = false;
     this._hideIcon(seat);
     if (!occupied) return;
-    seat.matrix = new THREE.Matrix4().compose(new THREE.Vector3(seat.x, 0, seat.z),
-      new THREE.Quaternion(), new THREE.Vector3(1, 0.92 + this.R() * 0.14, 1));
-    // 乘客聲音(語音 ID 尾碼):m = 雲哲、f = 曉雨、f2 = 曉臻(三聲混用)
-    seat.gender = this.R() < 0.5 ? 'm' : this.R() < 0.5 ? 'f' : 'f2';
+    seat.kind = (this.R() * this.kinds.length) | 0;
+    const real = this.kinds[seat.kind].v;
+    seat.matrix = new THREE.Matrix4().compose(new THREE.Vector3(seat.x, 0, seat.z), this.facing,
+      real ? new THREE.Vector3().setScalar(0.93 + this.R() * 0.1) : new THREE.Vector3(1, 0.92 + this.R() * 0.14, 1));
+    // 乘客聲音(語音 ID 尾碼):m = 雲哲、f = 曉雨、f2 = 曉臻(三聲混用);寫實人物依外觀性別
+    seat.gender = real ? (real.female ? (this.R() < 0.5 ? 'f' : 'f2') : 'm') : this.R() < 0.5 ? 'm' : this.R() < 0.5 ? 'f' : 'f2';
     seat.colors = {};
     for (const k of Object.keys(PALETTE)) seat.colors[k] = new THREE.Color(pick(PALETTE[k], this.R));
   }
 
   /** 只把有人坐的座位緊密寫入 instance(空位不佔頂點運算)。 */
   _commit() {
-    const occ = this.seats.filter((s) => s.occupied);
-    for (const p of this.parts) {
-      occ.forEach((s, i) => {
-        p.setMatrixAt(i, s.matrix);
-        if (p.userData.colored) p.setColorAt(i, s.colors[p.userData.slot]);
-      });
-      p.count = occ.length;
-      p.instanceMatrix.needsUpdate = true;
-      if (p.instanceColor) p.instanceColor.needsUpdate = true;
-    }
+    this.kinds.forEach((k, ki) => {
+      const occ = this.seats.filter((s) => s.occupied && s.kind === ki);
+      for (const p of k.parts) {
+        occ.forEach((s, i) => {
+          p.setMatrixAt(i, s.matrix);
+          if (p.userData.colored) p.setColorAt(i, s.colors[p.userData.slot]);
+        });
+        p.count = occ.length;
+        p.instanceMatrix.needsUpdate = true;
+        if (p.instanceColor) p.instanceColor.needsUpdate = true;
+      }
+    });
   }
 
   fill(rate) {

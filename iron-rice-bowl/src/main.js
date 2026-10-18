@@ -14,11 +14,11 @@ import { UI } from './ui/ui.js';
 import { OnboardPhase } from './game/onboardPhase.js';
 import { StationPhase } from './game/stationPhase.js';
 
-// 畫質設定:RectAreaLight、乘客陰影、解析度最吃效能
+// 畫質設定:RectAreaLight、乘客陰影、解析度最吃效能;scenery = 窗外景物密度;simplePax = 座位乘客用簡易人偶(寫實人物每人約 8 千面)
 const QUALITY = {
-  high: { label: '高', areaLights: true, shadows: true, paxShadows: true, shadowSize: 2048, maxDpr: 2 },
-  medium: { label: '中', areaLights: false, pointLights: true, shadows: true, paxShadows: false, shadowSize: 1024, maxDpr: 1.25 },
-  low: { label: '低', areaLights: false, pointLights: false, shadows: false, paxShadows: false, shadowSize: 512, maxDpr: 0.85 },
+  high: { label: '高', areaLights: true, shadows: true, paxShadows: true, shadowSize: 2048, maxDpr: 2, scenery: 1 },
+  medium: { label: '中', areaLights: false, pointLights: true, shadows: true, paxShadows: false, shadowSize: 1024, maxDpr: 1.25, scenery: 0.7 },
+  low: { label: '低', areaLights: false, pointLights: false, shadows: false, paxShadows: false, shadowSize: 512, maxDpr: 0.85, scenery: 0.4, simplePax: true },
 };
 const QUALITY_KEY = 'trainBento.quality';
 const SETTINGS_KEY = 'trainBento.settings';
@@ -163,7 +163,7 @@ class Game {
     this.renderer.shadowMap.enabled = this.quality.shadows;
     this.renderer.setSize(innerWidth, innerHeight);
     // 陰影開關會改變 shader,已載入模型的材質需重新編譯
-    this.assetCache?.forEach((set) => Object.values(set).forEach((root) => root.traverse((o) => {
+    this.assetCache?.forEach((set) => Object.values(set).forEach((root) => root.traverse?.((o) => {
       if (o.material) o.material.needsUpdate = true;
     })));
     try { localStorage.setItem(QUALITY_KEY, key); } catch { /* 忽略 */ }

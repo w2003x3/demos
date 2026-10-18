@@ -1,0 +1,993 @@
+{
+  "name": "rail-assets",
+  "version": "2026-10-15",
+  "conventions": {
+    "units": "meter",
+    "up": "+Y",
+    "forward": "-Z",
+    "right": "+X",
+    "pivot": "base-center:模型底面中心在原點(人物=雙腳之間、樹=樹幹底、建築=地面中心);origin:保留來源原點(駕駛艙、月台模組等有特定基準點)"
+  },
+  "loader": {
+    "draco": "Draco 壓縮網格:three.js 需 DRACOLoader;Godot/Unity(glTFast)/Unreal 原生支援",
+    "images": "EXT_texture_webp"
+  },
+  "slots": {
+    "platform/open": [
+      {
+        "id": "platform-open",
+        "file": "models/platform/open/platform-open.glb",
+        "bytes": 1211452,
+        "tris": 152,
+        "bounds": {
+          "min": [
+            1.52,
+            -1,
+            -5
+          ],
+          "max": [
+            7.8,
+            4.35,
+            5
+          ]
+        },
+        "materials": [
+          "Concrete",
+          "DoorFrame",
+          "LightPanel",
+          "PlatformEdge",
+          "PlatformTile",
+          "Roof",
+          "Steel",
+          "SteelDark",
+          "Tactile"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "PlatformOpen",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "platform/bench": [
+      {
+        "id": "metro-bench",
+        "file": "models/platform/bench/metro-bench.glb",
+        "bytes": 3372,
+        "tris": 132,
+        "bounds": {
+          "min": [
+            -0.23,
+            0,
+            -1
+          ],
+          "max": [
+            0.23,
+            0.88,
+            1
+          ]
+        },
+        "materials": [
+          "Steel",
+          "SteelDark"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "MetroBench",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "platform/trash-can": [
+      {
+        "id": "metal-trash-can",
+        "file": "models/platform/trash-can/metal-trash-can.glb",
+        "bytes": 273900,
+        "tris": 1500,
+        "bounds": {
+          "min": [
+            -0.497,
+            0.218,
+            -0.147
+          ],
+          "max": [
+            0.437,
+            0.695,
+            0.147
+          ]
+        },
+        "materials": [
+          "metal_trash_can",
+          "metal_trash_can_rust",
+          "metal_trash_can_rust.001"
+        ],
+        "license": "CC0-1.0",
+        "author": "GurJas Studios",
+        "title": "Metal Trash Can",
+        "source": "https://polyhaven.com/a/metal_trash_can",
+        "provider": "polyhaven"
+      }
+    ],
+    "trackside/mast": [
+      {
+        "id": "mast",
+        "file": "models/trackside/mast/mast.glb",
+        "bytes": 3228,
+        "tris": 76,
+        "bounds": {
+          "min": [
+            -3.4,
+            0,
+            -0.15
+          ],
+          "max": [
+            0.15,
+            6.8,
+            0.15
+          ]
+        },
+        "materials": [
+          "Rubber",
+          "Steel"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "Mast",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "trackside/electric-pole": [
+      {
+        "id": "electric-pole",
+        "file": "models/trackside/electric-pole/electric-pole.glb",
+        "bytes": 409680,
+        "tris": 400,
+        "bounds": {
+          "min": [
+            -0.099,
+            0,
+            -0.099
+          ],
+          "max": [
+            0.099,
+            10,
+            0.099
+          ]
+        },
+        "materials": [
+          "modular_electricity_poles"
+        ],
+        "license": "CC0-1.0",
+        "author": "James Ray Cock",
+        "title": "Modular Electricity Poles",
+        "source": "https://polyhaven.com/a/modular_electricity_poles",
+        "provider": "polyhaven"
+      }
+    ],
+    "trackside/utility-box": [
+      {
+        "id": "utility-box",
+        "file": "models/trackside/utility-box/utility-box.glb",
+        "bytes": 80764,
+        "tris": 800,
+        "bounds": {
+          "min": [
+            -0.301,
+            0,
+            -0.25
+          ],
+          "max": [
+            0.301,
+            1.3,
+            0.25
+          ]
+        },
+        "materials": [
+          "utility_box_01"
+        ],
+        "license": "CC0-1.0",
+        "author": "James Ray Cock",
+        "title": "Utility Box 01",
+        "source": "https://polyhaven.com/a/utility_box_01",
+        "provider": "polyhaven"
+      }
+    ],
+    "trackside/barrier": [
+      {
+        "id": "barrier",
+        "file": "models/trackside/barrier/barrier.glb",
+        "bytes": 108400,
+        "tris": 608,
+        "bounds": {
+          "min": [
+            -1,
+            0,
+            -0.412
+          ],
+          "max": [
+            1,
+            1.079,
+            0.412
+          ]
+        },
+        "materials": [
+          "concrete_road_barrier"
+        ],
+        "license": "CC0-1.0",
+        "author": "Amal Kumar",
+        "title": "Concrete Road Barrier",
+        "source": "https://polyhaven.com/a/concrete_road_barrier",
+        "provider": "polyhaven"
+      }
+    ],
+    "street/lamp": [
+      {
+        "id": "street-lamp-tw",
+        "file": "models/street/lamp/street-lamp-tw.glb",
+        "bytes": 4876,
+        "tris": 148,
+        "bounds": {
+          "min": [
+            -0.16,
+            0,
+            -0.2
+          ],
+          "max": [
+            2.95,
+            9.32,
+            0.2
+          ]
+        },
+        "materials": [
+          "LampHead",
+          "Steel",
+          "SteelDark"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "StreetLampTW",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "street/hydrant": [
+      {
+        "id": "fire-hydrant",
+        "file": "models/street/hydrant/fire-hydrant.glb",
+        "bytes": 96500,
+        "tris": 1500,
+        "bounds": {
+          "min": [
+            -0.127,
+            0,
+            -0.142
+          ],
+          "max": [
+            0.127,
+            0.8,
+            0.142
+          ]
+        },
+        "materials": [
+          "fire_hydrant"
+        ],
+        "license": "CC0-1.0",
+        "author": "Gonçalo Felício",
+        "title": "Fire Hydrant",
+        "source": "https://polyhaven.com/a/fire_hydrant",
+        "provider": "polyhaven"
+      }
+    ],
+    "street/aircon": [
+      {
+        "id": "aircon",
+        "file": "models/street/aircon/aircon.glb",
+        "bytes": 313104,
+        "tris": 800,
+        "bounds": {
+          "min": [
+            -0.425,
+            0,
+            -0.2
+          ],
+          "max": [
+            0.425,
+            0.99,
+            0.2
+          ]
+        },
+        "materials": [
+          "exterior_aircon_unit_01",
+          "exterior_aircon_unit_02"
+        ],
+        "license": "CC0-1.0",
+        "author": "Monsta3D",
+        "title": "Exterior Aircon Unit",
+        "source": "https://polyhaven.com/a/exterior_aircon_unit",
+        "provider": "polyhaven"
+      }
+    ],
+    "street/seating": [
+      {
+        "id": "street-seating",
+        "file": "models/street/seating/street-seating.glb",
+        "bytes": 58832,
+        "tris": 176,
+        "bounds": {
+          "min": [
+            -1,
+            0,
+            -0.052
+          ],
+          "max": [
+            1,
+            0.433,
+            0.052
+          ]
+        },
+        "materials": [
+          "modular_street_seating_timber"
+        ],
+        "license": "CC0-1.0",
+        "author": "Stuart Attenborrow",
+        "title": "Modular Street Seating",
+        "source": "https://polyhaven.com/a/modular_street_seating",
+        "provider": "polyhaven"
+      }
+    ],
+    "vegetation/tree": [
+      {
+        "id": "tree-camphor",
+        "file": "models/vegetation/tree/tree-camphor.glb",
+        "bytes": 360248,
+        "tris": 1116,
+        "bounds": {
+          "min": [
+            -4.007,
+            0,
+            -4.026
+          ],
+          "max": [
+            4.007,
+            9.017,
+            4.026
+          ]
+        },
+        "materials": [
+          "Bark",
+          "Leaves0",
+          "Leaves1",
+          "Leaves2"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "TreeCamphor",
+        "source": "",
+        "provider": "procedural"
+      },
+      {
+        "id": "tree-tall",
+        "file": "models/vegetation/tree/tree-tall.glb",
+        "bytes": 359232,
+        "tris": 1036,
+        "bounds": {
+          "min": [
+            -3.137,
+            0,
+            -3.205
+          ],
+          "max": [
+            3.137,
+            11.253,
+            3.205
+          ]
+        },
+        "materials": [
+          "Bark",
+          "Leaves0",
+          "Leaves1",
+          "Leaves2"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "TreeTall",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "vegetation/shrub": [
+      {
+        "id": "shrub-hedge",
+        "file": "models/vegetation/shrub/shrub-hedge.glb",
+        "bytes": 248012,
+        "tris": 104,
+        "bounds": {
+          "min": [
+            -1.359,
+            0,
+            -1.033
+          ],
+          "max": [
+            1.359,
+            1.783,
+            1.033
+          ]
+        },
+        "materials": [
+          "Leaves0",
+          "Leaves1",
+          "Leaves2"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "ShrubHedge",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "building/street": [
+      {
+        "id": "street-house-a",
+        "file": "models/building/street/street-house-a.glb",
+        "bytes": 2320360,
+        "tris": 2022,
+        "bounds": {
+          "min": [
+            -3,
+            0,
+            -1.15
+          ],
+          "max": [
+            3,
+            19.7,
+            14.2
+          ]
+        },
+        "materials": [
+          "AluminumFrame",
+          "Concrete",
+          "FacadePlaster",
+          "FacadePlasterGrey",
+          "FacadeTileA",
+          "IronGuard",
+          "PlatformTile",
+          "RollingShutter",
+          "SheetRoofBlue",
+          "ShopGlass",
+          "ShopSign0",
+          "ShopSign2",
+          "SteelDark",
+          "WaterTank",
+          "Window",
+          "WindowLit"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "StreetHouseA",
+        "source": "",
+        "provider": "procedural"
+      },
+      {
+        "id": "street-house-b",
+        "file": "models/building/street/street-house-b.glb",
+        "bytes": 1688556,
+        "tris": 1280,
+        "bounds": {
+          "min": [
+            -4,
+            0,
+            -1.15
+          ],
+          "max": [
+            4,
+            15.4,
+            14.2
+          ]
+        },
+        "materials": [
+          "AluminumFrame",
+          "Concrete",
+          "FacadePlaster",
+          "FacadePlasterGrey",
+          "IronGuard",
+          "PlatformTile",
+          "RollingShutter",
+          "ShopGlass",
+          "ShopSign1",
+          "ShopSign3",
+          "SteelDark",
+          "WaterTank",
+          "Window",
+          "WindowLit"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "StreetHouseB",
+        "source": "",
+        "provider": "procedural"
+      },
+      {
+        "id": "street-house-c",
+        "file": "models/building/street/street-house-c.glb",
+        "bytes": 1708164,
+        "tris": 5494,
+        "bounds": {
+          "min": [
+            -3.5,
+            0,
+            -1.15
+          ],
+          "max": [
+            3.5,
+            25.9,
+            14.2
+          ]
+        },
+        "materials": [
+          "AluminumFrame",
+          "Concrete",
+          "FacadePlaster",
+          "FacadePlasterGrey",
+          "IronGuard",
+          "PlatformTile",
+          "RollingShutter",
+          "SheetRoofGreen",
+          "ShopGlass",
+          "ShopSign3",
+          "ShopSign5",
+          "SteelDark",
+          "WaterTank",
+          "Window",
+          "WindowLit"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "StreetHouseC",
+        "source": "",
+        "provider": "procedural"
+      },
+      {
+        "id": "street-house-d",
+        "file": "models/building/street/street-house-d.glb",
+        "bytes": 1688000,
+        "tris": 1056,
+        "bounds": {
+          "min": [
+            -2.5,
+            0,
+            -1.15
+          ],
+          "max": [
+            2.5,
+            12.3,
+            14.2
+          ]
+        },
+        "materials": [
+          "AluminumFrame",
+          "Concrete",
+          "FacadePlaster",
+          "FacadePlasterCream",
+          "FacadePlasterGrey",
+          "IronGuard",
+          "PlatformTile",
+          "RollingShutter",
+          "ShopGlass",
+          "ShopSign1",
+          "ShopSign5",
+          "SteelDark",
+          "WaterTank",
+          "Window",
+          "WindowLit"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "StreetHouseD",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "building/tower": [
+      {
+        "id": "tower-a",
+        "file": "models/building/tower/tower-a.glb",
+        "bytes": 789056,
+        "tris": 476,
+        "bounds": {
+          "min": [
+            -11,
+            0,
+            -9
+          ],
+          "max": [
+            11,
+            75.8,
+            9
+          ]
+        },
+        "materials": [
+          "CurtainWall",
+          "PlatformTile",
+          "ShopGlass",
+          "Steel",
+          "TowerConcrete",
+          "Window",
+          "WindowLit"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "TowerA",
+        "source": "",
+        "provider": "procedural"
+      },
+      {
+        "id": "tower-b",
+        "file": "models/building/tower/tower-b.glb",
+        "bytes": 789328,
+        "tris": 668,
+        "bounds": {
+          "min": [
+            -8,
+            0,
+            -8
+          ],
+          "max": [
+            8,
+            104.6,
+            8
+          ]
+        },
+        "materials": [
+          "CurtainWall",
+          "PlatformTile",
+          "ShopGlass",
+          "Steel",
+          "TowerConcrete",
+          "Window",
+          "WindowLit"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "TowerB",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "people/standing": [
+      {
+        "id": "female-adult-01",
+        "file": "models/people/standing/female-adult-01.glb",
+        "bytes": 676660,
+        "tris": 8732,
+        "bounds": {
+          "min": [
+            -0.245,
+            0,
+            -0.183
+          ],
+          "max": [
+            0.245,
+            1.7,
+            0.183
+          ]
+        },
+        "materials": [
+          "f001_body",
+          "f001_head",
+          "f001_opacity"
+        ],
+        "license": "MIT",
+        "author": "Microsoft Rocketbox",
+        "title": "Female Adult 01",
+        "source": "https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Female_Adult_01",
+        "provider": "rocketbox"
+      },
+      {
+        "id": "female-adult-04",
+        "file": "models/people/standing/female-adult-04.glb",
+        "bytes": 695932,
+        "tris": 9284,
+        "bounds": {
+          "min": [
+            -0.238,
+            0,
+            -0.171
+          ],
+          "max": [
+            0.238,
+            1.7,
+            0.171
+          ]
+        },
+        "materials": [
+          "f004_body",
+          "f004_head",
+          "f004_opacity"
+        ],
+        "license": "MIT",
+        "author": "Microsoft Rocketbox",
+        "title": "Female Adult 04",
+        "source": "https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Female_Adult_04",
+        "provider": "rocketbox"
+      },
+      {
+        "id": "female-adult-06",
+        "file": "models/people/standing/female-adult-06.glb",
+        "bytes": 413004,
+        "tris": 6992,
+        "bounds": {
+          "min": [
+            -0.248,
+            0,
+            -0.182
+          ],
+          "max": [
+            0.248,
+            1.7,
+            0.182
+          ]
+        },
+        "materials": [
+          "f202_body",
+          "f202_head",
+          "f202_opacity"
+        ],
+        "license": "MIT",
+        "author": "Microsoft Rocketbox",
+        "title": "Female Adult 06",
+        "source": "https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Female_Adult_06",
+        "provider": "rocketbox"
+      },
+      {
+        "id": "female-adult-09",
+        "file": "models/people/standing/female-adult-09.glb",
+        "bytes": 683024,
+        "tris": 9032,
+        "bounds": {
+          "min": [
+            -0.244,
+            0,
+            -0.151
+          ],
+          "max": [
+            0.244,
+            1.7,
+            0.151
+          ]
+        },
+        "materials": [
+          "f009_body",
+          "f009_head",
+          "f009_opacity"
+        ],
+        "license": "MIT",
+        "author": "Microsoft Rocketbox",
+        "title": "Female Adult 09",
+        "source": "https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Female_Adult_09",
+        "provider": "rocketbox"
+      },
+      {
+        "id": "male-adult-01",
+        "file": "models/people/standing/male-adult-01.glb",
+        "bytes": 629196,
+        "tris": 7440,
+        "bounds": {
+          "min": [
+            -0.266,
+            0,
+            -0.158
+          ],
+          "max": [
+            0.266,
+            1.7,
+            0.158
+          ]
+        },
+        "materials": [
+          "m002_body",
+          "m002_head",
+          "m002_opacity"
+        ],
+        "license": "MIT",
+        "author": "Microsoft Rocketbox",
+        "title": "Male Adult 01",
+        "source": "https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Male_Adult_01",
+        "provider": "rocketbox"
+      },
+      {
+        "id": "male-adult-03",
+        "file": "models/people/standing/male-adult-03.glb",
+        "bytes": 830276,
+        "tris": 7200,
+        "bounds": {
+          "min": [
+            -0.278,
+            0,
+            -0.161
+          ],
+          "max": [
+            0.278,
+            1.7,
+            0.161
+          ]
+        },
+        "materials": [
+          "m004_body",
+          "m004_head",
+          "m004_opacity"
+        ],
+        "license": "MIT",
+        "author": "Microsoft Rocketbox",
+        "title": "Male Adult 03",
+        "source": "https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Male_Adult_03",
+        "provider": "rocketbox"
+      },
+      {
+        "id": "male-adult-05",
+        "file": "models/people/standing/male-adult-05.glb",
+        "bytes": 934900,
+        "tris": 7836,
+        "bounds": {
+          "min": [
+            -0.278,
+            0,
+            -0.173
+          ],
+          "max": [
+            0.278,
+            1.7,
+            0.173
+          ]
+        },
+        "materials": [
+          "m009_body",
+          "m009_head",
+          "m009_opacity"
+        ],
+        "license": "MIT",
+        "author": "Microsoft Rocketbox",
+        "title": "Male Adult 05",
+        "source": "https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Male_Adult_05",
+        "provider": "rocketbox"
+      },
+      {
+        "id": "male-adult-08",
+        "file": "models/people/standing/male-adult-08.glb",
+        "bytes": 678456,
+        "tris": 7364,
+        "bounds": {
+          "min": [
+            -0.273,
+            0,
+            -0.158
+          ],
+          "max": [
+            0.273,
+            1.7,
+            0.158
+          ]
+        },
+        "materials": [
+          "m014_body",
+          "m014_head",
+          "m014_opacity"
+        ],
+        "license": "MIT",
+        "author": "Microsoft Rocketbox",
+        "title": "Male Adult 08",
+        "source": "https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Male_Adult_08",
+        "provider": "rocketbox"
+      }
+    ]
+  },
+  "textures": {
+    "ballast": {
+      "maps": {
+        "color": "textures/ballast/color.webp",
+        "normal": "textures/ballast/normal.webp",
+        "arm": "textures/ballast/arm.webp"
+      },
+      "repeat": 2,
+      "license": "CC0-1.0",
+      "author": "Rob Tuytel",
+      "title": "Rocks Ground 02",
+      "source": "https://polyhaven.com/a/rocks_ground_02",
+      "provider": "polyhaven"
+    },
+    "concrete": {
+      "maps": {
+        "color": "textures/concrete/color.webp",
+        "normal": "textures/concrete/normal.webp",
+        "arm": "textures/concrete/arm.webp"
+      },
+      "repeat": 3,
+      "license": "CC0-1.0",
+      "author": "Rob Tuytel",
+      "title": "Concrete Floor 02",
+      "source": "https://polyhaven.com/a/concrete_floor_02",
+      "provider": "polyhaven"
+    },
+    "platform-floor": {
+      "maps": {
+        "color": "textures/platform-floor/color.webp",
+        "normal": "textures/platform-floor/normal.webp",
+        "arm": "textures/platform-floor/arm.webp"
+      },
+      "repeat": 2,
+      "license": "CC0-1.0",
+      "author": "Charlotte Baglioni",
+      "title": "Granite Tile",
+      "source": "https://polyhaven.com/a/granite_tile",
+      "provider": "polyhaven"
+    },
+    "asphalt": {
+      "maps": {
+        "color": "textures/asphalt/color.webp",
+        "normal": "textures/asphalt/normal.webp",
+        "arm": "textures/asphalt/arm.webp"
+      },
+      "repeat": 6,
+      "license": "CC0-1.0",
+      "author": "Rob Tuytel",
+      "title": "Asphalt 02",
+      "source": "https://polyhaven.com/a/asphalt_02",
+      "provider": "polyhaven"
+    },
+    "grass": {
+      "maps": {
+        "color": "textures/grass/color.webp",
+        "normal": "textures/grass/normal.webp",
+        "arm": "textures/grass/arm.webp"
+      },
+      "repeat": 4,
+      "license": "CC0-1.0",
+      "author": "Charlotte Baglioni",
+      "title": "Leafy Grass",
+      "source": "https://polyhaven.com/a/leafy_grass",
+      "provider": "polyhaven"
+    },
+    "metal": {
+      "maps": {
+        "color": "textures/metal/color.webp",
+        "normal": "textures/metal/normal.webp",
+        "arm": "textures/metal/arm.webp"
+      },
+      "repeat": 1,
+      "license": "CC0-1.0",
+      "author": "Rob Tuytel",
+      "title": "Metal Plate",
+      "source": "https://polyhaven.com/a/metal_plate",
+      "provider": "polyhaven"
+    }
+  },
+  "hdri": {
+    "day": {
+      "file": "hdri/day.hdr",
+      "bytes": 5451493,
+      "license": "CC0-1.0",
+      "author": "Greg Zaal, Jarod Guest",
+      "title": "Kloofendal 48d Partly Cloudy (Pure Sky)",
+      "source": "https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky",
+      "provider": "polyhaven"
+    },
+    "overcast": {
+      "file": "hdri/overcast.hdr",
+      "bytes": 4335717,
+      "license": "CC0-1.0",
+      "author": "Greg Zaal",
+      "title": "Kloofendal Overcast (Pure Sky)",
+      "source": "https://polyhaven.com/a/kloofendal_overcast_puresky",
+      "provider": "polyhaven"
+    },
+    "dusk": {
+      "file": "hdri/dusk.hdr",
+      "bytes": 4344656,
+      "license": "CC0-1.0",
+      "author": "Jarod Guest, Sergej Majboroda",
+      "title": "Industrial Sunset (Pure Sky)",
+      "source": "https://polyhaven.com/a/industrial_sunset_puresky",
+      "provider": "polyhaven"
+    }
+  }
+}

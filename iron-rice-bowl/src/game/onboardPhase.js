@@ -50,12 +50,20 @@ export class OnboardPhase {
     g.scene.add(this.root);
 
     this.train = new TrainSet(assets, type, cfg.serviceCars, g.quality);
-    this.pax = new Passengers(assets, this.train, this.R, g.quality.paxShadows);
+    this.pax = new Passengers(assets, this.train, this.R, g.quality.paxShadows, !g.quality.simplePax);
     this.pax.fill(cfg.occupancy);
     this.crew = new CartCrew(assets);
     this.scenery = new Scenery(g.renderer, cfg.scenery, assets, g.quality);
     this.root.add(this.train.group, this.pax.group, this.crew.group, this.scenery.group);
+    await this.scenery.ready;
     g.scene.fog = this.scenery.fog;
+    // HDRI 天空:背景與環境反射(車窗玻璃、金屬扶手);結束任務時還原
+    this._sceneEnv = { background: g.scene.background, environment: g.scene.environment, intensity: g.scene.environmentIntensity };
+    if (this.scenery.background) {
+      g.scene.background = this.scenery.background;
+      g.scene.environment = this.scenery.envMap;
+      g.scene.environmentIntensity = 0.55;
+    }
 
     // 路線與行駛曲線:區間時間 T → 距離 d = v(T - v/a)(加減速各佔 v/2a 距離)
     const v = type.maxSpeed, a = type.accel;
@@ -105,6 +113,11 @@ export class OnboardPhase {
     this.g.voice.hearing = null;
     this.g.scene.remove(this.root);
     this.g.scene.fog = null;
+    if (this._sceneEnv) {
+      this.g.scene.background = this._sceneEnv.background;
+      this.g.scene.environment = this._sceneEnv.environment;
+      this.g.scene.environmentIntensity = this._sceneEnv.intensity;
+    }
     this.g.voice.stopAll();
     this.g.ui.clearBubbles();
     this.g.camera.fov = FOV.normal;
@@ -239,7 +252,8 @@ export class OnboardPhase {
     this.g.ui.setPrompt(null);
     this.g.ui.renderDialog(null);
     this.crew.cart.visible = this.crew.load.visible = this.crew.posGroup.visible = false;
-    const conductor = cloneWithColors(this.assets.attendant, { Uniform_Vest: '#0b1430', Uniform_Pants: '#0b1430' });
+    const conductor = this.assets.crew?.conductor.clone(true)
+      || cloneWithColors(this.assets.attendant, { Uniform_Vest: '#0b1430', Uniform_Pants: '#0b1430' });
     conductor.position.set(center + 0.9, 0.05, -1.9);
     conductor.rotation.y = Math.PI / 2 + 0.5;
     const head = new THREE.Object3D();
@@ -462,9 +476,19 @@ export class OnboardPhase {
       g.add(puddle, cup);
       return g;
     }
-    const o = cloneWithColors(A.passengerStand, outfit());
+    let o;
+    if (A.people) {
+      // 寫實人物(面向 -Z):包一層轉成與簡易人偶相同的朝向(+X)
+      o = new THREE.Group();
+      const body = pick(A.people).stand.clone();
+      body.rotation.y = -Math.PI / 2;
+      o.add(body);
+      if (prop === 'kid') o.scale.set(0.74, 0.66, 0.74);
+    } else {
+      o = cloneWithColors(A.passengerStand, outfit());
+      if (prop === 'kid') o.scale.setScalar(0.6);
+    }
     o.rotation.y = Math.PI + (R() - 0.5) * 1.2;
-    if (prop === 'kid') o.scale.setScalar(0.6);
     return o;
   }
 

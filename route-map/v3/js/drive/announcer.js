@@ -43,8 +43,10 @@ export class Announcer {
 
     /** 固定用語的來源說明(顯示於設定畫面) */
     get sourceLabel() {
-        const n = Object.keys(this.manifest?.files || {}).length;
-        return n ? `Azure TTS 音檔 ${n}/${Object.keys(PHRASES).length} 則` : '尚未產生 Azure 音檔,改用瀏覽器語音';
+        const keys = Object.keys(this.manifest?.files || {});
+        if (!keys.length) return '尚未產生音檔,改用瀏覽器語音';
+        const names = keys.filter(k => k.startsWith('name_')).length;
+        return `微軟語音音檔:固定用語 ${keys.length - names}/${Object.keys(PHRASES).length} 則、站名路線名 ${names} 則(自訂名稱改用瀏覽器語音)`;
     }
 
     _loadVoices() {
