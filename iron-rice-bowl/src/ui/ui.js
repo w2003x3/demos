@@ -112,6 +112,45 @@ export class UI {
       ${p === null ? '' : `<div class="meter wide"><div style="width:${Math.round(p * 100)}%"></div></div>`}</div>`, 'dim');
   }
 
+  /**
+   * 整備畫面(任務載入中):顯示模型/語音載入進度,同時可瀏覽今天推車上的便當菜色與飲料;
+   * 全部載入完成後「開始服勤」才能按。回傳 { progress(key, p), ready() → Promise(按下開始) }。
+   */
+  prepare(items, thumbs = {}) {
+    const cards = items.map((it) => `
+      <div class="food-card">
+        ${thumbs[it.id] ? `<img src="${thumbs[it.id]}" alt="${esc(it.name)}">` : '<div class="food-ph">🍱</div>'}
+        <div class="food-info">
+          <b>${esc(it.name)}</b><span class="price">$${it.price}</span>
+          <small>${esc(it.desc || '')}</small>
+          ${it.dishes ? `<div class="dishes">${it.dishes.map((d) => `<i>${esc(d)}</i>`).join('')}</div>` : ''}
+        </div>
+      </div>`).join('');
+    const s = this.showScreen(`
+      <div class="card tall prep">
+        <h2>列車整備中<small>今天推車上的菜色</small></h2>
+        <div class="prep-bars">
+          <label>3D 模型 <div class="meter wide"><div data-k="model" style="width:0%"></div></div></label>
+          <label>語音 <div class="meter wide"><div data-k="voice" style="width:0%"></div></div></label>
+        </div>
+        <div class="tall-body food-grid">${cards}</div>
+        <div class="actions"><button id="b-go" disabled>載入中…</button></div>
+      </div>`, 'dim');
+    const btn = $('#b-go', s);
+    return {
+      progress: (k, p) => { const el = s.querySelector(`[data-k="${k}"]`); if (el) el.style.width = `${Math.round(p * 100)}%`; },
+      ready: () => new Promise((res) => {
+        btn.disabled = false;
+        btn.textContent = '開始服勤(Enter)';
+        const go = () => { removeEventListener('keydown', key); res(); };
+        const key = (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } };
+        btn.addEventListener('click', go, { once: true });
+        addEventListener('keydown', key);
+        btn.focus();
+      }),
+    };
+  }
+
   menu(missions, info, onPick, onToggleMute, onResetCareer) {
     const bars = (list, cls) => list.map((p) => `
       <div class="c-row"><span>${esc(p.label)}</span><div class="meter ${cls}"><div style="width:${(p.ratio * 100).toFixed(0)}%"></div></div>

@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { Sky } from 'three/addons/objects/Sky.js';
 import { Tex, rng, canvasTexture } from '../core/textures.js';
-import { makeInstanced } from '../core/assets.js';
+import { makeInstanced, pickPerson } from '../core/assets.js';
 
 const RAIL_Y = -1.1;          // 軌面高度(車廂地板 = 0;月台面 = 軌面 + 1.1)
 const GAUGE = 1.067;          // 台鐵軌距
@@ -333,7 +333,8 @@ export class Scenery {
     this.layers.push(L);
     this.group.add(L.group);
     const wireMat = new THREE.MeshBasicMaterial({ color: '#2a2a2a' });
-    for (const z of [0, TRACK2]) for (const y of [RAIL_Y + 5.3, RAIL_Y + 6.2]) {
+    // 只畫第二線的架空線:本線的架空線在列車正上方,從車內看不到,而且會透過車廂天花板被畫出來(走道上方的長線)
+    for (const z of [TRACK2]) for (const y of [RAIL_Y + 5.3, RAIL_Y + 6.2]) {
       const w = new THREE.Mesh(new THREE.BoxGeometry(4000, 0.015, 0.015), wireMat);
       w.position.set(0, y, z);
       this.group.add(w);
@@ -587,7 +588,7 @@ export class Scenery {
     if (assets.people) {
       const byKind = assets.people.map(() => []);
       for (let i = 0; i < 30 * Math.max(0.5, this.dens); i++) {
-        byKind[(R() * byKind.length) | 0].push({
+        byKind[pickPerson(assets.people, R)].push({
           matrix: mtx(-110 + R() * 220, top, -2.9 - R() * 3.6, 1, 1, 1, Math.PI + (R() - 0.5) * 1.6),
         });
       }

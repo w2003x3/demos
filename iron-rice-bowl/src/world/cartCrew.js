@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { ITEM_LIST } from '../config/items.js';
 import { Tex } from '../core/textures.js';
+import { makeFoodTemplates } from './food.js';
 
 export const CREW = {
   half: 0.425,       // 中點到推車中心 / 服勤員的距離
@@ -36,15 +37,8 @@ export class CartCrew {
     this.load.position.set(CREW.half, 0.95, 0);
     this.group.add(this.cart, this.attendant, this.head, this.load);
 
-    this.templates = {};
-    for (const it of ITEM_LIST) {
-      const t = assets.food.getObjectByName(it.model);
-      if (t) {
-        this.templates[it.id] = t.clone(true);
-        this.templates[it.id].position.set(0, 0, 0);
-      }
-    }
-    this._labels();
+    // 商品:程序化的精緻模型(透明上蓋便當、PET 瓶、罐裝咖啡),見 food.js
+    this.templates = makeFoodTemplates();
     this._signs();
     this._pos(assets.pos);
   }
@@ -140,23 +134,6 @@ export class CartCrew {
     this.posKeysTex.needsUpdate = true;
   }
 
-  _labels() {
-    this.labelMat = {};
-    const colors = { pork: '#b23a2a', chicken: '#c98a1c', veg: '#3f7d3a' };
-    for (const [id, col] of Object.entries(colors)) {
-      const it = ITEM_LIST.find((i) => i.id === id);
-      const tex = Tex.label((c, w, h) => {
-        c.fillStyle = '#f6f0e0'; c.fillRect(0, 0, w, h);
-        c.fillStyle = col; c.fillRect(0, 0, w, 22); c.fillRect(0, h - 22, w, 22);
-        c.fillStyle = '#1b1b1b';
-        c.font = `bold 46px ${font}`;
-        c.textAlign = 'center'; c.textBaseline = 'middle';
-        c.fillText(`臺鐵${it.short}`, w / 2, h / 2);
-      }, 256, 160);
-      this.labelMat[id] = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.8 });
-    }
-  }
-
   _signs() {
     const tex = Tex.label((c, w, h) => {
       c.fillStyle = '#d4572a'; c.fillRect(0, 0, w, h);
@@ -188,13 +165,6 @@ export class CartCrew {
         if (!slot) break;
         const o = tpl.clone(true);
         o.position.set(...slot);
-        if (it.kind === 'bento') {
-          const lab = new THREE.Mesh(new THREE.PlaneGeometry(0.12, 0.075), this.labelMat[it.id]);
-          lab.rotation.x = -Math.PI / 2;
-          lab.rotation.z = Math.PI / 2;
-          lab.position.y = 0.0535;
-          o.add(lab);
-        }
         this.load.add(o);
       }
     }

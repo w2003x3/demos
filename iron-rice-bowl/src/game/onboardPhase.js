@@ -7,7 +7,7 @@ import { ITEMS, ITEM_LIST } from '../config/items.js';
 import { INCIDENTS } from '../config/incidents.js';
 import { AMBIENT_KIDS, AMBIENT_GRANDMA_CHATS } from '../config/voice.js';
 import { rng, Tex } from '../core/textures.js';
-import { cloneWithColors } from '../core/assets.js';
+import { cloneWithColors, pickPerson } from '../core/assets.js';
 import { TrainSet } from '../world/trainset.js';
 import { Passengers } from '../world/passengers.js';
 import { Scenery } from '../world/scenery.js';
@@ -102,6 +102,11 @@ export class OnboardPhase {
     this.crew.setPos('臺鐵便當', 'READY');
 
     this._placeCamera(1, true);
+  }
+
+  /** 載入完成、玩家按下開始後:出發廣播與提示。 */
+  begin() {
+    const { g, cfg } = this;
     const term = this.stops.at(-1).id;
     g.voice.announce([`station_depart_${term}`, `conductor_welcome_${term}`, `conductor_welcome_${term}_en`]);
     g.ui.toast(`${cfg.trainNo} 往 ${this.stops.at(-1).zh},即將出發!`, 'info');
@@ -480,7 +485,7 @@ export class OnboardPhase {
     if (A.people) {
       // 寫實人物(面向 -Z):包一層轉成與簡易人偶相同的朝向(+X)
       o = new THREE.Group();
-      const body = pick(A.people).stand.clone();
+      const body = A.people[pickPerson(A.people, R)].stand.clone();
       body.rotation.y = -Math.PI / 2;
       o.add(body);
       if (prop === 'kid') o.scale.set(0.74, 0.66, 0.74);

@@ -11,6 +11,17 @@ const RAIL_SLOTS = [
   'street/lamp', 'street/aircon', 'platform/open', 'platform/bench', 'platform/trash-can',
 ];
 const RAIL_TEXTURES = { grass: 1, ballast: 1, concrete: 1, metal: 1, asphalt: 1 };
+// rail-assets 人物中的東亞面孔(Rocketbox Male_Adult_09/10、Business_Male_02、Female_Adult_03、Business_Female_04)
+const EAST_ASIAN = new Set(['male-adult-09', 'male-adult-10', 'male-business-02', 'female-adult-03', 'female-business-04']);
+const ASIAN_RATIO = 0.8;   // 乘客約八成是台灣面孔
+
+/** 依「八成東亞面孔」挑一位人物,回傳 people 陣列的索引(沒有東亞面孔變體時平均挑) */
+export function pickPerson(people, R = Math.random) {
+  const asian = [], other = [];
+  people.forEach((p, i) => (p.asian ? asian : other).push(i));
+  const pool = asian.length && (!other.length || R() < ASIAN_RATIO) ? asian : other;
+  return pool[(R() * pool.length) | 0];
+}
 
 const COMMON = {
   passengerSit: 'passenger_sit.glb',
@@ -58,7 +69,7 @@ async function loadRail(base, onProgress) {
     // 寫實人物:每個變體一份站姿、一份坐姿(頂點彎折,見 sitPose.js)
     const people = ra.variants('people/standing').filter((v) => ra.loaded.has(v.id)).map((v) => {
       const stand = person(ra, v.id);
-      return { id: v.id, female: v.id.startsWith('female'), stand, sit: sitPose(stand) };
+      return { id: v.id, female: v.id.startsWith('female'), asian: EAST_ASIAN.has(v.id), stand, sit: sitPose(stand) };
     });
     onProgress(1);
     return { rail: ra, railTex, people: people.length ? people : null, crew: makeCrew(ra) };
@@ -88,8 +99,8 @@ function makeCrew(ra) {
     g.add(body);
     return g;
   };
-  const attendant = mk(['female-adult-09', 'female-adult-01', 'female-adult-04', 'female-adult-06', 'male-adult-03'], '#1f2d52', true);
-  const conductor = mk(['male-adult-08', 'male-adult-03'], '#141c30', false);
+  const attendant = mk(['female-business-04', 'female-adult-03', 'female-adult-09', 'female-adult-01', 'female-adult-04', 'male-adult-03'], '#1f2d52', true);
+  const conductor = mk(['male-business-02', 'male-adult-10', 'male-adult-08', 'male-adult-03'], '#141c30', false);
   return attendant && conductor ? { attendant, conductor } : null;
 }
 

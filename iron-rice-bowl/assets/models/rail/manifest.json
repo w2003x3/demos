@@ -1,6 +1,6 @@
 {
   "name": "rail-assets",
-  "version": "2026-10-15",
+  "version": "2026-10-18",
   "conventions": {
     "units": "meter",
     "up": "+Y",
@@ -684,6 +684,34 @@
         "provider": "rocketbox"
       },
       {
+        "id": "female-adult-03",
+        "file": "models/people/standing/female-adult-03.glb",
+        "bytes": 609480,
+        "tris": 9208,
+        "bounds": {
+          "min": [
+            -0.243,
+            0,
+            -0.159
+          ],
+          "max": [
+            0.243,
+            1.7,
+            0.159
+          ]
+        },
+        "materials": [
+          "f003_body",
+          "f003_head",
+          "f003_opacity"
+        ],
+        "license": "MIT",
+        "author": "Microsoft Rocketbox",
+        "title": "Female Adult 03",
+        "source": "https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Female_Adult_03",
+        "provider": "rocketbox"
+      },
+      {
         "id": "female-adult-04",
         "file": "models/people/standing/female-adult-04.glb",
         "bytes": 695932,
@@ -765,6 +793,34 @@
         "author": "Microsoft Rocketbox",
         "title": "Female Adult 09",
         "source": "https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Female_Adult_09",
+        "provider": "rocketbox"
+      },
+      {
+        "id": "female-business-04",
+        "file": "models/people/standing/female-business-04.glb",
+        "bytes": 452144,
+        "tris": 8270,
+        "bounds": {
+          "min": [
+            -0.24,
+            0,
+            -0.167
+          ],
+          "max": [
+            0.24,
+            1.7,
+            0.167
+          ]
+        },
+        "materials": [
+          "f020_body",
+          "f020_head",
+          "f020_opacity"
+        ],
+        "license": "MIT",
+        "author": "Microsoft Rocketbox",
+        "title": "Business Female 04",
+        "source": "https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Professions/Business_Female_04",
         "provider": "rocketbox"
       },
       {
@@ -877,6 +933,90 @@
         "author": "Microsoft Rocketbox",
         "title": "Male Adult 08",
         "source": "https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Male_Adult_08",
+        "provider": "rocketbox"
+      },
+      {
+        "id": "male-adult-09",
+        "file": "models/people/standing/male-adult-09.glb",
+        "bytes": 505440,
+        "tris": 7426,
+        "bounds": {
+          "min": [
+            -0.262,
+            0,
+            -0.169
+          ],
+          "max": [
+            0.262,
+            1.7,
+            0.169
+          ]
+        },
+        "materials": [
+          "m017_body",
+          "m017_head",
+          "m017_opacity"
+        ],
+        "license": "MIT",
+        "author": "Microsoft Rocketbox",
+        "title": "Male Adult 09",
+        "source": "https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Male_Adult_09",
+        "provider": "rocketbox"
+      },
+      {
+        "id": "male-adult-10",
+        "file": "models/people/standing/male-adult-10.glb",
+        "bytes": 528352,
+        "tris": 6732,
+        "bounds": {
+          "min": [
+            -0.272,
+            0,
+            -0.159
+          ],
+          "max": [
+            0.272,
+            1.7,
+            0.159
+          ]
+        },
+        "materials": [
+          "m024_body",
+          "m024_head",
+          "m024_opacity"
+        ],
+        "license": "MIT",
+        "author": "Microsoft Rocketbox",
+        "title": "Male Adult 10",
+        "source": "https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Male_Adult_10",
+        "provider": "rocketbox"
+      },
+      {
+        "id": "male-business-02",
+        "file": "models/people/standing/male-business-02.glb",
+        "bytes": 520140,
+        "tris": 7448,
+        "bounds": {
+          "min": [
+            -0.275,
+            0,
+            -0.164
+          ],
+          "max": [
+            0.275,
+            1.7,
+            0.164
+          ]
+        },
+        "materials": [
+          "m008_body",
+          "m008_head",
+          "m008_opacity"
+        ],
+        "license": "MIT",
+        "author": "Microsoft Rocketbox",
+        "title": "Business Male 02",
+        "source": "https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Professions/Business_Male_02",
         "provider": "rocketbox"
       }
     ]

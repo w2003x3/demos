@@ -325,7 +325,8 @@
   function loadMapLib(id) {
     if (mapLib[id]) return mapLib[id];
     const lib = mapLib[id] = { ready: false, failed: false, nodes: {} };
-    const b64 = (typeof MAP_GLB !== 'undefined' && MAP_GLB[id]) || (typeof CHAR_GLB !== 'undefined' && CHAR_GLB[id]);
+    const b64 = (typeof MAP_GLB !== 'undefined' && MAP_GLB[id]) || (typeof CHAR_GLB !== 'undefined' && CHAR_GLB[id]) ||
+      (typeof EXTRA_GLB !== 'undefined' && EXTRA_GLB[id]);
     if (!b64 || !THREE.GLTFLoader) { lib.failed = true; return lib; }
     try {
       const str = atob(b64);
@@ -337,7 +338,7 @@
         lib.ready = true;
         if (currentMapId === id) needRebuild = true;
         if (id === 'chars' || id === 'anims') charsJustLoaded = true; // 積木人換成寫實人物
-        if (id === 'props') propsJustLoaded = true; // 先前用替代模型建立的貢丸/道具/寵物要換成正式模型
+        if (id === 'props' || id === 'extra') propsJustLoaded = true; // 先前用替代模型建立的貢丸/道具/寵物要換成正式模型
       }, (err) => {
         console.warn('地圖模型載入失敗', id, err);
         lib.failed = true;
@@ -704,9 +705,11 @@
 
   // ---------- 道具/貢丸/寵物模型庫(Blender 製作的 props.glb) ----------
   const propsLib = loadMapLib('props');
+  const extraLib = loadMapLib('extra'); // 新增的貢丸/道具(models/extra_models.js)
   function propModel(name) {
-    if (!propsLib.ready || !propsLib.nodes[name]) return null;
-    const o = cloneNode(propsLib.nodes[name]);
+    const lib = [extraLib, propsLib].find((l) => l.ready && l.nodes[name]);
+    if (!lib) return null;
+    const o = cloneNode(lib.nodes[name]);
     o.traverse((c) => { if (c.isMesh) c.castShadow = false; }); // 會動的小物件改用圓形柔影
     return o;
   }
@@ -726,6 +729,8 @@
   // ---------- 貢丸:寫實貢丸(各口味配料)+ 竹籤引信火花;快爆閃白、發霉變綠 ----------
   const ballCache = new Map();
   const BALL_R = { 3: 0.46, 4: 0.26, 10: 0.4, 11: 0.36, 12: 0.38, 13: 0.4 };
+  // 中心離地高度(相對直徑):球 0.5;香腸/米腸/大腸包小腸是躺著的,較低
+  const BALL_Y = { 11: 0.2, 12: 0.25, 13: 0.33 };
 
   // ---------- 新增的特殊貢丸/道具:用基本幾何組出 3D 模型 ----------
   const std = (color, rough = 0.55, extra = {}) => new THREE.MeshStandardMaterial({ color, roughness: rough, ...extra });
@@ -841,8 +846,9 @@
 
   function makeMeatball(m) {
     const g = new THREE.Group();
-    const custom = customMeatball(m.def.id);
-    const model = custom ? null : propModel('mb_' + m.def.id);
+    // 優先用 Blender 模型;模型還沒載入時,新增的種類先用幾何組合的替代模型
+    const model = propModel('mb_' + m.def.id);
+    const custom = model ? null : customMeatball(m.def.id);
     let body = custom ? custom.body : null;
     if (custom) {
       g.add(custom.group);
@@ -884,7 +890,7 @@
       const bob = Math.sin(elapsed * 8) * 0.03;
       const lift = (m.held ? 0.7 : 0) + (m.jump || 0) * 0.9; // 手持舉高、黑豬肉彈跳
       g.scale.set(r, r, r);
-      g.position.set(W2(m.x), 0.5 * r + bob + lift, W2(m.y));
+      g.position.set(W2(m.x), (BALL_Y[m.def.id] || 0.5) * r + bob + lift, W2(m.y));
       // 慢慢轉,增加生命感;香腸/米腸/大腸包小腸固定方向,一眼看出爆炸方向
       g.rotation.y = (m.def.axis || m.def.behavior === 'square') ? 0 : elapsed * 0.6;
       g.userData.shadow.position.y = (0.012 - g.position.y) / r; // 影子貼地(抵銷彈跳與舉起高度)
@@ -1204,7 +1210,7 @@
   const RARE = new Set(['luckybag', 'chicken', 'bloodcake', 'milktea', 'boba', 'tofu']);
   function makeItem(it) {
     const g = new THREE.Group();
-    const model = customItemModel(it.key) || propModel('it_' + it.key);
+    const model = propModel('it_' + it.key) || customItemModel(it.key);
     if (model) {
       model.scale.setScalar(1.2);
       const pivot = new THREE.Group();

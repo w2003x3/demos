@@ -10,6 +10,8 @@ import { TroublemakerPhase, TicketingPhase, StationmasterPhase, DispatchPhase, O
 import { Input } from './core/input.js';
 import { Sfx, Voice } from './core/audio.js';
 import { loadAssets } from './core/assets.js';
+import { renderFoodThumbs } from './world/food.js';
+import { ITEM_LIST } from './config/items.js';
 import { UI } from './ui/ui.js';
 import { OnboardPhase } from './game/onboardPhase.js';
 import { StationPhase } from './game/stationPhase.js';
@@ -63,6 +65,7 @@ class Game {
     });
     this.muted = false;
     this.voice.mode = this.settings.voiceMode;
+    this.voice.getCtx = () => this.sfx.ctx;
     let q = 'medium';
     try { q = localStorage.getItem(QUALITY_KEY) || q; } catch { /* 無法讀取 → 預設 */ }
     this.setQuality(QUALITY[q] ? q : 'medium');
@@ -105,8 +108,9 @@ class Game {
 
   async loadAssets(trainType) {
     if (!this.assetCache.has(trainType.id)) {
-      this.ui.loading('載入模型中…', 0);
-      const a = await loadAssets(MODEL_BASE, trainType, (p) => this.ui.loading('載入模型中…', p));
+      const report = (p) => (this.prep ? this.prep.progress('model', p) : this.ui.loading('載入模型中…', p));
+      report(0);
+      const a = await loadAssets(MODEL_BASE, trainType, report);
       this.assetCache.set(trainType.id, a);
     }
     return this.assetCache.get(trainType.id);
@@ -227,9 +231,21 @@ class Game {
     const cfg = this.mission.phases[this.phaseIndex];
     const Phase = PHASES[cfg.type];
     this.phase = new Phase(this, cfg);
+    // 整備畫面:模型與全部語音音檔都載入完成才開始(期間可瀏覽菜色)
+    this.foodThumbs ??= renderFoodThumbs();
+    this.prep = this.ui.prepare(ITEM_LIST, this.foodThumbs);
+    const voiceReady = this.voice.mode === 'browser' ? Promise.resolve() : this.voice.preload((p) => this.prep?.progress('voice', p));
+    if (this.voice.mode === 'browser') this.prep.progress('voice', 1);
     try {
-      await this.phase.init();
+      await Promise.all([this.phase.init(), voiceReady]);
+      this.prep.progress('model', 1);
+      this.prep.progress('voice', 1);
+      await this.prep.ready();
+      this.prep = null;
+      this.sfx.unlock();
+      this.phase.begin?.();
     } catch (e) {
+      this.prep = null;
       console.error(e);
       this.ui.showScreen(`<div class="card center"><h2>無法開始</h2><p>${e.message}</p>
         <p class="muted-txt">若是模型載入失敗,請用本機伺服器開啟(見 README),不要直接雙擊 index.html。</p></div>`, 'dim');

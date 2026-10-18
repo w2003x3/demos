@@ -204,6 +204,8 @@ const ROLE_LABEL = {
 /**
  * 語音:兩個頻道 —— 'announce'(廣播,排隊播放)與 'talk'(對話,新的會打斷舊的)。
  */
+const DECODE_CACHE = 48;   // 解碼後的 PCM 較大(約 0.2~0.5 MB/句),只保留最近用過的
+
 export class Voice {
   constructor(base, onSubtitle) {
     this.base = base;
@@ -223,6 +225,50 @@ export class Voice {
     this.hearing = null;
     /** 播放來源:both 預錄音檔優先(缺檔用瀏覽器發音)/ files 只用預錄 / browser 只用瀏覽器發音 */
     this.mode = 'both';
+    /**
+     * 預錄音檔:任務開始前全部下載到記憶體(raw = 壓縮的 mp3),播放時用 WebAudio 解碼混音。
+     * 不在播放當下才下載,避免網路延遲或瀏覽器同時媒體數量上限造成台詞卡住、之後一次全部播出。
+     * getCtx 由 Game 提供(Sfx 的 AudioContext,使用者操作後才建立)。
+     */
+    this.getCtx = null;
+    this.raw = new Map();
+    this.decoded = new Map();   // id → Promise<AudioBuffer>(最近用過的,上限 DECODE_CACHE)
+    this.announceGain = null;
+  }
+
+  /** 下載全部預錄音檔(只做一次);onProgress(0~1)。 */
+  preload(onProgress) {
+    const ids = [...this.files];
+    if (!this._preload) {
+      let done = 0, next = 0;
+      this._progress = new Set();
+      const worker = async () => {
+        while (next < ids.length) {
+          const id = ids[next++];
+          try {
+            const r = await fetch(`${this.base}/${id}.mp3`);
+            if (r.ok) this.raw.set(id, await r.arrayBuffer());
+          } catch { /* 單檔失敗 → 該句改走備援 */ }
+          done++;
+          this._progress.forEach((f) => f(done / ids.length));
+        }
+      };
+      this._preload = Promise.all(Array.from({ length: 8 }, worker)).then(() => { this._progress.clear(); });
+    }
+    if (onProgress) {
+      if (this.raw.size >= ids.length) onProgress(1);
+      else this._progress?.add(onProgress);
+    }
+    return this._preload;
+  }
+
+  _decode(ctx, id) {
+    let p = this.decoded.get(id);
+    if (p) { this.decoded.delete(id); this.decoded.set(id, p); return p; }   // 移到最新
+    p = ctx.decodeAudioData(this.raw.get(id).slice(0));
+    this.decoded.set(id, p);
+    if (this.decoded.size > DECODE_CACHE) this.decoded.delete(this.decoded.keys().next().value);
+    return p;
   }
 
   async init() {
@@ -285,7 +331,32 @@ export class Voice {
 
   /** 有對話正在發聲時廣播降為 75%,否則 100%(對話恆為 100%)。 */
   _duck() {
-    if (this.announceAudio) this.announceAudio.volume = this.speaking > 0 ? 0.75 : 1;
+    const v = this.speaking > 0 ? 0.75 : 1;
+    if (this.announceAudio) this.announceAudio.volume = v;
+    if (this.announceGain) this.announceGain.gain.setTargetAtTime(v, this.announceGain.context.currentTime, 0.06);
+  }
+
+  /** 以 WebAudio 播放預先下載的音檔(可任意多段同時) */
+  _playBuffer(ctx, id, talk, done) {
+    const gain = ctx.createGain();
+    gain.connect(ctx.destination);
+    let live = true, stopped = false, src = null;
+    const end = () => {
+      if (!live) return;
+      live = false;
+      if (talk) { this.speaking--; this._duck(); } else if (this.announceGain === gain) this.announceGain = null;
+      setTimeout(() => gain.disconnect(), 200);
+    };
+    if (talk) { this.speaking++; this._duck(); } else { this.announceGain = gain; this._duck(); }
+    this._decode(ctx, id).then((buf) => {
+      if (stopped) return;
+      src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(gain);
+      src.onended = () => { end(); if (!stopped) done(); };
+      src.start();
+    }).catch(() => { end(); if (!stopped) done(); });
+    return { stop: () => { stopped = true; end(); try { src?.stop(); } catch { /* 尚未開始 */ } } };
   }
 
   _playSeq(ids, meta, onEnd) {
@@ -319,7 +390,11 @@ export class Voice {
       const t = setTimeout(done, 400 + line.text.length * 120);
       return { stop: () => clearTimeout(t) };
     }
+    const ctx = this.getCtx?.();
+    // AudioContext 暫停中(例如尚未有使用者操作)就不排進 WebAudio,否則恢復時會一次全部播出
+    if (useFile && ctx?.state === 'running' && this.raw.has(id)) return this._playBuffer(ctx, id, meta.channel === 'talk', done);
     if (useFile) {
+      // 備援(尚未下載完成或沒有 AudioContext):直接用 <audio> 播放
       const a = new Audio(`${this.base}/${id}.mp3`);
       const talk = meta.channel === 'talk';
       let live = true;

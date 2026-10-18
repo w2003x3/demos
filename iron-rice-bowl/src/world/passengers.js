@@ -1,7 +1,7 @@
 // 坐著的乘客:以 InstancedMesh 繪製(每個材質一次 draw call),並管理「想買東西」的狀態與頭上圖示。
 // 有 rail-assets 寫實人物時用它們的坐姿(每個人物變體一組 InstancedMesh);否則用簡易人偶並隨機換衣服顏色。
 import * as THREE from 'three';
-import { makeInstanced } from '../core/assets.js';
+import { makeInstanced, pickPerson } from '../core/assets.js';
 import { Tex } from '../core/textures.js';
 
 const PALETTE = {
@@ -39,7 +39,7 @@ export class Passengers {
     seat.pitched = false;
     this._hideIcon(seat);
     if (!occupied) return;
-    seat.kind = (this.R() * this.kinds.length) | 0;
+    seat.kind = this.people ? pickPerson(this.people, this.R) : 0;
     const real = this.kinds[seat.kind].v;
     seat.matrix = new THREE.Matrix4().compose(new THREE.Vector3(seat.x, 0, seat.z), this.facing,
       real ? new THREE.Vector3().setScalar(0.93 + this.R() * 0.1) : new THREE.Vector3(1, 0.92 + this.R() * 0.14, 1));

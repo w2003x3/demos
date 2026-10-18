@@ -39,13 +39,18 @@
 | building/tower | tower-a | TowerA | rail-assets(Blender 程序化建模) | CC0-1.0 |  |
 | building/tower | tower-b | TowerB | rail-assets(Blender 程序化建模) | CC0-1.0 |  |
 | people/standing | female-adult-01 | Female Adult 01 | Microsoft Rocketbox | MIT | https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Female_Adult_01 |
+| people/standing | female-adult-03 | Female Adult 03 | Microsoft Rocketbox | MIT | https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Female_Adult_03 |
 | people/standing | female-adult-04 | Female Adult 04 | Microsoft Rocketbox | MIT | https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Female_Adult_04 |
 | people/standing | female-adult-06 | Female Adult 06 | Microsoft Rocketbox | MIT | https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Female_Adult_06 |
 | people/standing | female-adult-09 | Female Adult 09 | Microsoft Rocketbox | MIT | https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Female_Adult_09 |
+| people/standing | female-business-04 | Business Female 04 | Microsoft Rocketbox | MIT | https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Professions/Business_Female_04 |
 | people/standing | male-adult-01 | Male Adult 01 | Microsoft Rocketbox | MIT | https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Male_Adult_01 |
 | people/standing | male-adult-03 | Male Adult 03 | Microsoft Rocketbox | MIT | https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Male_Adult_03 |
 | people/standing | male-adult-05 | Male Adult 05 | Microsoft Rocketbox | MIT | https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Male_Adult_05 |
 | people/standing | male-adult-08 | Male Adult 08 | Microsoft Rocketbox | MIT | https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Male_Adult_08 |
+| people/standing | male-adult-09 | Male Adult 09 | Microsoft Rocketbox | MIT | https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Male_Adult_09 |
+| people/standing | male-adult-10 | Male Adult 10 | Microsoft Rocketbox | MIT | https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Male_Adult_10 |
+| people/standing | male-business-02 | Business Male 02 | Microsoft Rocketbox | MIT | https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Professions/Business_Male_02 |
 | platform/payphone | payphone | Korean Public Payphone 01 | UM JOORIN | CC0-1.0 | https://polyhaven.com/a/korean_public_payphone_01 |
 | texture | ballast | Rocks Ground 02 | Rob Tuytel | CC0-1.0 | https://polyhaven.com/a/rocks_ground_02 |
 | texture | concrete | Concrete Floor 02 | Rob Tuytel | CC0-1.0 | https://polyhaven.com/a/concrete_floor_02 |
