@@ -1128,6 +1128,15 @@
       "title": "Industrial Sunset (Pure Sky)",
       "source": "https://polyhaven.com/a/industrial_sunset_puresky",
       "provider": "polyhaven"
+    },
+    "night": {
+      "file": "hdri/night.hdr",
+      "bytes": 5461210,
+      "license": "CC0-1.0",
+      "author": "Greg Zaal, Jarod Guest",
+      "title": "Qwantani Night (Pure Sky)",
+      "source": "https://polyhaven.com/a/qwantani_night_puresky",
+      "provider": "polyhaven"
     }
   }
 }

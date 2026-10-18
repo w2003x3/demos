@@ -10,11 +10,23 @@ import { makeInstanced, pickPerson } from '../core/assets.js';
 const RAIL_Y = -1.1;          // 軌面高度(車廂地板 = 0;月台面 = 軌面 + 1.1)
 const GAUGE = 1.067;          // 台鐵軌距
 const TRACK2 = 4.3;           // 第二線中心
+// warmth:車內燈光偏鵝黃的程度(0~1);glow:夜間發光(路燈、窗戶、招牌)強度;env:環境反射強度;
+// tint/tintI:窗外照進來的色光(黃昏的橘紅夕照),隧道內消失
 const TIMES = {
-  morning: { elev: 22, azim: 125, turb: 6, ray: 1.6, sun: '#ffe2bd', sunI: 2.6, hemi: ['#cfe3ff', '#59623f', 0.9], fog: '#c9d7e3', hdri: 'day', sky: 0.9 },
-  noon:    { elev: 58, azim: 160, turb: 4, ray: 1.0, sun: '#fff6e8', sunI: 3.2, hemi: ['#d6e8ff', '#5b6640', 1.0], fog: '#c4d5e6', hdri: 'day', sky: 1.0 },
-  sunset:  { elev: 9,  azim: 250, turb: 9, ray: 3.0, sun: '#ffb070', sunI: 2.4, hemi: ['#ffd2b0', '#4a4232', 0.7], fog: '#e3b996', hdri: 'dusk', sky: 1.0 },
+  morning: { elev: 22, azim: 125, turb: 6, ray: 1.6, sun: '#ffe2bd', sunI: 2.6, hemi: ['#cfe3ff', '#59623f', 0.9], fog: '#c9d7e3', hdri: 'day', sky: 0.9, warmth: 0, glow: 0, env: 0.55, label: '早上' },
+  noon:    { elev: 58, azim: 160, turb: 4, ray: 1.0, sun: '#fff6e8', sunI: 3.2, hemi: ['#d6e8ff', '#5b6640', 1.0], fog: '#c4d5e6', hdri: 'day', sky: 1.0, warmth: 0, glow: 0, env: 0.55, label: '中午' },
+  // 黃昏:低角度的橘紅陽光斜射進車窗
+  sunset:  { elev: 9,  azim: 250, turb: 9, ray: 3.0, sun: '#ff6224', sunI: 4.2, hemi: ['#ff9a66', '#3a2a22', 0.55], fog: '#e3a982', hdri: 'dusk', sky: 1.0, warmth: 0.3, glow: 0.4, env: 0.42, label: '黃昏', tint: '#ff7a3a', tintI: 0.55 },
+  night:   { elev: 38, azim: 200, turb: 2, ray: 0.3, sun: '#8ea4d6', sunI: 0.35, hemi: ['#34425f', '#0b0d12', 0.3], fog: '#0c111c', hdri: 'night', sky: 1.0, warmth: 1, glow: 1, env: 0.3, label: '夜間', night: true },
 };
+
+/** 隨機時段:白天(早上或中午)、黃昏、夜間各約三分之一 */
+export function pickTime(R = Math.random) {
+  const r = R();
+  return r < 1 / 3 ? (R() < 0.5 ? 'morning' : 'noon') : r < 2 / 3 ? 'sunset' : 'night';
+}
+export const timeLabel = (id) => (TIMES[id] || TIMES.noon).label;
+
 // rows:沿線道路旁連續街屋的密度(0~1);towers:遠處高樓數;road:軌道旁(-Z 側)的道路
 const THEMES = {
   town:   { houses: 80, rows: 0.9, towers: 9, trees: 160, palms: 0.05, mountainsL: true, mountainsR: false, ocean: false, road: true },
@@ -108,7 +120,95 @@ export class Scenery {
     this._trees();
     this._mountains();
     this._platform(assets);
+    this.tunnels = [];
+    this.tunnelF = 0;
+    this.curtains = false;
+    // 夜間/黃昏:rail-assets 的路燈、窗戶、招牌、月台燈發光(白天也要呼叫一次,把共用材質還原)
+    if (this.ra) this.ra.setNight(this.group, this.time.glow);
+    this.outdoor = this.group.children.filter((o) => !o.isLight && o !== this.sun.target && o !== this.sky);
     this.ready = this._environment(renderer);
+  }
+
+  /**
+   * 隧道(雙線、混凝土襯砌、牆上燈具、洞口與山體)。list:[{ s0, s1 }](路線里程,公尺)。
+   * 列車固定在原點,隧道依里程換算位置:世界 x = 里程 - s + center(與月台相同)。
+   */
+  setTunnels(list, center) {
+    this.center = center;
+    for (const t of this.tunnels) this.group.remove(t.group);
+    this.tunnels = list.map(({ s0, s1 }) => {
+      const g = this._tunnel(s1 - s0);
+      g.visible = false;
+      this.group.add(g);
+      return { s0, s1, group: g };
+    });
+  }
+
+  _tunnel(len) {
+    const g = new THREE.Group();
+    const zc = TRACK2 / 2, hw = 5.4, wallTop = RAIL_Y + 4.6, rise = 3.2;
+    // 斷面:+Z 側牆 → 拱頂 → -Z 側牆(雙面材質,內外都看得到)
+    const prof = [[zc + hw, RAIL_Y - 0.45]];
+    for (let i = 0; i <= 16; i++) {
+      const a = (i / 16) * Math.PI;
+      prof.push([zc + Math.cos(a) * hw, wallTop + Math.sin(a) * rise]);
+    }
+    prof.push([zc - hw, RAIL_Y - 0.45]);
+    const lining = this.tex.concrete ? this.tex.concrete.clone() : new THREE.MeshStandardMaterial({ roughness: 0.95 });
+    lining.color.set('#8f8b83');
+    lining.side = THREE.DoubleSide;
+    const tube = new THREE.Mesh(sweepX(prof, 0, len, 4), lining);
+    tube.receiveShadow = true;
+    g.add(tube);
+    // 牆上燈具(每 25 m,兩側)
+    const lamps = [];
+    for (let x = 12; x < len; x += 25) for (const side of [1, -1]) lamps.push(mtx(x, RAIL_Y + 3.4, zc + side * (hw - 0.1)));
+    const lampMat = new THREE.MeshStandardMaterial({ color: '#2a2a2a', emissive: '#ffd27a', emissiveIntensity: 4 });
+    const im = new THREE.InstancedMesh(new THREE.BoxGeometry(0.7, 0.12, 0.14), lampMat, lamps.length);
+    lamps.forEach((m, i) => im.setMatrixAt(i, m));
+    g.add(im);
+    // 洞口端牆(中間挖出與斷面相同的洞)
+    const face = new THREE.Shape();
+    const W = 30, H = 12.5;
+    face.moveTo(-(zc + W / 2), RAIL_Y - 0.5); face.lineTo(-(zc - W / 2), RAIL_Y - 0.5);
+    face.lineTo(-(zc - W / 2), RAIL_Y + H); face.lineTo(-(zc + W / 2), RAIL_Y + H); face.closePath();
+    const hole = new THREE.Path();
+    prof.forEach(([z, y], i) => (i ? hole.lineTo(-z, y) : hole.moveTo(-z, y)));
+    hole.closePath();
+    face.holes.push(hole);
+    const faceGeo = new THREE.ExtrudeGeometry(face, { depth: 1.2, bevelEnabled: false });
+    faceGeo.rotateY(Math.PI / 2);    // 形狀 (u,v) → 世界 (z = -u, y = v),厚度沿 X
+    const portalMat = this.tex.concrete ? this.tex.concrete.clone() : lining;
+    portalMat.color?.set('#a9a59c');
+    for (const x of [-1.2, len]) {
+      const p = new THREE.Mesh(faceGeo, portalMat);
+      p.position.x = x;
+      p.receiveShadow = true;
+      g.add(p);
+    }
+    // 山體:覆蓋隧道的長形山丘(頂點加雜訊,較自然)
+    // 山坡做陡(高度取 0.35 次方):洞口後方很快就升到 25~30 m,蓋住附近的房子;山體從洞口端牆開始,不擋洞口
+    const R = rng(Math.round(len));
+    const hill = new THREE.SphereGeometry(1, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2);
+    const pos = hill.attributes.position;
+    for (let i = 0; i < pos.count; i++) {
+      const y = pos.getY(i);
+      const k = 1 + (y > 0.05 ? (R() - 0.5) * 0.1 : 0);
+      pos.setXYZ(i, pos.getX(i) * k, Math.pow(Math.max(y, 0), 0.35) * k, pos.getZ(i) * k);
+    }
+    hill.computeVertexNormals();
+    const hillMesh = new THREE.Mesh(hill, new THREE.MeshStandardMaterial({ color: '#3f5a2d', roughness: 1, flatShading: true }));
+    hillMesh.scale.set(len / 2, 34, 130);
+    hillMesh.position.set(len / 2, RAIL_Y - 2, zc);
+    g.add(hillMesh);
+    return g;
+  }
+
+  /** 窗簾拉下:窗外景物與隧道都不繪製(燈光保留) */
+  setCurtains(on) {
+    this.curtains = on;
+    for (const o of this.outdoor) o.visible = !on;
+    for (const t of this.tunnels) t.group.visible = false;
   }
 
   /** rail-assets 槽位的已載入變體 id */
@@ -158,6 +258,7 @@ export class Scenery {
       THREE.MathUtils.degToRad(90 - t.elev), THREE.MathUtils.degToRad(t.azim));
     u.sunPosition.value.copy(this.sunDir);
     this.sky = sky;
+    sky.visible = !t.night;   // 夜間沒有 HDRI 時就是黑夜(程序化天空只做白天/黃昏)
     this.group.add(sky);
     this.fog = new THREE.Fog(t.fog, 250, 4200);
   }
@@ -191,6 +292,18 @@ export class Scenery {
         const el = (0.5 - (br + 0.5) / h) * Math.PI, az = ((bc + 0.5) / w - 0.5) * Math.PI * 2;
         if (el > THREE.MathUtils.degToRad(5)) this.sunDir.set(Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az));
       }
+      // 夜間:夜空照片通常偏亮(月光、光害),依上半球平均亮度壓到夜晚的亮度
+      this.skyScale = 1;
+      if (this.time.night) {
+        let sumL = 0, cnt = 0;
+        for (let r = 0; r < h / 2; r += 4) for (let c = 0; c < w; c += 4) {
+          const [R, G, B] = px(r, c);
+          const L = R * 0.2126 + G * 0.7152 + B * 0.0722;
+          if (L < 5) { sumL += L; cnt++; }      // 略過月亮
+        }
+        const avg = cnt ? sumL / cnt : 0.03;
+        this.skyScale = THREE.MathUtils.clamp(0.025 / Math.max(avg, 1e-4), 0.01, 1);
+      }
       // 霧色:地平線上方一小段的平均
       const sum = [0, 0, 0];
       let n = 0;
@@ -199,7 +312,8 @@ export class Scenery {
         if (v[0] + v[1] + v[2] > 30) continue; // 略過太陽
         sum[0] += v[0]; sum[1] += v[1]; sum[2] += v[2]; n++;
       }
-      if (n) this.fog.color.setRGB(sum[0] / n * this.time.sky, sum[1] / n * this.time.sky, sum[2] / n * this.time.sky, THREE.LinearSRGBColorSpace);
+      const k = this.time.sky * this.skyScale;
+      if (n) this.fog.color.setRGB(sum[0] / n * k, sum[1] / n * k, sum[2] / n * k, THREE.LinearSRGBColorSpace);
       this._hazeMountains();
     } catch (err) {
       console.warn('HDRI 天空載入失敗,改用程序化天空', err);
@@ -218,7 +332,8 @@ export class Scenery {
     this.sun = sun;
     this.group.add(sun, sun.target);
     const [sk, gr, hi] = t.hemi;
-    this.group.add(new THREE.HemisphereLight(sk, gr, hi));
+    this.hemi = new THREE.HemisphereLight(sk, gr, hi);
+    this.group.add(this.hemi);
   }
 
   _ground(theme) {
@@ -644,11 +759,45 @@ export class Scenery {
 
   /** s:累計行駛距離;platformX:最近車站月台相對位置(null = 不顯示);focusX:陰影跟隨位置。 */
   update(s, platformX, focusX) {
+    this._updateTunnels(s, focusX);
     for (const L of this.layers) L.update(s);
     for (const { tex, size } of this.scrollTex) tex.offset.x = (s / size) % 1;
     this.platform.visible = platformX !== null && Math.abs(platformX) < 2000;
     if (this.platform.visible) this.platform.position.x = platformX;
     this.sun.position.copy(this.sunDir).multiplyScalar(60).add(new THREE.Vector3(focusX, 0, 0));
     this.sun.target.position.set(focusX, 0, 0);
+  }
+
+  /** 隧道位置與「在隧道內」程度 tunnelF(0~1,洞口前後約 40 m 漸變);深入隧道時不繪製外面景物 */
+  _updateTunnels(s, focusX) {
+    let f = 0, deep = false;
+    for (const t of this.tunnels) {
+      const x0 = t.s0 - s + this.center, x1 = t.s1 - s + this.center;
+      const near = x1 > -2500 && x0 < 2500;
+      t.group.visible = near && !this.curtains;
+      if (!near) continue;
+      t.group.position.x = x0;
+      const depth = Math.min(focusX - x0, x1 - focusX);
+      f = Math.max(f, THREE.MathUtils.smoothstep(depth, -15, 25));
+      if (depth > 120) deep = true;
+    }
+    this.tunnelF = f;
+    if (!this.curtains && deep !== this._deep) {
+      this._deep = deep;
+      for (const o of this.outdoor) o.visible = !deep;
+    }
+    // 隧道內:陽光與天光擋掉,只剩隧道燈
+    const t = this.time;
+    this.sun.intensity = t.sunI * (1 - f);
+    this.hemi.intensity = t.hemi[2] * (1 - 0.88 * f);
+  }
+
+  /** 車內燈光:warmth(0 白光 ~ 1 鵝黃)、dark(車外暗的程度,車內燈要補亮) */
+  get ambience() {
+    const f = this.tunnelF, t = this.time;
+    return {
+      warmth: Math.max(t.warmth, f), dark: Math.max(t.night ? 1 : 0, f), env: t.env * Math.min(1, (this.skyScale ?? 1) * 4) * (1 - 0.85 * f),
+      tint: t.tint || null, tintI: (t.tintI || 0) * (1 - f),
+    };
   }
 }

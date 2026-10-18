@@ -41,12 +41,13 @@ export class Sfx {
     if (this.master) this.master.gain.value = m ? 0 : 0.8;
   }
 
-  /** speedRatio 0~1,控制行駛噪音大小。 */
-  setRumble(speedRatio) {
+  /** speedRatio 0~1,控制行駛噪音大小;enclosed 0~1 為在隧道內的程度。 */
+  setRumble(speedRatio, enclosed = 0) {
     if (!this.ctx) return;
     const t = this.ctx.currentTime;
-    this.rumbleGain.gain.setTargetAtTime(0.05 + speedRatio * 0.35, t, 0.3);
-    this.rumbleFilter.frequency.setTargetAtTime(180 + speedRatio * 420, t, 0.3);
+    // enclosed:在隧道內的程度(0~1),回音讓行駛聲更大、更悶
+    this.rumbleGain.gain.setTargetAtTime((0.05 + speedRatio * 0.35) * (1 + 0.9 * enclosed), t, 0.3);
+    this.rumbleFilter.frequency.setTargetAtTime(180 + speedRatio * 420 + 160 * enclosed, t, 0.3);
   }
 
   _tone(freq, dur, { type = 'sine', gain = 0.2, delay = 0, slide = 0 } = {}) {

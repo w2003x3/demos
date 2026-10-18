@@ -10,7 +10,7 @@ import { rng, Tex } from '../core/textures.js';
 import { cloneWithColors, pickPerson } from '../core/assets.js';
 import { TrainSet } from '../world/trainset.js';
 import { Passengers } from '../world/passengers.js';
-import { Scenery } from '../world/scenery.js';
+import { Scenery, pickTime, timeLabel } from '../world/scenery.js';
 import { CartCrew, CREW, POS_KEYS } from '../world/cartCrew.js';
 import { OVERCHARGE_COMPLAINT_CHANCE } from './career.js';
 
@@ -53,7 +53,11 @@ export class OnboardPhase {
     this.pax = new Passengers(assets, this.train, this.R, g.quality.paxShadows, !g.quality.simplePax);
     this.pax.fill(cfg.occupancy);
     this.crew = new CartCrew(assets);
-    this.scenery = new Scenery(g.renderer, cfg.scenery, assets, g.quality);
+    // 窗外時段每趟隨機(白天/黃昏/夜間)
+    // 網址可指定時段(測試用):?time=morning | noon | sunset | night
+    const forced = new URLSearchParams(location.search).get('time');
+    this.timeOfDay = ['morning', 'noon', 'sunset', 'night'].includes(forced) ? forced : pickTime(this.R);
+    this.scenery = new Scenery(g.renderer, { ...cfg.scenery, time: this.timeOfDay }, assets, g.quality);
     this.root.add(this.train.group, this.pax.group, this.crew.group, this.scenery.group);
     await this.scenery.ready;
     g.scene.fog = this.scenery.fog;
@@ -63,6 +67,7 @@ export class OnboardPhase {
       g.scene.background = this.scenery.background;
       g.scene.environment = this.scenery.envMap;
       g.scene.environmentIntensity = 0.55;
+      g.scene.backgroundIntensity = this.scenery.skyScale ?? 1;   // 夜空壓暗
     }
 
     // 路線與行駛曲線:區間時間 T → 距離 d = v(T - v/a)(加減速各佔 v/2a 距離)
@@ -71,6 +76,7 @@ export class OnboardPhase {
     this.legDist = cfg.legTimes.map((T) => v * Math.max(5, T - v / a));
     this.S = [0];
     this.legDist.forEach((d, i) => this.S.push(this.S[i] + d));
+    this.scenery.setTunnels(this._makeTunnels(), (this.train.n - 1) * this.train.pitch / 2);
     this.run = { leg: 0, pos: 0, v: 0, s: 0, mode: 'dwell', dwell: 9, announced: false, endTimer: null, clackAcc: 0 };
 
     this.p = { mid: this.train.minX + 0.1 + CREW.back, facing: 1, angle: 0, vel: 0, turning: null };
@@ -109,7 +115,7 @@ export class OnboardPhase {
     const { g, cfg } = this;
     const term = this.stops.at(-1).id;
     g.voice.announce([`station_depart_${term}`, `conductor_welcome_${term}`, `conductor_welcome_${term}_en`]);
-    g.ui.toast(`${cfg.trainNo} 往 ${this.stops.at(-1).zh},即將出發!`, 'info');
+    g.ui.toast(`${cfg.trainNo} 往 ${this.stops.at(-1).zh},即將出發!(${timeLabel(this.timeOfDay)}${this.scenery.tunnels.length ? `・沿途 ${this.scenery.tunnels.length} 座隧道` : ''})`, 'info');
     if (this.tickets.length) g.ui.toast(`有 ${this.tickets.length} 份預訂便當要送到指定座位(按 F 送餐)`, 'info');
     this.calloutTimer = 6;
   }
@@ -122,6 +128,7 @@ export class OnboardPhase {
       this.g.scene.background = this._sceneEnv.background;
       this.g.scene.environment = this._sceneEnv.environment;
       this.g.scene.environmentIntensity = this._sceneEnv.intensity;
+      this.g.scene.backgroundIntensity = 1;
     }
     this.g.voice.stopAll();
     this.g.ui.clearBubbles();
@@ -135,7 +142,32 @@ export class OnboardPhase {
     const on = !!this.g.settings.curtains;
     this.train.setCurtains(on);
     // 窗簾拉下:窗外景物不繪製(保留燈光,車內亮度不變)
-    this.scenery.group.children.forEach((o) => { if (!o.isLight) o.visible = !on; });
+    this.scenery.setCurtains(on);
+  }
+
+  /**
+   * 隨機隧道:每個區間有一定機率出現一座(市鎮約三成、其他約七成五;150~900 m),離車站至少 250 m(不蓋到月台)。
+   * 回傳 [{ s0, s1 }](路線里程)。
+   */
+  _makeTunnels() {
+    const out = [];
+    const chance = this.cfg.scenery.theme === 'town' ? 0.3 : 0.75;   // 市鎮少、山區多
+    for (let i = 0; i < this.S.length - 1; i++) {
+      const a = this.S[i] + 250, b = this.S[i + 1] - 250;
+      if (b - a < 200 || this.R() > chance) continue;
+      const len = 150 + this.R() * Math.min(750, b - a - 150);
+      const s0 = a + this.R() * (b - a - len);
+      out.push({ s0, s1: s0 + len });
+    }
+    return out;
+  }
+
+  /** 燈光氣氛:隧道內/夜間車內燈轉鵝黃、環境反射變暗、行駛聲變大 */
+  _applyAmbience() {
+    const a = this.scenery.ambience, g = this.g;
+    this.train.setAmbience(a.warmth, a.dark, a.tint, a.tintI);
+    if (this.scenery.background) g.scene.environmentIntensity = a.env;
+    g.sfx.setRumble(this.run.v / this.type.maxSpeed, this.scenery.tunnelF);
   }
 
   /** 對話可聽度:只聽得到同一節車廂(1),別節車廂 0(只顯示字幕)。 */
@@ -911,6 +943,7 @@ export class OnboardPhase {
     if (this.kick) {
       this._updateKick(dt);
       this.scenery.update(this.run.s, this._platformX(), this.kick.center);
+      this._applyAmbience();
       g.ui.updateBubbles(g.camera);
       return null;
     }
@@ -992,8 +1025,8 @@ export class OnboardPhase {
     this.crew.place(this.p.mid, this.p.angle, this.time, moving);
     this.train.updateDoors(...this._extent(), dt);
     this.scenery.update(this.run.s, this._platformX(), this.p.mid);
+    this._applyAmbience();
     this._updateCamera(dt);
-    g.sfx.setRumble(this.run.v / this.type.maxSpeed);
 
     this._hud(dt, prompt);
     return null;

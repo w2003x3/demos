@@ -8,15 +8,25 @@ const ctx = canvas.getContext('2d');
 canvas.width = W;
 canvas.height = H;
 
-// ---------- SVG 像素資產 ----------
-// 貢丸 id(1~9)對應的 sprite 檔名
-const MB_SPRITE = ['gongwan', 'pee', 'lava', 'mini', 'mushroom', 'taro', 'cilantro', 'spicy', 'squid',
-  'blackpork', 'sausage', 'ricesausage', 'bigwrap'];
+// ---------- 2D 圖片資產(由 3D 寫實模型渲染,見 tools/sprites/)----------
+// 貢丸 id(1~13)對應的圖檔名
+const MB_SPRITE = Array.from({ length: 13 }, (_, i) => 'mb_' + (i + 1));
+// 各主題的地圖物件圖:有多款時依格子座標固定挑一款(外圈用 wall,內部柱子用 solid)
+const TILE_SPRITES = {
+  park:   { floor: ['floor1', 'floor2'], wall: ['wall'], solid: ['stone'], brick: ['crate', 'crate2'],
+            trash: ['trashcan'], bush: ['bush', 'bush2'] },
+  market: { floor: ['market_floor1', 'market_floor2'], wall: ['market_wall', 'market_wall2'], solid: ['market_stall'],
+            brick: ['market_crate', 'market_crate2', 'market_crate3'], trash: ['market_trash'], bush: ['market_pile'] },
+  night:  { floor: ['night_floor1', 'night_floor2'], wall: ['night_wall', 'night_wall2'], solid: ['night_stall'],
+            brick: ['night_table', 'night_table2'], trash: ['night_trash'], bush: ['night_boxes'] },
+};
+// 地圖物件圖是 1 格寬、1.25 格高(65° 俯視);畫的時候把格子深度拉回正方形
+const TILE_IMG_H = 1.25 / Math.sin(65 * Math.PI / 180);
+const FX_VARIANTS = 4; // 爆炸波每種 4 張
 const ASSET_LIST = {
-  tiles: ['floor1', 'floor2', 'stone', 'crate', 'trashcan', 'bush',
-          'market_floor1', 'market_floor2', 'market_stall', 'market_crate', 'market_pile', 'market_trash',
-          'night_floor1', 'night_floor2', 'night_stall', 'night_table', 'night_boxes', 'night_trash'],
+  tiles: [...new Set(Object.values(TILE_SPRITES).flatMap((t) => Object.values(t).flat()))],
   meatballs: MB_SPRITE,
+  fx: ['fire', 'poison', 'ink'].flatMap((k) => Array.from({ length: FX_VARIANTS }, (_, i) => k + (i + 1))),
   items: ['mushroom', 'taro', 'cilantro', 'chili', 'skewer', 'radish', 'pepper', 'enoki',
           'squid', 'blastsuit', 'mask', 'ratbait', 'roachbait', 'vacuum', 'garbage',
           'slippers', 'tongs', 'glove', 'slingshot',
@@ -38,7 +48,7 @@ function loadAssets() {
       const img = new Image();
       ASSETS[key] = img;
       jobs.push(new Promise((res) => { img.onload = res; img.onerror = res; }));
-      img.src = 'assets/' + key + '.svg';
+      img.src = 'assets/' + key + '.webp';
     }
   }
   return Promise.all(jobs);
@@ -53,6 +63,14 @@ function sprite(key, cx, cy, size) {
   ctx.drawImage(img, Math.round(cx - size / 2), Math.round(cy - size / 2), size, size);
   return true;
 }
+// 以左上角與寬高畫圖(地圖物件、地板)
+function spriteRect(key, x, y, w, h) {
+  const img = ASSETS[key];
+  if (!img || !img.complete || !img.naturalWidth) return false;
+  ctx.drawImage(img, Math.round(x), Math.round(y), Math.ceil(w), Math.ceil(h));
+  return true;
+}
+const pickVar = (list, c, r) => list[(c * 7 + r * 13) % list.length];
 const meatballSprite = (def) => 'meatballs/' + MB_SPRITE[def.id - 1];
 const charSprite = (e) => 'characters/' + (e === player ? 'player' : e.team === 'red' ? 'enemy' : 'ally');
 
@@ -1634,21 +1652,14 @@ function update(dt) {
 // ====================================================================
 function draw() {
   // 背景
-  ctx.fillStyle = '#1f6e2e';
+  ctx.fillStyle = '#1f2a1a';
   ctx.fillRect(0, 0, W, H);
+  const ts = TILE_SPRITES[currentMapId] || TILE_SPRITES.park;
 
-  // 地板 / 牆 / 可破壞物 / 垃圾桶(依地圖主題選 SVG 像素磚)
-  const th = theme().tiles;
+  // 地板(棋盤格兩款)
   for (let r = 0; r < ROWS; r++) {
     for (let c = 0; c < COLS; c++) {
-      const t = grid[r][c];
-      const cx = c * TS + TS / 2, cy = r * TS + TS / 2;
-      const floor = 'tiles/' + ((c + r) % 2 === 0 ? th.floor1 : th.floor2);
-      if (t === TILE.SOLID) sprite('tiles/' + th.solid, cx, cy, TS);
-      else if (t === TILE.BRICK) sprite('tiles/' + th.brick, cx, cy, TS);
-      else if (t === TILE.TRASH) sprite('tiles/' + th.trash, cx, cy, TS);
-      else if (t === TILE.BUSH) sprite('tiles/' + th.bush, cx, cy, TS);
-      else sprite(floor, cx, cy, TS);
+      spriteRect('tiles/' + ts.floor[(c + r) % 2], c * TS, r * TS, TS, TS);
     }
   }
 
@@ -1665,23 +1676,35 @@ function draw() {
     }
   }
 
-  // 道具
-  items.forEach(drawItem);
-  // 爆炸
-  explosions.forEach(drawExplosion);
-  // 貢丸
-  meatballs.forEach(drawMeatball);
-  // 寵物
-  allPets().forEach(drawPet);
-  // 野生生物(自生自滅)
-  wildCritters.forEach((w) => {
+  // 場上的東西依所在列分組,和地圖物件一起由上往下畫(前排會擋住後排)
+  const rows = Array.from({ length: ROWS }, () => []);
+  const add = (y, fn) => rows[clamp(toRow(y), 0, ROWS - 1)].push([y, fn]);
+  items.forEach((it) => add(it.y, () => drawItem(it)));
+  meatballs.forEach((m) => add(m.y, () => drawMeatball(m)));
+  allPets().forEach((p) => add(p.y, () => drawPet(p)));
+  wildCritters.forEach((w) => add(w.y, () => {
     ctx.globalAlpha = clamp(w.life, 0, 1); // 快消失時漸淡
-    sprite('pets/' + w.def.id, w.x, w.y, TS * 0.6);
+    sprite('pets/' + w.def.id, w.x, w.y, TS * 0.7);
     ctx.globalAlpha = 1;
-  });
-  // AI 角色(紅隊敵人 / 藍隊隊友)與玩家
-  bots.forEach((e) => { if (e.alive || e.deathT > 0) drawCharacter(e); });
-  if (player.alive || player.invuln > 0) drawCharacter(player);
+  }));
+  bots.forEach((e) => { if (e.alive || e.deathT > 0) add(e.y, () => drawCharacter(e)); });
+  if (player.alive || player.invuln > 0) add(player.y, () => drawCharacter(player));
+
+  const tallH = TS * TILE_IMG_H;
+  for (let r = 0; r < ROWS; r++) {
+    for (let c = 0; c < COLS; c++) {
+      const t = grid[r][c];
+      if (t === TILE.EMPTY) continue;
+      const edge = r === 0 || c === 0 || r === ROWS - 1 || c === COLS - 1;
+      const list = t === TILE.SOLID ? (edge ? ts.wall : ts.solid)
+        : t === TILE.BRICK ? ts.brick : t === TILE.TRASH ? ts.trash : ts.bush;
+      spriteRect('tiles/' + pickVar(list, c, r), c * TS, (r + 1) * TS - tallH, TS, tallH);
+    }
+    rows[r].sort((p, q) => p[0] - q[0]).forEach(([, fn]) => fn());
+  }
+
+  // 爆炸(在最上層)
+  explosions.forEach(drawExplosion);
 
   // 飄字
   particles.forEach((p) => {
@@ -1689,6 +1712,8 @@ function draw() {
     ctx.fillStyle = p.color;
     ctx.font = 'bold 18px sans-serif';
     ctx.textAlign = 'center';
+    ctx.strokeStyle = 'rgba(0,0,0,0.55)'; ctx.lineWidth = 3;
+    ctx.strokeText(p.text, p.x, p.y);
     ctx.fillText(p.text, p.x, p.y);
     ctx.globalAlpha = 1;
   });
@@ -1724,19 +1749,14 @@ function drawBlind() {
 
 function drawItem(it) {
   const bob = Math.sin(it.t * 4) * 1.5;
-  const pulse = 1 + Math.sin(it.t * 5) * 0.06;
-  // 柔和陰影
-  ctx.fillStyle = 'rgba(0,0,0,0.2)';
-  ctx.beginPath();
-  ctx.ellipse(it.x, it.y + TS * 0.34, TS * 0.24, TS * 0.09, 0, 0, Math.PI * 2);
-  ctx.fill();
+  const pulse = 1 + Math.sin(it.t * 5) * 0.04;
   // 發霉:縮小、快消失時閃爍,並蓋上綠色黴斑
   const rot = it.moldy ? clamp((it.age - it.fresh) / MOLD_STAGE, 0, 1) : 0;
   if (it.moldy && rot > 0.7 && Math.floor(it.t * 8) % 2 === 0) return;
-  // 道具(SVG)
-  sprite('items/' + it.key, it.x, it.y + bob, TS * 0.78 * pulse * (1 - rot * 0.35));
+  // 道具(寫實圖,影子已含在圖裡)
+  sprite('items/' + it.key, it.x, it.y + bob, TS * 0.95 * pulse * (1 - rot * 0.35));
   if (it.moldy) {
-    ctx.fillStyle = 'rgba(110,170,40,0.55)';
+    ctx.fillStyle = 'rgba(110,170,40,0.5)';
     ctx.beginPath(); ctx.arc(it.x, it.y + bob, TS * 0.3, 0, Math.PI * 2); ctx.fill();
     ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
     ctx.fillText('🦠', it.x + TS * 0.22, it.y - TS * 0.2 + bob);
@@ -1744,16 +1764,11 @@ function drawItem(it) {
 }
 
 function drawMeatball(m) {
-  const wob = Math.sin(elapsed * 8) * 2;
+  const wob = Math.sin(elapsed * 8) * 1.5;
   const x = m.x, y = m.y - (m.held ? TS * 0.5 : 0) - (m.jump || 0) * TS * 0.6 + wob; // 手持/跳起時抬高 + 上下浮動
   const r = TS * 0.36;
-  // 陰影
-  ctx.fillStyle = 'rgba(0,0,0,0.25)';
-  ctx.beginPath();
-  ctx.ellipse(m.x, m.y + r * 0.8, r * 0.9, r * 0.4, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // 丸身(SVG)
-  sprite(meatballSprite(m.def), x, y, TS);
+  // 丸身(寫實圖,影子已含在圖裡)
+  sprite(meatballSprite(m.def), x, y, TS * 1.15);
 
   // 快爆炸時閃白
   if (m.fuse < 0.6 && Math.floor(m.fuse * 12) % 2 === 0) {
@@ -1761,14 +1776,11 @@ function drawMeatball(m) {
     ctx.beginPath(); ctx.arc(x, y, r, 0, Math.PI * 2); ctx.fill();
     ctx.globalAlpha = 1;
   }
-  // 發霉斑點
+  // 發霉:罩一層綠
   if (m.moldy) {
-    ctx.fillStyle = 'rgba(124,179,66,0.85)';
-    for (const [sx, sy] of [[-0.4, -0.3], [0.35, -0.15], [-0.15, 0.4], [0.3, 0.35]]) {
-      ctx.beginPath();
-      ctx.arc(x + sx * r, y + sy * r, r * 0.16, 0, Math.PI * 2);
-      ctx.fill();
-    }
+    ctx.globalAlpha = 0.5; ctx.fillStyle = '#7cb342';
+    ctx.beginPath(); ctx.arc(x, y, r * 0.95, 0, Math.PI * 2); ctx.fill();
+    ctx.globalAlpha = 1;
   }
   // 被寵物啃時的貢丸 HP 條
   if (m.hp < MEATBALL_HP) {
@@ -1781,19 +1793,29 @@ function drawMeatball(m) {
   }
 }
 
+// 爆炸波:每格一團火球(黴毒綠 / 墨魚黑),隨機旋轉,邊擴散邊淡出
 function drawExplosion(ex) {
   const a = clamp(ex.t / EXPLOSION_TIME, 0, 1);
+  const kind = ex.poison ? 'poison' : ex.ink ? 'ink' : 'fire';
   for (const cl of ex.cells) {
-    const x = cl.c * TS, y = cl.r * TS;
-    ctx.globalAlpha = a * 0.9;
-    const g = ctx.createRadialGradient(x + TS / 2, y + TS / 2, 2, x + TS / 2, y + TS / 2, TS * 0.6);
-    g.addColorStop(0, '#fff7c2');
-    g.addColorStop(0.5, '#ffb300');
-    g.addColorStop(1, ex.color || '#d84315');
-    ctx.fillStyle = g;
-    ctx.beginPath();
-    ctx.arc(x + TS / 2, y + TS / 2, TS * 0.48, 0, Math.PI * 2);
-    ctx.fill();
+    const cx = cl.c * TS + TS / 2, cy = cl.r * TS + TS / 2;
+    const v = ((cl.c * 7 + cl.r * 13) % FX_VARIANTS) + 1;
+    const img = ASSETS['fx/' + kind + v];
+    if (img && img.complete && img.naturalWidth) {
+      const size = TS * (1.2 + 0.45 * (1 - a));
+      ctx.save();
+      ctx.globalAlpha = Math.min(1, a * 1.4);
+      ctx.translate(cx, cy);
+      ctx.rotate((cl.c * 1.7 + cl.r * 2.3) + (1 - a) * 0.6);
+      ctx.drawImage(img, -size / 2, -size / 2, size, size);
+      ctx.restore();
+    } else { // 圖還沒載入:簡單的漸層圓
+      ctx.globalAlpha = a * 0.9;
+      const g = ctx.createRadialGradient(cx, cy, 2, cx, cy, TS * 0.6);
+      g.addColorStop(0, '#fff7c2'); g.addColorStop(0.5, '#ffb300'); g.addColorStop(1, ex.color || '#d84315');
+      ctx.fillStyle = g;
+      ctx.beginPath(); ctx.arc(cx, cy, TS * 0.48, 0, Math.PI * 2); ctx.fill();
+    }
   }
   ctx.globalAlpha = 1;
 }
@@ -1801,28 +1823,35 @@ function drawExplosion(ex) {
 function drawCharacter(e) {
   const blink = e.invuln > 0 && Math.floor(e.invuln * 12) % 2 === 0;
   if (blink) return;
-  // 陰影
-  ctx.fillStyle = 'rgba(0,0,0,0.25)';
-  ctx.beginPath();
-  ctx.ellipse(e.x, e.y + e.r * 0.95, e.r * 0.8, e.r * 0.32, 0, 0, Math.PI * 2);
-  ctx.fill();
-  // 學生全身像(SVG)
+  // 全身像(寫實圖,腳底對齊格子下方;往左走時左右翻轉)
+  const size = TS * 1.55, footY = e.y + TS * 0.42;
+  const img = ASSETS[charSprite(e)];
   ctx.globalAlpha = e.alive ? 1 : 0.4;
-  sprite(charSprite(e), e.x, e.y - TS * 0.06, TS * 1.2);
+  if (img && img.complete && img.naturalWidth) {
+    ctx.save();
+    ctx.translate(e.x, footY - size / 2);
+    if (e.dir && e.dir.x < 0) ctx.scale(-1, 1);
+    ctx.drawImage(img, -size / 2, -size / 2, size, size);
+    ctx.restore();
+  }
   ctx.globalAlpha = 1;
+  const headY = footY - size * 0.93;
   // 隊伍/玩家標記(頭上小箭頭:你=金色,隊友=藍,敵人=紅)
   ctx.fillStyle = e === player ? '#ffd54f' : TEAM_COLOR[e.team];
+  ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 1.5;
   ctx.beginPath();
-  ctx.moveTo(e.x, e.y - TS * 0.72 + Math.sin(elapsed * 5) * 1.5);
-  ctx.lineTo(e.x - 5, e.y - TS * 0.86);
-  ctx.lineTo(e.x + 5, e.y - TS * 0.86);
-  ctx.fill();
+  const bob = Math.sin(elapsed * 5) * 1.5;
+  ctx.moveTo(e.x, headY + bob);
+  ctx.lineTo(e.x - 6, headY - 10 + bob);
+  ctx.lineTo(e.x + 6, headY - 10 + bob);
+  ctx.closePath(); ctx.fill(); ctx.stroke();
+  const midY = footY - size * 0.42;
   // 防護盾光環(抵免爆炸)
   if (e.blastGuard > 0) {
     ctx.strokeStyle = 'rgba(255,213,79,0.9)';
     ctx.lineWidth = 3;
     ctx.beginPath();
-    ctx.arc(e.x, e.y, e.r * 1.35 + Math.sin(elapsed * 6) * 2, 0, Math.PI * 2);
+    ctx.ellipse(e.x, midY, e.r * 1.35 + Math.sin(elapsed * 6) * 2, size * 0.48, 0, 0, Math.PI * 2);
     ctx.stroke();
   }
   // 口罩光環(抵免黴毒)
@@ -1831,7 +1860,7 @@ function drawCharacter(e) {
     ctx.lineWidth = 2;
     ctx.setLineDash([4, 4]);
     ctx.beginPath();
-    ctx.arc(e.x, e.y, e.r * 1.55, 0, Math.PI * 2);
+    ctx.ellipse(e.x, midY, e.r * 1.6, size * 0.52, 0, 0, Math.PI * 2);
     ctx.stroke();
     ctx.setLineDash([]);
   }
@@ -1848,8 +1877,8 @@ function drawPet(pet) {
     ctx.arc(pet.x, pet.y, pet.r * 1.7, 0, Math.PI * 2);
     ctx.fill();
   }
-  // 寵物(SVG)
-  sprite('pets/' + pet.def.id, pet.x, pet.y, TS * 0.72);
+  // 寵物(寫實圖)
+  sprite('pets/' + pet.def.id, pet.x, pet.y, TS * 0.85);
   // 寵物 HP 條
   if (pet.hp < pet.maxHp) {
     const bw = pet.r * 2.2, bh = 3;
@@ -1901,7 +1930,7 @@ function buildRoster() {
     const row = document.createElement('div');
     row.className = 'roster-row team-' + f.team + (f === player ? ' me' : '');
     row.innerHTML =
-      `<img class="roster-face" src="assets/characters/${portrait}.svg" alt="">` +
+      `<img class="roster-face" src="assets/characters/${portrait}.webp" alt="">` +
       `<span class="roster-name">${f.label || ''}</span>` +
       `<span class="roster-hp"></span>`;
     el.appendChild(row);
@@ -2016,7 +2045,7 @@ function buildSelector() {
   if (!sel || !sel.querySelectorAll) return;
   sel.innerHTML = MEATBALLS.filter((m) => !m.special).map((m) => `
     <button type="button" class="mbtn${m.night ? ' night-only' : ''}" data-id="${m.id}" title="${m.name}:${m.desc}${m.night ? '(夜市限定)' : ''}">
-      <img src="assets/meatballs/${MB_SPRITE[m.id - 1]}.svg" alt="${m.name}">
+      <img src="assets/meatballs/${MB_SPRITE[m.id - 1]}.webp" alt="${m.name}">
       <b>${m.hotkey ? m.hotkey.toUpperCase() : m.id}</b>
     </button>`).join('');
   sel.addEventListener('click', (ev) => {
@@ -2114,7 +2143,7 @@ function loop(now) {
 // 載入畫面
 ctx.fillStyle = '#1f6e2e'; ctx.fillRect(0, 0, W, H);
 ctx.fillStyle = '#fff'; ctx.font = 'bold 22px sans-serif'; ctx.textAlign = 'center';
-ctx.fillText('載入像素圖…', W / 2, H / 2);
+ctx.fillText('載入圖片…', W / 2, H / 2);
 
 // 先載入 SVG 資產 → 顯示主選單(場景在背後待命)
 loadAssets().then(() => {

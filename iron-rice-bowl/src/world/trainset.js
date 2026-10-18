@@ -4,6 +4,10 @@ import { makeInstanced } from '../core/assets.js';
 import { Tex } from '../core/textures.js';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 
+const COOL = new THREE.Color('#fff1dc'), WARM = new THREE.Color('#ffd27f');          // 車內燈:白光 → 鵝黃
+const TMP = new THREE.Color();
+const EMIT_COOL = new THREE.Color('#fff6e8'), EMIT_WARM = new THREE.Color('#ffd889');   // 燈罩發光色
+
 export class TrainSet {
   /** quality.areaLights:true 用 RectAreaLight(柔和但吃效能),false 用點光源。 */
   constructor(assets, type, serviceCars, quality = { areaLights: false }) {
@@ -17,6 +21,8 @@ export class TrainSet {
     this.seats = [];   // {x, z, car} 每個座位(乘客位置)
 
     const I = type.interior;
+    this.lights = [];
+    this.emitMats = new Set();
     for (let k = 0; k < this.n; k++) {
       const cx = this.carX(k);
       const car = assets.car.clone(true);
@@ -31,11 +37,14 @@ export class TrainSet {
         light.position.set(cx, 2.19, 0);
         light.lookAt(cx, 0, 0);
         this.group.add(light);
+        this.lights.push(light);
       } else if (quality.pointLights) {
         const light = new THREE.PointLight(0xfff1dc, 6, 14, 1.2);
         light.position.set(cx, 2.05, 0);
         this.group.add(light);
+        this.lights.push(light);
       }
+      car.traverse((o) => { if (o.isMesh && o.material.name === 'Light_Emit') this.emitMats.add(o.material); });
     }
 
     // 座椅:每節 seatRows 排 × 左右兩組
@@ -62,6 +71,10 @@ export class TrainSet {
       this.group.add(im);
     }
 
+    this.lights.forEach((l) => (l.userData.base = l.intensity));
+    // 低畫質沒有車內燈:夜間/隧道用暖色環境補光(白天為 0)
+    this.fill = new THREE.HemisphereLight(0xffe2a8, 0x6b5a3a, 0);
+    this.group.add(this.fill);
     this._buildDisplays();
     this._buildEndDoors(assets);
     this._buildSeatNumbers();
@@ -208,6 +221,27 @@ export class TrainSet {
       d.open += (target - d.open) * Math.min(1, dt * (target ? 2.6 : 3.5));
       d.obj.position.z = -d.open * 0.86;
     }
+  }
+
+  /**
+   * 車內燈光氣氛:warmth 0(白光)~1(鵝黃),dark 0~1(車外越暗,車內燈相對越亮)。
+   * 夜間、隧道內 warmth = 1;黃昏約 0.3。
+   */
+  setAmbience(warmth, dark, tint = null, tintI = 0) {
+    const c = COOL.clone().lerp(WARM, warmth);
+    for (const l of this.lights) {
+      l.color.copy(c);
+      l.intensity = l.userData.base * (1 + 0.45 * dark);
+    }
+    for (const m of this.emitMats) {
+      m.emissive.copy(EMIT_COOL).lerp(EMIT_WARM, warmth);
+      m.emissiveIntensity = 2.2 + 0.8 * dark;
+    }
+    // 補光:夜間/隧道為暖色車內光;黃昏時混入窗外照進來的橘紅夕照
+    const fillI = dark * (this.lights.length ? 0.25 : 0.9);
+    this.fill.color.copy(c);
+    if (tint && tintI > 0) this.fill.color.lerp(TMP.set(tint), tintI / (tintI + fillI));
+    this.fill.intensity = fillI + tintI;
   }
 
   /** 窗簾:拉下後遮住整條窗帶(看不到窗外,可關閉窗外景色省效能)。 */
