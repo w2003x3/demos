@@ -10,6 +10,8 @@
 | 📦 3D 紙箱生成器 | <https://w2003x3.github.io/demos/3d-box/> |
 | 🔤 注英台 | <https://w2003x3.github.io/demos/zhu-ying-tai/> |
 | 🌊 一詞春水 | <https://w2003x3.github.io/demos/muse-ripple/> |
+| 💣 爆爆丸 3D | <https://w2003x3.github.io/demos/bang-bang-porkball/3d.html> |
+| 💣 爆爆丸 2D | <https://w2003x3.github.io/demos/bang-bang-porkball/> |
 
 這個 repo 只放**可以執行的網站檔案**,由 `publish.mjs` 從各專案的資料夾複製或打包產生,不要直接修改子資料夾內的檔案。
 

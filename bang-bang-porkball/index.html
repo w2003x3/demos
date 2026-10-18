@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>爆爆丸 — 貢丸版炸彈超人</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body>
+<div id="app">
+
+  <!-- 頂部狀態列 -->
+  <header class="topbar">
+    <div class="brand">💣 爆爆丸 <small>Q版</small></div>
+    <div id="stat-enemies" class="timer"></div>
+    <div class="top-tools">
+      <div id="stat-weather" class="pill"></div>
+      <a class="icon-btn" href="3d.html">🧊 3D版</a>
+      <button id="btn-help" class="icon-btn" type="button">❓ 說明</button>
+    </div>
+  </header>
+
+  <main class="cockpit">
+
+    <!-- 左:玩家狀態 -->
+    <aside class="panel side-left">
+      <h3>🧑‍🤝‍🧑 戰隊名單</h3>
+      <div id="roster" class="roster"></div>
+      <h3>👤 玩家狀態</h3>
+      <div id="stat-hp" class="stat"></div>
+      <div id="stat-mp" class="stat"></div>
+      <div class="pill-grid">
+        <div id="stat-power" class="pill"></div>
+        <div id="stat-speed" class="pill"></div>
+        <div id="stat-bombs" class="pill"></div>
+        <div id="stat-guard" class="pill"></div>
+        <div id="stat-pet" class="pill wide"></div>
+        <div id="stat-tools" class="pill wide"></div>
+        <div id="stat-poison" class="pill wide"></div>
+      </div>
+      <p class="ctl-hint">🖱️/👆 點地圖一下:走過去<br>點兩下:放貢丸<br>⌨️ WASD / ↑↓←→ 移動</p>
+    </aside>
+
+    <!-- 中:遊戲畫面 -->
+    <section class="stage-wrap">
+      <div class="stage">
+        <canvas id="game"></canvas>
+
+        <div id="menu-overlay" class="overlay hidden">
+          <div class="opanel">
+            <div class="logo">💣 爆爆丸</div>
+            <p class="sub">Q版貢丸炸彈對戰・2 隊限時淘汰</p>
+            <div class="map-pick">
+              <button type="button" class="mapbtn active" data-map="park">🌳 公園</button>
+              <button type="button" class="mapbtn" data-map="market">🥬 菜市場</button>
+              <button type="button" class="mapbtn" data-map="night">🏮 夜市</button>
+            </div>
+            <button id="btn-start" class="big primary">🎮 開始對戰</button>
+            <button class="big" disabled>🌐 多人連線(開發中)</button>
+            <p class="mini">🔵 你 + 2 名 AI 隊友 vs 🔴 3 名 AI・限時 2 分鐘<br>炸光敵隊獲勝;時間到比存活人數</p>
+          </div>
+        </div>
+
+        <div id="result-overlay" class="overlay hidden">
+          <div class="opanel">
+            <div id="result-title" class="logo"></div>
+            <p id="result-sub" class="sub"></p>
+            <button id="btn-again" class="big primary">🔄 再來一場</button>
+            <p class="mini">或按 R / Enter</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- 右:貢丸 + 動作 -->
+    <aside class="panel side-right">
+      <h3>🍡 貢丸 <span>(1~9)</span></h3>
+      <div id="selector" class="mb-bar"></div>
+      <div id="mb-desc" class="mb-desc"></div>
+      <h3>⚡ 動作</h3>
+      <div class="actions">
+        <button type="button" class="act primary" data-key=" ">💣<span>放貢丸</span><kbd>空白</kbd></button>
+        <button type="button" class="act" data-key="e">👟<span>踢/騎</span><kbd>E</kbd></button>
+        <button type="button" class="act" data-key="g">🛡️<span>防護盾</span><kbd>G</kbd></button>
+        <button type="button" class="act" data-key="z">🥢<span>食物夾</span><kbd>Z</kbd></button>
+        <button type="button" class="act" data-key="x">🧤<span>手套丟</span><kbd>X</kbd></button>
+        <button type="button" class="act" data-key="c">🏹<span>彈弓</span><kbd>C</kbd></button>
+        <button type="button" class="act" data-key="q">🧹<span>吸塵器</span><kbd>Q</kbd></button>
+        <button type="button" class="act" data-key="f">🚛<span>垃圾車</span><kbd>F</kbd></button>
+        <button type="button" class="act" data-key="v">🩴<span>藍白拖</span><kbd>V</kbd></button>
+        <button type="button" class="act" data-key="k">🐭<span>老鼠</span><kbd>K</kbd></button>
+        <button type="button" class="act" data-key="l">🪳<span>蟑螂</span><kbd>L</kbd></button>
+        <button type="button" class="act restart" data-key="r">🔄<span>重來</span><kbd>R</kbd></button>
+      </div>
+    </aside>
+  </main>
+</div>
+
+<!-- 說明彈窗 -->
+<div id="help-modal" class="modal hidden">
+  <div class="modal-panel">
+    <button id="btn-help-close" class="icon-btn close" type="button">✕ 關閉</button>
+    <h2>操作說明</h2>
+    <ul class="help">
+      <li>🖱️ 點地圖一下=自動走過去 · 點兩下=放貢丸(滑鼠/觸控皆可)</li>
+      <li><kbd>↑↓←→</kbd> / <kbd>WASD</kbd> 移動(一步一格)</li>
+      <li><kbd>空白鍵</kbd> 放置貢丸 · <kbd>1</kbd>~<kbd>9</kbd> 切換貢丸</li>
+      <li><kbd>E</kbd>/<kbd>J</kbd> 踢/騎乘前方貢丸(耗 MP)</li>
+      <li><kbd>G</kbd> 防護盾(耗 MP,擋一次爆炸)</li>
+      <li><kbd>Q</kbd> 吸塵器 · <kbd>F</kbd> 垃圾車(清前方貢丸)</li>
+      <li><kbd>Z</kbd> 食物夾(夾起/放下) · <kbd>X</kbd> 隔熱手套(丟)</li>
+      <li><kbd>C</kbd> 彈弓(射向前方第一人,立即爆)</li>
+      <li><kbd>V</kbd> 藍白拖(踩附近寵物)</li>
+      <li><kbd>K</kbd> 放出/收起 🐭老鼠 · <kbd>L</kbd> 🪳蟑螂</li>
+      <li><kbd>R</kbd> 隨時重新開始</li>
+    </ul>
+
+    <h2>地圖元素</h2>
+    <ul class="help">
+      <li>🧱 石磚牆 → 不可破壞</li>
+      <li>📦 木箱 → 炸掉 60% 掉<b>裝備/防護</b></li>
+      <li>🗑️ 垃圾桶 → 炸掉 90% 掉<b>食用道具</b></li>
+      <li>🌿 草叢 → 可走過;40% 驚動野生🐭/🪳偷襲一下,可炸掉變草地</li>
+    </ul>
+
+    <h2>食用道具</h2>
+    <ul class="help">
+      <li>🍄 香菇 速度+ · 🍠 芋頭 HP上限+</li>
+      <li>🌿 香菜 MP上限+ · 🌶️ 辣椒 威力+</li>
+      <li>🥬 白蘿蔔 免疫力+(負面狀態變短)</li>
+      <li>🧂 胡椒粉 丟擲距離+ · 🍢 竹籤 可放貢丸數+</li>
+      <li>🍄 金針菇 自己貢丸時效+(死亡噴等量)</li>
+      <li>🦑 墨魚 減輕黑畫面(會自己游走)</li>
+    </ul>
+
+    <h2>台灣小吃神器(稀有!)</h2>
+    <ul class="help">
+      <li>🧧 福袋 → <b>全能力直接達頂</b>(超稀有)</li>
+      <li>🍗 雞排 → HP 補滿 · 🍡 豬血糕 → MP 補滿</li>
+      <li>🧋 早餐店奶茶 → 速度達頂 · 🧋 珍奶 → 貢丸數達頂</li>
+      <li>🥡 臭豆腐 → 貢丸威力達頂</li>
+      <li>💡 各地圖名產不同:公園=奶茶、菜市場=雞排/豬血糕、夜市=珍奶/臭豆腐</li>
+    </ul>
+
+    <h2>地圖</h2>
+    <ul class="help">
+      <li>🌳 公園:草地、石牆、木箱、草叢</li>
+      <li>🥬 菜市場:磁磚地、紅白棚攤位、蔬菜箱、菜堆(垃圾桶較多)</li>
+      <li>🏮 夜市:柏油地、亮燈攤車、摺疊桌、紙箱堆</li>
+    </ul>
+
+    <h2>裝備 / 防護</h2>
+    <ul class="help">
+      <li>🦺 防爆衣 → 抵免一次爆炸波</li>
+      <li>😷 N95口罩 → 抵免一次中黴毒</li>
+    </ul>
+
+    <h2>貢丸個性</h2>
+    <ul class="help">
+      <li>貢丸=單純爆 · 撒尿牛丸=踢出反彈</li>
+      <li>爆漿貢丸=火焰穿牆(最大)· 小貢丸=需三顆相連(最小)</li>
+      <li>香菇/芋頭/香菜/麻辣=爆炸噴對應道具</li>
+      <li>墨魚貢丸=炸到短暫黑畫面 + 噴墨魚</li>
+    </ul>
+
+    <h2>寵物 🐭🪳</h2>
+    <ul class="help">
+      <li>可各自<b>放出/收起</b>(K / L),放出後自動啃貢丸</li>
+      <li>老鼠咬擊高、蟑螂低;有 HP,昏倒需復活道具</li>
+      <li>⚠️ 🧀老鼠藥、🧴蟑螂藥 會引誘對應寵物去咬 → 身亡</li>
+    </ul>
+
+    <h2>隊伍對戰</h2>
+    <ul class="help">
+      <li>🔵 藍隊(你 + 隊友)對 🔴 紅隊</li>
+      <li>⏱️ 限時內炸光敵隊獲勝;時間到比存活人數</li>
+      <li>有友軍傷害,別炸到隊友</li>
+    </ul>
+
+    <p class="tip">🌡️溫度、💧濕度越高,貢丸(食物)時效越短、引信越快;爆炸前若先發霉,被炸到會中黴毒(每秒扣 HP)。免疫力越高負面狀態越短。💧 MP 會隨時間緩慢回復。</p>
+  </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/net.js"></script>
+<script src="js/game.js"></script>
+<script src="js/controls.js"></script>
+</body>
+</html>
