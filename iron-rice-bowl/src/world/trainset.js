@@ -73,7 +73,9 @@ export class TrainSet {
 
     this.lights.forEach((l) => (l.userData.base = l.intensity));
     // 低畫質沒有車內燈:夜間/隧道用暖色環境補光(白天為 0)
-    this.fill = new THREE.HemisphereLight(0xffe2a8, 0x6b5a3a, 0);
+    // 夜間/隧道的暖色補光(全場景共用,不宜太亮以免照亮窗外夜景;人物的均勻受光改由室內環境光負責,見 onboardPhase)
+    // 地面色接近天空色,讓上下受光平均(低畫質沒有車內燈時也靠它照亮)
+    this.fill = new THREE.HemisphereLight(0xffe2a8, 0xd9b77e, 0);
     this.group.add(this.fill);
     this._buildDisplays();
     this._buildEndDoors(assets);
@@ -238,7 +240,7 @@ export class TrainSet {
       m.emissiveIntensity = 2.2 + 0.8 * dark;
     }
     // 補光:夜間/隧道為暖色車內光;黃昏時混入窗外照進來的橘紅夕照
-    const fillI = dark * (this.lights.length ? 0.25 : 0.9);
+    const fillI = dark * (this.lights.length ? 0.4 : 1.0);
     this.fill.color.copy(c);
     if (tint && tintI > 0) this.fill.color.lerp(TMP.set(tint), tintI / (tintI + fillI));
     this.fill.intensity = fillI + tintI;

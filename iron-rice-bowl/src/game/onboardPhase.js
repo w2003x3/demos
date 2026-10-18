@@ -1,6 +1,7 @@
 // 「車上販售」階段:列車行駛、推車移動、點餐 → 心算結帳(第一人稱結帳機台)、預訂便當配送、
 // 乘客狀況、趟數判定;失敗時演出「被列車長趕下車」。
 import * as THREE from 'three';
+import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { TRAIN_TYPES } from '../config/trains.js';
 import { STATIONS } from '../config/stations.js';
 import { ITEMS, ITEM_LIST } from '../config/items.js';
@@ -70,6 +71,33 @@ export class OnboardPhase {
       g.scene.backgroundIntensity = this.scenery.skyScale ?? 1;   // 夜空壓暗
     }
 
+    // 車內物件(車廂、座椅、乘客、服勤員、推車與商品)固定用室內環境光(RoomEnvironment),與窗外天空分開:
+    // 夜間/隧道內調高,人物受光均勻、不會只剩天花板燈造成的重陰影,窗外夜景也不會被照亮
+    this.interiorMats = new Set();
+    const addMats = (root) => root?.traverse((o) => { if (o.material) [].concat(o.material).forEach((m) => this.interiorMats.add(m)); });
+    [this.train.group, this.pax.group, this.crew.group].forEach(addMats);
+    assets.people?.forEach((p) => addMats(p.stand));
+    addMats(assets.crew?.conductor);
+    addMats(assets.passengerStand);
+    addMats(assets.suitcase);
+    this.roomEnv = this._sceneEnv.environment;
+    // 暖色(鵝黃)版室內環境光:夜間/隧道內使用(兩張環境貼圖格式相同,切換不需重新編譯著色器)
+    if (!g.warmRoomEnv) {
+      const room = new RoomEnvironment();
+      const warm = new THREE.Color('#ffd58f');
+      room.traverse((o) => { if (o.material?.color) o.material.color.multiply(warm); });
+      const pm = new THREE.PMREMGenerator(g.renderer);
+      g.warmRoomEnv = pm.fromScene(room, 0.04).texture;
+      pm.dispose();
+    }
+    this.warmEnv = g.warmRoomEnv;
+    for (const m of this.interiorMats) {
+      if (!('envMapIntensity' in m)) continue;
+      m.userData.envBase ??= m.envMapIntensity;
+      m.envMap = this.roomEnv;
+      m.needsUpdate = true;
+    }
+
     // 路線與行駛曲線:區間時間 T → 距離 d = v(T - v/a)(加減速各佔 v/2a 距離)
     const v = type.maxSpeed, a = type.accel;
     this.stops = cfg.route.map((id) => ({ id, ...STATIONS[id] }));
@@ -124,6 +152,13 @@ export class OnboardPhase {
     this.g.voice.hearing = null;
     this.g.scene.remove(this.root);
     this.g.scene.fog = null;
+    // 共用材質還原成跟隨場景環境光
+    for (const m of this.interiorMats || []) {
+      if (m.envMap !== this.roomEnv && m.envMap !== this.warmEnv) continue;
+      m.envMap = null;
+      m.envMapIntensity = m.userData.envBase ?? 1;
+      m.needsUpdate = true;
+    }
     if (this._sceneEnv) {
       this.g.scene.background = this._sceneEnv.background;
       this.g.scene.environment = this._sceneEnv.environment;
@@ -166,6 +201,18 @@ export class OnboardPhase {
   _applyAmbience() {
     const a = this.scenery.ambience, g = this.g;
     this.train.setAmbience(a.warmth, a.dark, a.tint, a.tintI);
+    // 室內環境光:白天 0.45(與原本相同),夜間/隧道內最高 0.85
+    const k = 0.45 + 0.4 * a.dark;
+    const env = a.warmth > 0.5 ? this.warmEnv : this.roomEnv;   // 夜間/隧道內:鵝黃
+    if (k !== this._roomK || env !== this._roomEnvNow) {
+      this._roomK = k;
+      this._roomEnvNow = env;
+      for (const m of this.interiorMats) {
+        if (m.envMap !== this.roomEnv && m.envMap !== this.warmEnv) continue;
+        m.envMap = env;
+        m.envMapIntensity = (m.userData.envBase ?? 1) * k;
+      }
+    }
     if (this.scenery.background) g.scene.environmentIntensity = a.env;
     g.sfx.setRumble(this.run.v / this.type.maxSpeed, this.scenery.tunnelF);
   }
