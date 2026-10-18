@@ -94,8 +94,11 @@ export class Sfx {
   lose() { [392, 330, 262].forEach((f, i) => this._tone(f, 0.5, { delay: i * 0.25, gain: 0.12, type: 'triangle' })); }
 }
 
+/** 微軟語音的中文名稱(Edge 內建語音以中文命名;含簡體寫法) */
+const VOICE_ALIASES = { HsiaoChen: ['曉臻', '晓臻'], YunJhe: ['雲哲', '云哲'], HsiaoYu: ['曉雨', '晓雨'] };
+
 const ROLE_LABEL = {
-  attendant: '服勤員', passengerM: '乘客', passengerF: '乘客', child: '小朋友', grandma: '阿嬤',
+  attendant: '服勤員', passengerM: '乘客', passengerF: '乘客', passengerF2: '乘客', child: '小朋友', grandma: '阿嬤',
   conductor: '列車廣播', conductorEn: '列車廣播', station: '車站廣播', stationEn: '車站廣播',
 };
 
@@ -135,9 +138,9 @@ export class Voice {
   }
 
   get source() {
-    if (this.files.size) return `微軟 Azure 語音音檔 ${this.files.size} 句(雲哲・曉臻・曉雨)`;
-    const ms = ['HsiaoChen', 'YunJhe', 'HsiaoYu'].filter((n) => this.synthVoices?.some((v) => v.name.includes(n)));
-    return ms.length ? `瀏覽器內建微軟語音(${ms.map((n) => ({ HsiaoChen: '曉臻', YunJhe: '雲哲', HsiaoYu: '曉雨' }[n])).join('・')})`
+    if (this.files.size) return `預先錄製的微軟語音 ${this.files.size} 句(雲哲・曉臻・曉雨)`;
+    const ms = ['HsiaoChen', 'YunJhe', 'HsiaoYu'].filter((n) => this.synthVoices?.some((v) => [n, ...VOICE_ALIASES[n]].some((x) => v.name.includes(x))));
+    return ms.length ? `瀏覽器內建微軟 AI 語音(${ms.map((n) => VOICE_ALIASES[n][0]).join('・')})`
       : '瀏覽器語音(未偵測到微軟曉臻/雲哲/曉雨,建議用 Edge 瀏覽器開啟)';
   }
 
@@ -238,9 +241,14 @@ export class Voice {
     const cfg = VOICES[line.role];
     const u = new SpeechSynthesisUtterance(line.text);
     u.lang = cfg.lang;
+    // Edge 內建的微軟 AI 語音名稱為中文(例:「Microsoft 曉臻 Online (Natural)」),其他平台可能是英文名;
+    // 找不到指定聲音時,優先挑同語言的 Online (Natural) AI 語音,最後才用舊式語音
     const short = cfg.voice.split('-')[2]?.replace('Neural', '');
-    u.voice = this.synthVoices.find((v) => short && v.name.includes(short))
-      || this.synthVoices.find((v) => v.lang === cfg.lang)
+    const names = [short, ...(VOICE_ALIASES[short] || [])].filter(Boolean);
+    const sameLang = (v) => v.lang === cfg.lang || v.lang.replace('_', '-') === cfg.lang;
+    u.voice = this.synthVoices.find((v) => names.some((n) => v.name.includes(n)))
+      || this.synthVoices.find((v) => sameLang(v) && /Natural|Online/.test(v.name))
+      || this.synthVoices.find(sameLang)
       || this.synthVoices.find((v) => v.lang.startsWith(cfg.lang.slice(0, 2))) || null;
     const pct = (s) => (s ? parseFloat(s) / 100 : 0);
     u.pitch = 1 + pct(cfg.pitch);

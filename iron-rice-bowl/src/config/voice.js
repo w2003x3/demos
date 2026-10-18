@@ -8,16 +8,18 @@ import { INCIDENTS } from './incidents.js';
 import { MISSIONS } from './missions.js';
 
 // 角色 → Azure Neural 語音與語調(SSML prosody)
+// 聲音分配:廣播一律男聲(雲哲 / 英文男聲);販售員 = 曉臻;乘客 = 雲哲・曉雨・曉臻 三聲混用
 export const VOICES = {
   attendant:   { voice: 'zh-TW-HsiaoChenNeural', lang: 'zh-TW', rate: '+5%' },
   passengerM:  { voice: 'zh-TW-YunJheNeural', lang: 'zh-TW' },
   passengerF:  { voice: 'zh-TW-HsiaoYuNeural', lang: 'zh-TW' },
+  passengerF2: { voice: 'zh-TW-HsiaoChenNeural', lang: 'zh-TW', pitch: '+4%' },
   child:       { voice: 'zh-TW-HsiaoYuNeural', lang: 'zh-TW', pitch: '+25%', rate: '+10%' },
   grandma:     { voice: 'zh-TW-HsiaoChenNeural', lang: 'zh-TW', pitch: '-15%', rate: '-12%' },
   conductor:   { voice: 'zh-TW-YunJheNeural', lang: 'zh-TW', rate: '-5%' },
   conductorEn: { voice: 'en-US-GuyNeural', lang: 'en-US', rate: '-5%' },
-  station:     { voice: 'zh-TW-HsiaoYuNeural', lang: 'zh-TW', rate: '-8%' },
-  stationEn:   { voice: 'en-US-JennyNeural', lang: 'en-US', rate: '-5%' },
+  station:     { voice: 'zh-TW-YunJheNeural', lang: 'zh-TW', rate: '-8%' },
+  stationEn:   { voice: 'en-US-ChristopherNeural', lang: 'en-US', rate: '-5%' },
 };
 
 const PASSENGER_LINES = {
@@ -86,11 +88,13 @@ export function buildVoiceLines() {
   for (const [k, t] of Object.entries(PASSENGER_LINES)) {
     add(`pax_${k}_m`, 'passengerM', t);
     add(`pax_${k}_f`, 'passengerF', t);
+    add(`pax_${k}_f2`, 'passengerF2', t);
   }
   for (const it of Object.values(ITEMS)) {
     const t = `給我一${it.unit}${it.name}。`;
     add(`order_${it.id}_m`, 'passengerM', t);
     add(`order_${it.id}_f`, 'passengerF', t);
+    add(`order_${it.id}_f2`, 'passengerF2', t);
   }
   for (const inc of INCIDENTS) {
     const v = INCIDENT_VOICE[inc.id];

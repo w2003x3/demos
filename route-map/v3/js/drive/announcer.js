@@ -52,9 +52,12 @@ export class Announcer {
         const all = speechSynthesis.getVoices();
         const pick = (tag, prefer) => {
             const cands = all.filter(v => v.lang && v.lang.replace('_', '-').toLowerCase().startsWith(tag.toLowerCase()));
-            return cands.find(v => prefer.some(p => v.name.includes(p))) || cands[0] || null;
+            // 依偏好順序挑(不是依清單順序):先找最優先的名稱
+            for (const p of prefer) { const v = cands.find(c => c.name.includes(p)); if (v) return v; }
+            return cands[0] || null;
         };
-        this.voices.zh = pick('zh-TW', ['HsiaoChen', 'Hsiao', 'Yating', 'Hanhan', 'Google', 'Natural']) || pick('zh', ['Natural', 'Google']);
+        // Edge 內建微軟 AI 語音以中文命名(「Microsoft 曉臻 Online (Natural)」),優先於舊式的雅婷/漢漢
+        this.voices.zh = pick('zh-TW', ['曉臻', 'HsiaoChen', '曉雨', 'HsiaoYu', 'Natural', 'Online', 'Google', 'Yating', 'Hanhan']) || pick('zh', ['Natural', 'Google']);
         this.voices.en = pick('en-US', ['Jenny', 'Aria', 'Natural', 'Google', 'Zira']) || pick('en', []);
     }
 

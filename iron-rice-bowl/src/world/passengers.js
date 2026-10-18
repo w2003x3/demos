@@ -35,7 +35,8 @@ export class Passengers {
     if (!occupied) return;
     seat.matrix = new THREE.Matrix4().compose(new THREE.Vector3(seat.x, 0, seat.z),
       new THREE.Quaternion(), new THREE.Vector3(1, 0.92 + this.R() * 0.14, 1));
-    seat.gender = this.R() < 0.5 ? 'm' : 'f';
+    // 乘客聲音(語音 ID 尾碼):m = 雲哲、f = 曉雨、f2 = 曉臻(三聲混用)
+    seat.gender = this.R() < 0.5 ? 'm' : this.R() < 0.5 ? 'f' : 'f2';
     seat.colors = {};
     for (const k of Object.keys(PALETTE)) seat.colors[k] = new THREE.Color(pick(PALETTE[k], this.R));
   }

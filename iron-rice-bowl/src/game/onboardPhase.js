@@ -344,7 +344,7 @@ export class OnboardPhase {
     this._sat(-6);
     if (inc.def.prop === 'adult' || inc.def.prop === 'kid') {
       g.ui.toast('推車撞到乘客了!', 'bad');
-      const gender = this.R() < 0.5 ? 'm' : 'f';
+      const gender = ['m', 'f', 'f2'][(this.R() * 3) | 0];
       g.voice.talk([{ id: 'att_sorry_crash', anchor: this.crew.head }, { id: `pax_crash_${gender}`, anchor: inc.anchor }]);
       this._complain(`推車撞到乘客(${inc.def.title})`);
     } else {
