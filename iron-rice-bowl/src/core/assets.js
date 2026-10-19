@@ -84,8 +84,23 @@ async function loadRail(base, onProgress) {
  * 寫實服勤人員:餐服員(推車姿勢)、列車長(站姿),衣服染成藏青色制服。
  * 輸出已轉成面向 +X(與 Blender 人偶相同),可直接取代 assets.attendant。
  */
+/**
+ * 寫實工作人員:依序嘗試 ids 中的人物,衣服染成 color;push = 雙臂往前(推車/在工作檯操作)。
+ * 回傳面向 +X 的 Group(rail-assets 未載入或都無法擺姿勢時為 null)。
+ */
+export function workerFigure(ra, ids, color, push) {
+  return ra ? makeCrewWith(ra)(ids, color, push) : null;
+}
+
 function makeCrew(ra) {
-  const mk = (ids, color, push) => {
+  const mk = makeCrewWith(ra);
+  const attendant = mk(['female-business-04', 'female-adult-03', 'female-adult-09', 'female-adult-01', 'female-adult-04', 'male-adult-03'], '#1f2d52', true);
+  const conductor = mk(['male-business-02', 'male-adult-10', 'male-adult-08', 'male-adult-03'], '#141c30', false);
+  return attendant && conductor ? { attendant, conductor } : null;
+}
+
+function makeCrewWith(ra) {
+  return (ids, color, push) => {
     let body = null;
     for (const id of ids.filter((x) => ra.loaded.has(x))) {
       const o = person(ra, id);
@@ -99,9 +114,6 @@ function makeCrew(ra) {
     g.add(body);
     return g;
   };
-  const attendant = mk(['female-business-04', 'female-adult-03', 'female-adult-09', 'female-adult-01', 'female-adult-04', 'male-adult-03'], '#1f2d52', true);
-  const conductor = mk(['male-business-02', 'male-adult-10', 'male-adult-08', 'male-adult-03'], '#141c30', false);
-  return attendant && conductor ? { attendant, conductor } : null;
 }
 
 /**

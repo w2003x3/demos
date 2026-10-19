@@ -9,9 +9,11 @@ import { ITEMS, ITEM_LIST } from '../config/items.js';
 import { canvasTexture, rng } from '../core/textures.js';
 
 const L = 0.18, W = 0.13, TRAY_H = 0.034, RICE_Y = 0.025;
+export const BENTO_SIZE = { L, W, TRAY_H, RICE_Y };
 const font = '"Noto Sans TC","Microsoft JhengHei",sans-serif';
 
 let shared = null;
+export function foodMats() { return mats(); }
 function mats() {
   if (shared) return shared;
   const R = rng(17);
@@ -115,6 +117,27 @@ function riceBed(R) {
   return g;
 }
 
+function lidLabel(it) {
+  const S = mats();
+  if (!S.labels[it.id]) {
+    const col = it.color || { pork: '#b23a2a', chicken: '#c98a1c', veg: '#3f7d3a' }[it.id] || '#555';
+    const tex = canvasTexture(256, 150, (c, w, h) => {
+      c.fillStyle = '#f7f1e2'; c.fillRect(0, 0, w, h);
+      c.fillStyle = col; c.fillRect(0, 0, w, 30); c.fillRect(0, h - 18, w, 18);
+      c.fillStyle = '#fff'; c.font = `bold 22px ${font}`; c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText('臺鐵便當', w / 2, 16);
+      c.fillStyle = '#1b1b1b'; c.font = `bold 50px ${font}`;
+      const label = it.label || it.name.replace('便當', '');
+      c.font = `bold ${label.length > 3 ? Math.floor(150 / label.length) + 6 : 50}px ${font}`;
+      c.fillText(label, w / 2, h / 2 + 6);
+      c.font = `bold 20px ${font}`; c.fillStyle = col;
+      c.fillText(`NT$ ${it.price}`, w / 2, h - 34);
+    }, { wrap: false });
+    S.labels[it.id] = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.7, polygonOffset: true, polygonOffsetFactor: -1 });
+  }
+  return S.labels[it.id];
+}
+
 function halfEgg(matte, glossy, x, z, ry) {
   const base = M(x, RICE_Y + 0.001, z, 0, ry, 0);
   const shell = new THREE.SphereGeometry(1, 16, 8, 0, Math.PI * 2, Math.PI / 2, Math.PI / 2);
@@ -126,102 +149,139 @@ function halfEgg(matte, glossy, x, z, ry) {
   matte.push(part(yolk, '#e9a62a', base.clone().multiply(M(0.002, 0.0118, 0, 0, 0, 0, 0.012, 0.004, 0.009))));
 }
 
-function sides(R, matte, glossy, { egg = 'half', tofu = true, corn = false }) {
-  // 高麗菜(右前)
-  for (let i = 0; i < 6; i++) {
-    matte.push(part(lump(R, 0.016, 0.005, 0.012), ['#a9cf72', '#c6dd92', '#8fbf5c'][i % 3],
-      M(-0.058 + R() * 0.03, RICE_Y + 0.004 + R() * 0.004, 0.035 + R() * 0.018, R() * 0.6, R() * 6, R() * 0.6)));
-  }
-  // 酸菜(左前)
-  for (let i = 0; i < 7; i++) {
-    glossy.push(part(lump(R, 0.008, 0.004, 0.006), ['#6d6b25', '#5c5a1e', '#7a7630'][i % 3],
-      M(-0.02 + R() * 0.024, RICE_Y + 0.004, 0.042 + R() * 0.014, 0, R() * 6, 0)));
-  }
-  // 黃蘿蔔(三片半圓)
-  for (let i = 0; i < 3; i++) {
-    const g = new THREE.CylinderGeometry(0.012, 0.012, 0.0028, 18, 1, false, 0, Math.PI);
-    glossy.push(part(g, '#f2c42a', M(-0.07 + i * 0.008, RICE_Y + 0.004 + i * 0.0012, -0.04, 0.35, 0.4, 0)));
-  }
-  if (egg === 'half') halfEgg(matte, glossy, -0.06, -0.008, 0.3);
-  if (egg === 'whole') glossy.push(part(new THREE.SphereGeometry(1, 18, 12), '#7e4b1f', M(-0.062, RICE_Y + 0.012, -0.006, 0, 0.4, 0, 0.024, 0.016, 0.017)));
-  if (tofu) {
-    for (let i = 0; i < 2; i++) glossy.push(part(new THREE.BoxGeometry(0.022, 0.008, 0.02), '#6e4220', M(-0.032 + i * 0.012, RICE_Y + 0.005 + i * 0.003, -0.035 + i * 0.006, 0.08, R() * 0.6, 0.1)));
-  }
-  if (corn) {
-    const k = new THREE.SphereGeometry(0.0032, 6, 4);
-    for (let i = 0; i < 26; i++) glossy.push(part(k, '#f2cd38', M(-0.064 + R() * 0.03, RICE_Y + 0.003 + R() * 0.002, -0.032 + R() * 0.02, 0, 0, 0, 1, 0.8, 1.15)));
-  }
-}
+/**
+ * 便當的組成元件(廚房關卡逐項加入;推車上的成品把全部元件合併)。
+ * 鍵:rice 白飯、pork 滷排骨、chicken 炸雞腿、vegpatty 煎素排、egg 滷蛋、tofu 滷豆干、
+ *     cabbage 炒高麗菜、pickle 酸菜、radish 黃蘿蔔、corn 玉米粒
+ * 每個元件在盒中的位置固定(主菜在右半、配菜在左半);recipe 決定滷蛋是半顆(排骨)或整顆(雞腿)。
+ */
+export const BENTO_PARTS = ['rice', 'pork', 'chicken', 'vegpatty', 'egg', 'tofu', 'cabbage', 'pickle', 'radish', 'corn'];
+export const RECIPES = {
+  pork: ['rice', 'pork', 'egg', 'tofu', 'cabbage', 'pickle', 'radish'],
+  chicken: ['rice', 'chicken', 'egg', 'cabbage', 'pickle', 'radish'],
+  veg: ['rice', 'vegpatty', 'tofu', 'corn', 'cabbage', 'radish'],
+};
+const SEED = { rice: 1, pork: 3, chicken: 5, vegpatty: 9, egg: 11, tofu: 13, cabbage: 17, pickle: 19, radish: 23, corn: 29 };
 
-function lidLabel(it) {
-  const S = mats();
-  if (!S.labels[it.id]) {
-    const col = { pork: '#b23a2a', chicken: '#c98a1c', veg: '#3f7d3a' }[it.id];
-    const tex = canvasTexture(256, 150, (c, w, h) => {
-      c.fillStyle = '#f7f1e2'; c.fillRect(0, 0, w, h);
-      c.fillStyle = col; c.fillRect(0, 0, w, 30); c.fillRect(0, h - 18, w, 18);
-      c.fillStyle = '#fff'; c.font = `bold 22px ${font}`; c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.fillText('臺鐵便當', w / 2, 16);
-      c.fillStyle = '#1b1b1b'; c.font = `bold 50px ${font}`;
-      c.fillText(it.name.replace('便當', ''), w / 2, h / 2 + 6);
-      c.font = `bold 20px ${font}`; c.fillStyle = col;
-      c.fillText(`NT$ ${it.price}`, w / 2, h - 34);
-    }, { wrap: false });
-    S.labels[it.id] = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.7, polygonOffset: true, polygonOffsetFactor: -1 });
-  }
-  return S.labels[it.id];
-}
-
-/** 臺鐵便當:黑色餐盒、白飯、主菜與配菜、透明上蓋、上蓋貼紙 */
-export function makeBento(id) {
-  const it = ITEMS[id], S = mats(), R = rng({ pork: 3, chicken: 5, veg: 9 }[id]);
-  const g = new THREE.Group();
-  g.name = it.model;
-  // 餐盒:圓角外框(擠出)+ 底板 + 上緣
-  const outer = roundRect(L, W, 0.012);
-  outer.holes.push(roundRect(L - 0.005, W - 0.005, 0.01));
-  const wall = new THREE.ExtrudeGeometry(outer, { depth: TRAY_H, bevelEnabled: false, curveSegments: 4 });
-  wall.rotateX(-Math.PI / 2);
-  const floor = new THREE.ShapeGeometry(roundRect(L - 0.004, W - 0.004, 0.01), 4);
-  floor.rotateX(-Math.PI / 2);
-  floor.translate(0, 0.002, 0);
-  const rimShape = roundRect(L + 0.006, W + 0.006, 0.014);
-  rimShape.holes.push(roundRect(L - 0.004, W - 0.004, 0.01));
-  const rim = new THREE.ExtrudeGeometry(rimShape, { depth: 0.0016, bevelEnabled: false, curveSegments: 4 });
-  rim.rotateX(-Math.PI / 2);
-  rim.translate(0, TRAY_H - 0.0016, 0);
-  g.add(new THREE.Mesh(mergeGeometries([wall, floor.toNonIndexed(), rim].map((x) => (x.index ? x.toNonIndexed() : x)).map((x) => { x.deleteAttribute('uv'); return x; })), S.tray));
-
-  const matte = [part(riceBed(R), '#f6f2e8')], glossy = [];
-  if (id === 'pork') {
-    matte.push(part(slab(R, 0.052, 0.034, 0.007), '#b06a2c', M(0.035, RICE_Y + 0.001, 0.004, 0.06, 0.25, -0.04)));
-    glossy.push(part(new THREE.CylinderGeometry(0.0035, 0.004, 0.022, 8), '#e9dcc0', M(0.083, RICE_Y + 0.006, 0.02, 0, 0.25, Math.PI / 2)));   // 排骨的骨頭
-    sides(R, matte, glossy, { egg: 'half', tofu: true });
-  } else if (id === 'chicken') {
-    // 滷雞腿:車床曲線(骨頭端細、肉的部分飽滿)
+export function bentoPartGeos(key, recipe = 'pork') {
+  const R = rng(SEED[key] || 7);
+  const matte = [], glossy = [];
+  if (key === 'rice') matte.push(part(riceBed(R), '#f6f2e8'));
+  else if (key === 'pork') {
+    // 滷排骨:醬色、表面油亮,帶一小段骨頭
+    glossy.push(part(slab(R, 0.052, 0.034, 0.007), '#6e3416', M(0.035, RICE_Y + 0.001, 0.004, 0.06, 0.25, -0.04)));
+    glossy.push(part(new THREE.CylinderGeometry(0.0035, 0.004, 0.022, 8), '#e9dcc0', M(0.083, RICE_Y + 0.006, 0.02, 0, 0.25, Math.PI / 2)));
+  } else if (key === 'chicken') {
+    // 炸雞腿:金黃酥脆的麵衣(霧面,貼圖斑點像麵衣顆粒)
     const prof = [[0, 0], [0.006, 0.002], [0.0065, 0.012], [0.009, 0.026], [0.017, 0.042], [0.022, 0.058], [0.021, 0.072], [0.014, 0.084], [0.004, 0.09], [0, 0.091]]
       .map(([r, y]) => new THREE.Vector2(r, y));
     const leg = new THREE.LatheGeometry(prof, 20);
     const pos = leg.attributes.position;
-    for (let i = 0; i < pos.count; i++) pos.setX(i, pos.getX(i) * 1.0), pos.setZ(i, pos.getZ(i) * 0.78);
+    for (let i = 0; i < pos.count; i++) pos.setZ(i, pos.getZ(i) * 0.78);
     leg.computeVertexNormals();
-    glossy.push(part(leg, '#6a3514', M(0.078, RICE_Y + 0.012, 0.004, 0, 0.2, Math.PI / 2)));
+    matte.push(part(leg, '#b8762e', M(0.078, RICE_Y + 0.012, 0.004, 0, 0.2, Math.PI / 2)));
     glossy.push(part(new THREE.SphereGeometry(0.0055, 10, 8), '#ecdfc4', M(0.081, RICE_Y + 0.012, 0.0055, 0, 0, 0, 1.2, 1, 1)));
-    sides(R, matte, glossy, { egg: 'whole', tofu: false });
-  } else {
-    matte.push(part(slab(R, 0.048, 0.032, 0.008), '#c69248', M(0.035, RICE_Y + 0.001, 0.004, 0.05, -0.2, 0.03)));
-    sides(R, matte, glossy, { egg: null, tofu: true, corn: true });
+  } else if (key === 'vegpatty') {
+    // 煎素排:兩面煎上色
+    matte.push(part(slab(R, 0.048, 0.032, 0.008), '#c18a43', M(0.035, RICE_Y + 0.001, 0.004, 0.05, -0.2, 0.03)));
+  } else if (key === 'egg') {
+    if (recipe === 'chicken') glossy.push(part(new THREE.SphereGeometry(1, 18, 12), '#7e4b1f', M(-0.062, RICE_Y + 0.012, -0.006, 0, 0.4, 0, 0.024, 0.016, 0.017)));
+    else halfEgg(matte, glossy, -0.06, -0.008, 0.3);
+  } else if (key === 'tofu') {
+    for (let i = 0; i < 2; i++) glossy.push(part(new THREE.BoxGeometry(0.022, 0.008, 0.02), '#6e4220', M(-0.032 + i * 0.012, RICE_Y + 0.005 + i * 0.003, -0.035 + i * 0.006, 0.08, R() * 0.6, 0.1)));
+  } else if (key === 'cabbage') {
+    for (let i = 0; i < 6; i++) {
+      matte.push(part(lump(R, 0.016, 0.005, 0.012), ['#a9cf72', '#c6dd92', '#8fbf5c'][i % 3],
+        M(-0.058 + R() * 0.03, RICE_Y + 0.004 + R() * 0.004, 0.035 + R() * 0.018, R() * 0.6, R() * 6, R() * 0.6)));
+    }
+  } else if (key === 'pickle') {
+    for (let i = 0; i < 7; i++) {
+      glossy.push(part(lump(R, 0.008, 0.004, 0.006), ['#6d6b25', '#5c5a1e', '#7a7630'][i % 3],
+        M(-0.02 + R() * 0.024, RICE_Y + 0.004, 0.042 + R() * 0.014, 0, R() * 6, 0)));
+    }
+  } else if (key === 'radish') {
+    for (let i = 0; i < 3; i++) {
+      const g = new THREE.CylinderGeometry(0.012, 0.012, 0.0028, 18, 1, false, 0, Math.PI);
+      glossy.push(part(g, '#f2c42a', M(-0.07 + i * 0.008, RICE_Y + 0.004 + i * 0.0012, -0.04, 0.35, 0.4, 0)));
+    }
+  } else if (key === 'corn') {
+    const k = new THREE.SphereGeometry(0.0032, 6, 4);
+    for (let i = 0; i < 26; i++) glossy.push(part(k, '#f2cd38', M(-0.064 + R() * 0.03, RICE_Y + 0.003 + R() * 0.002, -0.032 + R() * 0.02, 0, 0, 0, 1, 0.8, 1.15)));
   }
-  g.add(new THREE.Mesh(mergeGeometries(matte), S.matte), new THREE.Mesh(mergeGeometries(glossy), S.glossy));
+  return { matte, glossy };
+}
 
-  // 透明上蓋(PET):略大於餐盒、高 1.8 cm,圓角
-  const lid = new THREE.Mesh(new RoundedBoxGeometry(L + 0.004, 0.018, W + 0.004, 3, 0.006), S.lid);
+/** 單一元件的網格(廚房組裝時逐項顯示) */
+export function makeBentoPart(key, recipe) {
+  const S = mats(), { matte, glossy } = bentoPartGeos(key, recipe);
+  const g = new THREE.Group();
+  g.name = `part_${key}`;
+  if (matte.length) g.add(new THREE.Mesh(mergeGeometries(matte), S.matte));
+  if (glossy.length) g.add(new THREE.Mesh(mergeGeometries(glossy), S.glossy));
+  g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+  return g;
+}
+
+let trayGeo = null;
+/** 黑色餐盒(圓角外框 + 底板 + 上緣) */
+export function makeBentoTray() {
+  if (!trayGeo) {
+    const outer = roundRect(L, W, 0.012);
+    outer.holes.push(roundRect(L - 0.005, W - 0.005, 0.01));
+    const wall = new THREE.ExtrudeGeometry(outer, { depth: TRAY_H, bevelEnabled: false, curveSegments: 4 });
+    wall.rotateX(-Math.PI / 2);
+    const floor = new THREE.ShapeGeometry(roundRect(L - 0.004, W - 0.004, 0.01), 4);
+    floor.rotateX(-Math.PI / 2);
+    floor.translate(0, 0.002, 0);
+    const rimShape = roundRect(L + 0.006, W + 0.006, 0.014);
+    rimShape.holes.push(roundRect(L - 0.004, W - 0.004, 0.01));
+    const rim = new THREE.ExtrudeGeometry(rimShape, { depth: 0.0016, bevelEnabled: false, curveSegments: 4 });
+    rim.rotateX(-Math.PI / 2);
+    rim.translate(0, TRAY_H - 0.0016, 0);
+    trayGeo = mergeGeometries([wall, floor.toNonIndexed(), rim].map((x) => (x.index ? x.toNonIndexed() : x)).map((x) => { x.deleteAttribute('uv'); return x; }));
+  }
+  const m = new THREE.Mesh(trayGeo, mats().tray);
+  m.name = 'tray';
+  m.castShadow = m.receiveShadow = true;
+  return m;
+}
+
+let lidGeo = null;
+/** 透明上蓋(PET,略大於餐盒、高 1.8 cm);recipe 給定時加上蓋子貼紙 */
+export function makeBentoLid(recipe = null) {
+  const S = mats();
+  lidGeo ??= new RoundedBoxGeometry(L + 0.004, 0.018, W + 0.004, 3, 0.006);
+  const g = new THREE.Group();
+  g.name = 'lid';
+  const lid = new THREE.Mesh(lidGeo, S.lid);
   lid.position.y = TRAY_H + 0.009 - 0.0016;
   lid.renderOrder = 2;
-  const sticker = new THREE.Mesh(new THREE.PlaneGeometry(0.06, 0.036), lidLabel(it));
-  sticker.rotation.set(-Math.PI / 2, -Math.PI / 2, 0, 'YXZ');   // 平放、文字上方朝 +X:站在推車把手側(-X)看是正的
-  sticker.position.set(-0.058, TRAY_H + 0.0166, 0.032);
-  g.add(lid, sticker);
+  g.add(lid);
+  if (recipe) {
+    // recipe:推車品項 id,或關卡便當的貼紙資料 { id, name, label, price, color }
+    const sticker = new THREE.Mesh(new THREE.PlaneGeometry(0.06, 0.036), lidLabel(typeof recipe === 'string' ? ITEMS[recipe] : recipe));
+    sticker.rotation.set(-Math.PI / 2, -Math.PI / 2, 0, 'YXZ');   // 平放、文字上方朝 +X:站在推車把手側(-X)看是正的
+    sticker.position.set(-0.058, TRAY_H + 0.0166, 0.032);
+    sticker.name = 'sticker';
+    g.add(sticker);
+  }
+  return g;
+}
+
+/** 臺鐵便當成品:黑色餐盒、白飯、主菜與配菜、透明上蓋、上蓋貼紙(推車與廚房成品共用) */
+export function makeBento(id) {
+  const it = ITEMS[id], S = mats();
+  const g = new THREE.Group();
+  g.name = it.model;
+  g.add(makeBentoTray());
+  const matte = [], glossy = [];
+  for (const k of RECIPES[id]) {
+    const p = bentoPartGeos(k, id);
+    matte.push(...p.matte);
+    glossy.push(...p.glossy);
+  }
+  g.add(new THREE.Mesh(mergeGeometries(matte), S.matte), new THREE.Mesh(mergeGeometries(glossy), S.glossy));
+  g.add(makeBentoLid(id));
   g.traverse((o) => { if (o.isMesh) { o.castShadow = o.material !== S.lid; o.receiveShadow = true; } });
   return g;
 }

@@ -1,3 +1,4 @@
+import { KITCHEN_LEVELS } from './kitchen.js';
 // 任務 = 依序執行的階段(phases)。目前實作 'onboard'(車上販售);
 // 'station'(大站下車 → 換月台 → 等指定列車領便當 → 上另一班車)已預留介面,見 src/game/stationPhase.js。
 
@@ -104,12 +105,13 @@ export const DRIVER_MISSION = {
 };
 
 // 被調職後的工作(預留):台鐵便當廚房
-export const KITCHEN_MISSION = {
-  id: 'k1',
-  locked: true,
-  title: '台鐵便當廚房',
-  subtitle: '調職後 · 開發中',
-  difficulty: 2,
-  brief: '被調職到便當廚房:盛飯、擺上排骨與滷蛋、封盒,在出車前趕出指定數量的便當。',
-  phases: [{ type: 'kitchen' }],
-};
+/** 便當廚房:每個關卡一個任務(經典款 + 騰雲座艙各餐旅分處) */
+export const KITCHEN_MISSIONS = KITCHEN_LEVELS.map((L) => ({
+  id: L.id,
+  title: `便當廚房・${L.title}`,
+  subtitle: `${L.branch} · ${Object.values(L.bentos).map((b) => b.name).join('/')}`,
+  difficulty: L.difficulty,
+  brief: `${L.brief}依製作單組裝(盒 → 飯 → 主菜與配菜 → 蓋子),成品要和樣品一模一樣,再放到對應的成品架。缺料自己補,裝錯要賠錢記點。`,
+  phases: [{ type: 'kitchen', level: L.id, timeLimit: L.timeLimit, quota: L.quota }],
+}));
+export const KITCHEN_MISSION = KITCHEN_MISSIONS[0];

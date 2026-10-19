@@ -210,6 +210,7 @@ export class UI {
 
   brief(m, onStart, onBack) {
     const ph = m.phases[0];
+    if (ph.type === 'kitchen') return this.kitchenBrief(m, onStart, onBack);
     const s = this.showScreen(`
       <div class="card brief tall">
         <h2>${esc(m.title)} <small>${esc(m.subtitle)}</small></h2>
@@ -223,6 +224,25 @@ export class UI {
         <p class="tip">頭上 🍱 = 想買東西(等太久會放棄)、走道 ❗ = 狀況。結帳要<b>心算總金額</b>,少算虧損、多算客訴。<br>
         操作方式見選單或暫停中的「📖 操作說明」。</p>
         <div class="actions"><button class="ghost" id="b-back">返回</button><button id="b-start">開始服勤(Enter)</button></div>
+      </div>`, 'dim');
+    $('#b-start', s).addEventListener('click', onStart);
+    $('#b-back', s).addEventListener('click', onBack);
+  }
+
+  kitchenBrief(m, onStart, onBack) {
+    const ph = m.phases[0];
+    const s = this.showScreen(`
+      <div class="card brief tall">
+        <h2>${esc(m.title)} <small>${esc(m.subtitle)}</small></h2>
+        <p>${esc(m.brief)}</p>
+        <table class="kv">
+          <tr><th>任務目標</th><td>出車前 <b>${Math.round(ph.timeLimit / 60)} 分鐘</b>內做好 <b>${ph.quota}</b> 個便當(製作單隨機:排骨/雞腿/素食,做完一個才來下一個)</td></tr>
+          <tr><th>組裝順序</th><td>便當盒 → 飯 → 主菜與配菜 → 蓋子,再拿到對應款式的成品架</td></tr>
+          <tr><th>裝錯</th><td>內容不符或放錯架子:賠償售價、記點 1</td></tr>
+          <tr><th>缺料</th><td>到對應的工作站自己做(炊飯機、滷鍋、炒鍋、油炸機、煎台、砧板),便當盒/蓋子去倉庫搬。有些要多道工序(例如先炸後滷、先切再炒)。烹煮時可去做別的事,完成後太久沒起鍋會燒焦</td></tr>
+        </table>
+        <p class="tip"><kbd>WASD</kbd>/方向鍵 移動(或點地板、右側工作站清單自動走過去)・<kbd>E</kbd> 操作・組裝時用數字鍵 <kbd>1</kbd>~<kbd>0</kbd>、<kbd>-</kbd>、<kbd>=</kbd> 放材料,<kbd>⌫</kbd> 倒掉重做</p>
+        <div class="actions"><button class="ghost" id="b-back">返回</button><button id="b-start">開始上工(Enter)</button></div>
       </div>`, 'dim');
     $('#b-start', s).addEventListener('click', onStart);
     $('#b-back', s).addEventListener('click', onBack);
@@ -334,6 +354,7 @@ export class UI {
   }
 
   result(m, r, career, onRetry, onMenu) {
+    if (r.kind === 'kitchen') return this.kitchenResult(m, r, career, onRetry, onMenu);
     const stars = r.success ? 1 + (r.sat >= 70 && !r.complaints.length ? 1 : 0) + (r.sat >= 90 && r.missed <= 2 && !r.underCount ? 1 : 0) : 0;
     // career = 本次人事異動紀錄(null = 沒有異動)
     const notice = !career ? ''
@@ -359,6 +380,32 @@ export class UI {
         <div class="actions"><button class="ghost" id="b-menu">回任務選單</button>${career && career.to !== '列車餐服員' ? '' : '<button id="b-retry">再挑戰一次(Enter)</button>'}</div>
       </div>`, 'dim');
     $('#b-retry', s)?.addEventListener('click', onRetry);
+    $('#b-menu', s).addEventListener('click', onMenu);
+  }
+
+  /** 便當廚房結算 */
+  kitchenResult(m, r, career, onRetry, onMenu) {
+    const stars = r.success ? 1 + (r.mistakes === 0 ? 1 : 0) + (r.mistakes === 0 && !r.burnt && r.timeLeft >= 60 ? 1 : 0) : 0;
+    const notice = !career ? ''
+      : `<div class="c-status ${career.kind === 'promote' ? 'good' : 'bad'} big">${career.kind === 'promote' ? '🎉' : '📋'} 人事命令:${esc(career.from)} ${esc(career.verb)}「${esc(career.to)}」<br><small>${esc(career.reason)}</small></div>`;
+    const fmt = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    const s = this.showScreen(`
+      <div class="card result ${r.success ? 'ok' : 'fail'}">
+        <h2>${r.success ? '準時出車!' : '來不及出車'}</h2>
+        ${r.reason ? `<p class="reason">${esc(r.reason)}</p>` : ''}
+        ${notice}
+        <div class="big-stars">${'★'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>
+        <table class="kv">
+          <tr><th>完成便當</th><td>${r.made} / ${r.quota}</td><th>剩餘時間</th><td>${fmt(r.timeLeft)}</td></tr>
+          <tr><th>記點</th><td>${r.mistakes} 點</td><th>賠償</th><td>$${r.fines}</td></tr>
+          <tr><th>內容裝錯</th><td>${r.wrongContent} 個</td><th>放錯架子</th><td>${r.wrongRack} 個</td></tr>
+          <tr><th>燒焦</th><td>${r.burnt} 鍋</td><th></th><td></td></tr>
+        </table>
+        <h3>裝錯紀錄 ${r.log.length} 筆</h3>
+        ${r.log.length ? `<ul class="complaints">${r.log.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>` : '<p class="muted-txt">全部正確,做得好!</p>'}
+        <div class="actions"><button class="ghost" id="b-menu">回任務選單</button><button id="b-retry">再挑戰一次(Enter)</button></div>
+      </div>`, 'dim');
+    $('#b-retry', s).addEventListener('click', onRetry);
     $('#b-menu', s).addEventListener('click', onMenu);
   }
 

@@ -199,7 +199,7 @@ const VOICE_ALIASES = { HsiaoChen: ['曉臻', '晓臻'], YunJhe: ['雲哲', '云
 
 const ROLE_LABEL = {
   attendant: '服勤員', passengerM: '乘客', passengerF: '乘客', passengerF2: '乘客', child: '小朋友', grandma: '阿嬤', grandma2: '阿嬤',
-  conductor: '列車廣播', conductorEn: '列車廣播', station: '車站廣播', stationEn: '車站廣播',
+  conductor: '列車廣播', conductorEn: '列車廣播', station: '車站廣播', stationEn: '車站廣播', kitchenBoss: '廚房主任',
 };
 
 /**

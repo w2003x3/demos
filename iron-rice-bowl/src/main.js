@@ -1,7 +1,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
-import { MISSIONS, DRIVER_MISSION, KITCHEN_MISSION } from './config/missions.js';
+import { MISSIONS, DRIVER_MISSION, KITCHEN_MISSIONS } from './config/missions.js';
 import { RANKS, rankById } from './config/careerLadder.js';
 import { Career } from './game/career.js';
 import { KitchenPhase } from './game/kitchenPhase.js';
@@ -130,7 +130,14 @@ class Game {
       ? { ...m, locked: true, subtitle: `${m.subtitle} · 目前職位:${rank.title}` } : m));
     // 其他職位的任務:還沒到達該職位前不揭露內容
     const mask = (m, id) => (c.knows(id) ? m : { ...m, title: '？？？', subtitle: '未知職位', brief: '到達該職位後揭曉。' });
-    list.push(mask(DRIVER_MISSION, 'driver'), mask(KITCHEN_MISSION, 'kitchen'));
+    // 便當廚房:目前職位是廚房時可玩;網址加 ?kitchen 可直接試玩
+    const tryKitchen = new URLSearchParams(location.search).has('kitchen');
+    list.push(mask(DRIVER_MISSION, 'driver'));
+    for (const km of KITCHEN_MISSIONS) {
+      const kitchen = { ...km, locked: !(rank.phase === 'kitchen' || tryKitchen) };
+      list.push(tryKitchen ? kitchen : mask(kitchen, 'kitchen'));
+      if (!tryKitchen && !c.knows('kitchen')) break;   // 還沒到過廚房:只顯示一張未知卡片
+    }
     const name = (id) => (c.knows(id) ? rankById(id).title : '？？？');
     this.ui.menu(list, {
       muted: this.muted,
@@ -213,7 +220,7 @@ class Game {
 
   /** 首次遊戲:先看完操作說明(快捷鍵、畫面區塊、圖示)才開始。 */
   startMission(m) {
-    if (load(TUTORIAL_KEY, false)) { this.play(m); return; }
+    if (load(TUTORIAL_KEY, false) || m.phases[0].type !== 'onboard') { this.play(m); return; }
     this.state = 'tutorial';
     this.ui.tutorial(() => { save(TUTORIAL_KEY, true); this.play(m); }, { first: true });
   }
@@ -233,7 +240,10 @@ class Game {
     this.phase = new Phase(this, cfg);
     // 整備畫面:模型與全部語音音檔都載入完成才開始(期間可瀏覽菜色)
     this.foodThumbs ??= renderFoodThumbs();
-    this.prep = this.ui.prepare(ITEM_LIST, this.foodThumbs);
+    // 整備畫面:便當廚房顯示本關便當款式,其他顯示推車上的商品
+    this.prep = this.phase.prepItems
+      ? this.ui.prepare(this.phase.prepItems(), await this.phase.prepThumbs())
+      : this.ui.prepare(ITEM_LIST, this.foodThumbs);
     const voiceReady = this.voice.mode === 'browser' ? Promise.resolve() : this.voice.preload((p) => this.prep?.progress('voice', p));
     if (this.voice.mode === 'browser') this.prep.progress('voice', 1);
     try {
@@ -253,7 +263,7 @@ class Game {
       return;
     }
     this.ui.hideScreen();
-    this.ui.showHud(true);
+    this.ui.showHud(!this.phase.ownHud);   // 廚房等關卡有自己的介面
     this.clock.getDelta();
     this.state = 'play';
   }
@@ -300,7 +310,7 @@ class Game {
     } else if (this.state === 'brief') {
       if (inp.wasPressed('Enter', 'NumpadEnter')) this.startMission(this.pending);
     } else if (this.state === 'result') {
-      if (inp.wasPressed('Enter', 'NumpadEnter') && this.career.rank.phase === 'onboard') this.play(this.mission);
+      if (inp.wasPressed('Enter', 'NumpadEnter') && this.mission.phases[0].type === this.career.rank.phase) this.play(this.mission);
     }
     inp.endFrame();
     if (this.phase && this.state !== 'loading') this.renderer.render(this.scene, this.camera);
