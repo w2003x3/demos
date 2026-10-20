@@ -15,9 +15,15 @@ import { makeFoodPart, makeLevelBento, bulkFood, renderBentoThumbs } from '../wo
 import { workerFigure } from '../core/assets.js';
 import { KitchenSfx } from '../core/kitchenSfx.js';
 import { rng } from '../core/textures.js';
+import { HELPERS, HELPER_LINES } from '../config/helpers.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 const R_CHEF = 0.28, SPEED = 2.7, REACH = 1.05;
+const STEP_LEN = 0.7;          // 搬便當時每走一步的距離(m)
+const HELPER_AT = -1.55;       // 同事在組裝島台的位置(x)
+const STOLEN_COST = { main: 30, rice: 10, side: 8 };   // 被偷吃一份的成本(元)
+/** 搬 k 個便當時每一步掉落的機率 */
+export const dropChance = (k) => (k <= 2 ? 0 : Math.min(0.45, (k - 2) * 0.02 + (k - 2) ** 2 * 0.002));
 const COOK_STATIONS = ['rice', 'braise', 'wok', 'fryer', 'griddle'];
 const fmt = (s) => `${Math.floor(Math.max(0, s) / 60)}:${String(Math.floor(Math.max(0, s) % 60)).padStart(2, '0')}`;
 
@@ -102,7 +108,16 @@ export class KitchenPhase {
     this.asm = null;
     this.time = 0;
     this.left = this.cfg.timeLimit;
-    this.stats = { made: 0, mistakes: 0, fines: 0, wrongContent: 0, wrongRack: 0, burnt: 0, log: [] };
+    this.stats = { made: 0, mistakes: 0, fines: 0, wrongContent: 0, wrongRack: 0, burnt: 0, log: [], dropped: 0, dropValue: 0, stolen: [], stolenValue: 0, asmDone: 0, helperMade: 0 };
+    this.stack = [];               // 桌邊做好的便當(等玩家一次搬到成品架)
+    this.stackGroup = new THREE.Group();
+    this.root.add(this.stackGroup);
+    this.dropGroup = new THREE.Group();
+    this.root.add(this.dropGroup);
+    this.helper = null;
+    this.modal = null;
+    this.extraObs = [];
+    this._stepAcc = 0;
     this.ordersDone = 0;
     this.nagT = {};
     this.endTimer = null;
@@ -208,18 +223,100 @@ export class KitchenPhase {
 
   _finishBento() {
     const a = this.asm;
-    this.carry = { bento: true, order: this.order, parts: [...a.parts] };
-    // 成品拿在手上:直接用與推車相同的成品模型(內容錯誤時用組裝出來的樣子)
+    const item = { order: this.order, parts: [...a.parts], by: 'player' };
     this.root.remove(a.group);
-    const correct = this._contentOk(this.carry);
-    const b = this.B[this.order];
-    const obj = correct ? (b.classic ? makeBento(b.classic) : makeLevelBento(b, this.F)) : a.group;
-    obj.position.set(0, 0, 0);
-    obj.rotation.y = Math.PI / 2;
-    this._setCarryObj(obj);
+    // 正確的用與推車相同的成品模型,錯的保留組裝出來的樣子
+    item.obj = this._contentOk(item) ? this._bentoModel(item.order) : a.group;
+    item.obj.position.set(0, 0, 0);
+    this._pushStack(item);
     this.asm = { parts: [], box: false, group: null };
+    this.stats.asmDone++;
+    this._toast(`${this.B[item.order].name}完成,放在桌邊(按 F 一次拿起,搬到成品架)`);
+    this._newOrder();
+    this._renderPanel();
+    if (this.stats.asmDone >= 5 && !this.helperOffered) this._offerHelpers();
+  }
+
+  /** 放到桌邊堆疊(島台東側,3 落 × 6 層) */
+  _pushStack(item) {
+    this.stack.push(item);
+    this._layoutStack();
+  }
+
+  _layoutStack() {
+    this.stackGroup.clear();
+    const at = this.k.assemblyAt;
+    this.stack.forEach((it, i) => {
+      const col = Math.floor(i / 6) % 3, row = i % 6;
+      it.obj.position.set(at.x + 0.45 + col * 0.21, at.y + 0.002 + row * 0.053 + Math.floor(i / 18) * 0.32, at.z + 0.02);
+      it.obj.rotation.set(0, Math.PI / 2 + ((i * 37) % 7 - 3) * 0.01, 0);
+      this.stackGroup.add(it.obj);
+    });
+    this._renderOrder();
+  }
+
+  /** F:把桌邊的便當一次全部拿起來 */
+  _takeStack() {
+    if (!this.stack.length) { this._toast('桌邊沒有做好的便當', 'warn'); return; }
+    if (this.carry && !this.carry.bentos) { this._toast('手上有東西,先放好再拿便當', 'warn'); return; }
+    if (this._nearStation() !== 'assembly') { this._toast('要站在組裝台旁邊才拿得到', 'warn'); return; }
+    const list = this.carry?.bentos || [];
+    this.carry = { bentos: list.concat(this.stack.splice(0)) };
+    this._layoutStack();
+    this._refreshCarry();
     this._closePanel();
-    this._toast(`${this.B[this.order].name}完成,拿到「${this._sname(`rack_${this.order}`)}」`);
+    const k = this.carry.bentos.length;
+    this._toast(`拿起 ${k} 個便當${dropChance(k) > 0 ? `(每一步約 ${Math.round(dropChance(k) * 100)}% 會掉落,小心走)` : ''}`, dropChance(k) > 0.1 ? 'warn' : 'info');
+  }
+
+  /** 手上的便當疊成一落 */
+  _refreshCarry() {
+    const c = this.carry;
+    if (!c?.bentos) return;
+    const g = new THREE.Group();
+    c.bentos.forEach((b, i) => {
+      b.obj.position.set(Math.sin(i * 1.7) * 0.006, i * 0.054, 0);
+      b.obj.rotation.set(0, Math.PI / 2 + Math.sin(i * 2.3) * 0.04, 0);
+      g.add(b.obj);
+    });
+    this._setCarryObj(g);
+  }
+
+  /** 搬便當走路時掉落 */
+  _stepCarry(dist) {
+    const c = this.carry;
+    if (!c?.bentos) { this._stepAcc = 0; return; }
+    this._stepAcc += dist;
+    while (this._stepAcc >= STEP_LEN && this.carry?.bentos) {
+      this._stepAcc -= STEP_LEN;
+      const k = c.bentos.length;
+      if (this.R() < dropChance(k)) this._drop(Math.min(k, 1 + Math.floor(this.R() * (k / 5))));
+    }
+  }
+
+  _drop(n) {
+    const c = this.carry, P = this.p;
+    const fell = c.bentos.splice(c.bentos.length - n, n);
+    let value = 0;
+    fell.forEach((b, i) => {
+      value += this.B[b.order].price;
+      const o = b.obj;
+      this.carryAnchor.remove(o);
+      // 摔在腳邊:翻覆或側倒,蓋子歪掉
+      o.position.set(P.x + (this.R() - 0.5) * 0.9, 0.02 + (this.R() < 0.5 ? 0.06 : 0), P.z + (this.R() - 0.5) * 0.9);
+      o.rotation.set(this.R() < 0.5 ? Math.PI : (this.R() - 0.5) * 1.4, this.R() * 6, (this.R() - 0.5) * 1.2);
+      const lid = o.getObjectByName('lid');
+      if (lid) { lid.position.x += 0.08; lid.rotation.z = 0.4; }
+      this.dropGroup.add(o);
+    });
+    this.stats.dropped += n;
+    this.stats.dropValue += value;
+    this.g.sfx.bad();
+    this.ksfx.place(0.45);
+    if (!c.bentos.length) { this.carry = null; this._setCarryObj(null); } else this._refreshCarry();
+    this._toast(`啪!掉了 ${n} 個便當,賠 $${value}`, 'bad');
+    if ((this._dropNag || 0) < this.time) { this._dropNag = this.time + 15; this.g.voice.talk('kboss_drop', this.bossHead); }
+    this._renderTop();
   }
 
   _contentOk(c) {
@@ -227,33 +324,42 @@ export class KitchenPhase {
     return c.parts[0] === want[0] && c.parts.length === want.length && want.every((k) => c.parts.includes(k));
   }
 
-  /** 把便當放到成品架 */
+  /** 在成品架放下手上同款的全部便當 */
   _toRack(id) {
     const c = this.carry;
-    const contentOk = this._contentOk(c), rackOk = id === c.order;
-    this.carry = null;
-    this._setCarryObj(null);
-    if (contentOk && rackOk) {
-      this.stats.made++;
-      this.k.addToRack(id, this._bentoModel(c.order));
-      this.ksfx.place(0.7);
-      this.g.sfx.ok();
-      this._toast(`✓ ${this.B[c.order].name} 完成(${this.stats.made}/${this.cfg.quota})`, 'good');
-      if (this.stats.made % 4 === 0 && this.stats.made < this.cfg.quota) this.g.voice.talk('kboss_good', this.bossHead);
-    } else {
-      const price = this.B[c.order].price * this.cfg.fine;
-      this.stats.mistakes++;
-      this.stats.fines += price;
-      if (!contentOk) this.stats.wrongContent++; else this.stats.wrongRack++;
-      const why = !contentOk ? this._whyWrong(c) : `放錯架子(應放${this._sname(`rack_${c.order}`)})`;
-      this.stats.log.push(`${this.B[c.order].name}:${why}`);
+    const mine = c.bentos.filter((b) => b.order === id);
+    if (!mine.length) { this._toast(`手上沒有${this.B[id].name}`, 'warn'); return; }
+    c.bentos = c.bentos.filter((b) => b.order !== id);
+    let ok = 0, bad = 0, fine = 0;
+    for (const b of mine) {
+      if (this._contentOk(b)) {
+        ok++;
+        this.stats.made++;
+        if (b.by !== 'player') this.stats.helperMade++;
+        this.k.addToRack(id, b.obj);
+      } else {
+        const price = this.B[b.order].price * this.cfg.fine;
+        bad++; fine += price;
+        this.stats.mistakes++;
+        this.stats.fines += price;
+        this.stats.wrongContent++;
+        const who = b.by === 'player' ? '' : `(${HELPERS[b.by].name}做的)`;
+        this.stats.log.push(`${this.B[b.order].name}${who}:${this._whyWrong(b)}`);
+        this.carryAnchor.remove(b.obj);
+      }
+    }
+    if (!c.bentos.length) { this.carry = null; this._setCarryObj(null); } else this._refreshCarry();
+    this.ksfx.place(0.7);
+    if (bad) {
       this.g.sfx.bad();
-      this.g.voice.talk(contentOk ? 'kboss_wrong_rack' : 'kboss_wrong', this.bossHead);
-      this._toast(`✗ ${why} — 賠 $${price}、記點 1`, 'bad');
-      if (contentOk) this.k.addToRack(id, this._bentoModel(c.order));
+      this.g.voice.talk('kboss_wrong', this.bossHead);
+      this._toast(`上架 ${ok} 個;${bad} 個裝錯 — 賠 $${fine}、記點 ${bad}`, 'bad');
+    } else {
+      this.g.sfx.ok();
+      this._toast(`✓ ${this.B[id].name} 上架 ${ok} 個(完成 ${this.stats.made}/${this.cfg.quota})`, 'good');
+      if (ok && Math.floor(this.stats.made / 4) !== Math.floor((this.stats.made - ok) / 4) && this.stats.made < this.cfg.quota) this.g.voice.talk('kboss_good', this.bossHead);
     }
     if (this.stats.made >= this.cfg.quota) this._end(true);
-    else this._newOrder();
     this._renderTop();
   }
 
@@ -292,13 +398,13 @@ export class KitchenPhase {
     if (s === 'assembly') return this._assembly();
     if (s === 'trash') {
       if (!this.carry) { this._toast('廚餘桶:燒焦的食物倒這裡'); return; }
-      this._toast(`已倒掉${this.carry.bento ? '便當' : this.CA[this.carry]?.name || ''}`, 'warn');
+      this._toast(`已倒掉${this.carry.bentos ? `${this.carry.bentos.length} 個便當` : this.CA[this.carry]?.name || ''}`, 'warn');
       this.carry = null;
       this._setCarryObj(null);
       return;
     }
     if (s.startsWith('rack_')) {
-      if (!this.carry?.bento) { this._toast(`${this._sname(s)}:已放 ${this.k.racks[s.slice(5)].items.length} 個`); return; }
+      if (!this.carry?.bentos) { this._toast(`${this._sname(s)}:已放 ${this.k.racks[s.slice(5)].items.length} 個`); return; }
       return this._toRack(s.slice(5));
     }
     const st = this.st[s];
@@ -382,7 +488,7 @@ export class KitchenPhase {
       this._syncScene();
       return;
     }
-    if (c?.bento) { this._toast(`便當要放到「${this._sname(`rack_${c.order}`)}」`, 'warn'); return; }
+    if (c?.bentos) { this._toast('先把手上的便當放到成品架', 'warn'); return; }
     this.panel = { kind: 'assembly' };
     this._renderPanel();
   }
@@ -443,7 +549,7 @@ export class KitchenPhase {
     const inStore = x > STORE.x0 + R_CHEF && x < STORE.x1 && z > STORE.z0 + R_CHEF && z < STORE.z1 - R_CHEF;
     const inDoor = x > STORE.x1 - 0.5 && x < ROOM.x0 + 0.5 && z > STORE.door[0] + R_CHEF && z < STORE.door[1] - R_CHEF;
     if (!inRoom && !inStore && !inDoor) return false;
-    for (const [x0, z0, x1, z1] of OBSTACLES) if (x > x0 - R_CHEF && x < x1 + R_CHEF && z > z0 - R_CHEF && z < z1 + R_CHEF) return false;
+    for (const [x0, z0, x1, z1] of OBSTACLES.concat(this.extraObs || [])) if (x > x0 - R_CHEF && x < x1 + R_CHEF && z > z0 - R_CHEF && z < z1 + R_CHEF) return false;
     return true;
   }
 
@@ -558,10 +664,13 @@ export class KitchenPhase {
     const l = Math.hypot(dx, dz);
     if (l > 0) {
       dx /= l; dz /= l;
-      const v = SPEED * (this.carry ? 0.85 : 1);
+      const k = this.carry?.bentos?.length || 0;
+      const v = SPEED * (k ? Math.max(0.55, 1 - 0.035 * k) : this.carry ? 0.85 : 1);
       const nx = P.x + dx * v * dt, nz = P.z + dz * v * dt;
+      const x0 = P.x, z0 = P.z;
       if (this._walkable(nx, P.z)) P.x = nx;
       if (this._walkable(P.x, nz)) P.z = nz;
+      this._stepCarry(Math.hypot(P.x - x0, P.z - z0));
       if (!this._fwdOnly) {   // 第一人稱按鍵移動時不轉身(後退仍面向前方)
         const target = Math.atan2(-dz, dx);
         let da = target - P.angle;
@@ -582,6 +691,7 @@ export class KitchenPhase {
       if (this.endTimer <= 0) return this._result();
       return null;
     }
+    if (this.modal) { this._visual(dt); return null; }   // 選同事時暫停計時
     this.left -= dt;
     if (this.left <= 60 && !this._hurry) { this._hurry = true; g.voice.talk('kboss_hurry', this.bossHead); }
     if (this.left <= 0) { this._end(false); return null; }
@@ -598,6 +708,8 @@ export class KitchenPhase {
       if (o) this._start(this.panel.station, o.id);
       if (inp.wasPressed('Escape', 'KeyE')) this._closePanel();
     } else if (inp.wasPressed('KeyE', 'Space') && !this.work) this._interact();
+    if (inp.wasPressed('KeyF') && !this.work) this._takeStack();
+    this._updateHelper(dt);
     if (inp.wasPressed('KeyV')) { this.cam.mode = this.cam.mode === 'first' ? 'third' : 'first'; this._toast(this.cam.mode === 'first' ? '第一人稱視角(W/S 前後、A/D 轉向)' : '第三人稱視角'); }
 
     // 手上的工作
@@ -687,6 +799,181 @@ export class KitchenPhase {
     this._renderStock();
   }
 
+  // ================================================================ 協助同事
+  _offerHelpers() {
+    this.helperOffered = true;
+    this.modal = 'helper';
+    this._closePanel();
+    this.g.voice.talk('kboss_helper_pick', this.bossHead);
+    const shots = this._portraits();
+    const el = this.$('modal');
+    el.innerHTML = `<div class="k-modal-card"><h2>新同事報到!<small>只能選一位來幫你裝便當(不負責料理)</small></h2>
+      <div class="k-helpers">${Object.entries(HELPERS).map(([id, h]) => `
+        <button class="k-helper" data-hire="${id}">
+          ${shots[id] ? `<img src="${shots[id]}" alt="">` : `<div class="k-h-ph">${h.icon}</div>`}
+          <b>${esc(h.name)}</b><em>${esc(h.title)}</em>
+          <p>${esc(h.intro)}</p>
+          <div class="k-h-pro">＋ ${esc(h.pros)}(約 ${h.speed} 秒/個)</div>
+          <div class="k-h-con">－ ${esc(h.cons)}</div>
+        </button>`).join('')}</div>
+      <button class="k-close" data-hire="none">不用了,我自己來</button></div>`;
+    el.classList.remove('hidden');
+  }
+
+  /** 候選同事的大頭照(離屏算圖) */
+  _portraits() {
+    if (this._shots) return this._shots;
+    const out = {};
+    let r;
+    try { r = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true }); } catch { return (this._shots = out); }
+    r.setSize(200, 220);
+    r.toneMapping = THREE.ACESFilmicToneMapping;
+    const scene = new THREE.Scene();
+    scene.add(new THREE.HemisphereLight('#ffffff', '#776655', 1.6));
+    const key = new THREE.DirectionalLight('#fff3e0', 2.2);
+    key.position.set(2, 3, 1.5);
+    scene.add(key);
+    const cam = new THREE.PerspectiveCamera(26, 200 / 220, 0.05, 10);
+    for (const [id, h] of Object.entries(HELPERS)) {
+      const f = this._helperFigure(h);
+      if (!f) continue;
+      scene.add(f);
+      cam.position.set(1.55, 1.52 * h.figure.scale[1], 0.35);
+      cam.lookAt(0, 1.38 * h.figure.scale[1], 0);
+      r.render(scene, cam);
+      out[id] = r.domElement.toDataURL('image/png');
+      scene.remove(f);
+    }
+    r.dispose();
+    r.forceContextLoss();
+    return (this._shots = out);
+  }
+
+  _helperFigure(h) {
+    const f = workerFigure(this.assets.rail, h.figure.ids, h.figure.color, true);
+    if (!f) return null;
+    f.scale.set(...h.figure.scale);
+    return f;
+  }
+
+  _hire(id) {
+    this.modal = null;
+    this.$('modal').classList.add('hidden');
+    if (id === 'none' || !HELPERS[id]) { this._toast('自己來!'); return; }
+    const spec = HELPERS[id];
+    const fig = this._helperFigure(spec) || this.assets.attendant.clone(true);
+    const at = this.k.assemblyAt;
+    fig.position.set(HELPER_AT, 0, 1.85);
+    fig.rotation.y = Math.PI / 2;
+    const head = new THREE.Object3D();
+    head.position.set(0, 1.9, 0);
+    fig.add(head);
+    this.root.add(fig);
+    // 同事的工作墊
+    const mat = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.01, 0.36), this.k.M.board);
+    mat.position.set(HELPER_AT, at.y - 0.005, at.z);
+    this.root.add(mat);
+    this.helper = { id, spec, fig, head, order: null, t: 0, dur: 1, pause: 0, chatT: 6, eatT: 14 + this.R() * 8, shortT: 0, tray: null };
+    // 同事站的位置不能走過去:重建尋路網格
+    this.extraObs = [[HELPER_AT - 0.3, 1.55, HELPER_AT + 0.3, 2.15]];
+    this._nav();
+    this.g.voice.talk(`helper_${id}_join`, head);
+    this._toast(`${spec.name}(${spec.title})加入,開始幫忙裝便當`, 'good');
+    this._renderTop();
+  }
+
+  _say(key) { this.g.voice.talk(`helper_${this.helper.id}_${key}`, this.helper.head); }
+
+  _updateHelper(dt) {
+    const h = this.helper;
+    if (!h) return;
+    const spec = h.spec, R = this.R;
+    h.fig.rotation.z = h.order && h.pause <= 0 ? Math.sin(this.time * 9) * 0.015 : 0;
+    // 缺點:阿姨偷吃
+    if (h.id === 'aunt') {
+      h.eatT -= dt;
+      if (h.eatT <= 0) {
+        h.eatT = 18 + R() * 14;
+        const avail = Object.keys(this.F).filter((k) => this.stock[k] > 0);
+        if (avail.length) {
+          const k = avail[(R() * avail.length) | 0], f = this.F[k];
+          this.stock[k]--;
+          const cost = f.main ? STOLEN_COST.main : f.shape === 'rice' ? STOLEN_COST.rice : STOLEN_COST.side;
+          this.stats.stolen.push(f.name);
+          this.stats.stolenValue += cost;
+          this._say(`eat${(R() * 4) | 0}`);
+          h.pause = 2;
+          this._syncScene();
+        }
+      }
+    }
+    // 缺點:大學生聊天、哼歌(講話時停下手)
+    if (h.id === 'student') {
+      h.chatT -= dt;
+      if (h.chatT <= 0) {
+        h.chatT = 12 + R() * 10;
+        this._say(R() < 0.6 ? `chat${(R() * 6) | 0}` : `hum${(R() * 3) | 0}`);
+        h.pause = 3.5;
+      }
+    }
+    if (h.pause > 0) { h.pause -= dt; return; }
+    // 開始一個新便當
+    if (!h.order) {
+      let r = R();
+      const list = Object.values(this.B);
+      const b = list.find((x) => (r -= x.mix || 1 / list.length) < 0) || list[list.length - 1];
+      let parts = [...b.parts];
+      let wrong = false;
+      if (spec.wrongRate && R() < spec.wrongRate) {
+        wrong = true;
+        const i = 1 + ((R() * (parts.length - 1)) | 0);
+        const others = Object.keys(this.F).filter((k) => !parts.includes(k) && this.F[k].shape !== 'rice');
+        if (others.length && R() < 0.5) parts[i] = others[(R() * others.length) | 0];   // 放錯菜
+        else parts.splice(i, 1);                                                          // 漏放
+      }
+      const need = ['box', ...parts, 'lid'];
+      const missing = need.filter((k) => this.stock[k] <= 0);
+      if (missing.length) {
+        h.shortT -= dt;
+        if (h.shortT <= 0) {
+          h.shortT = 14;
+          this._say('short');
+          this._toast(`${spec.name}:${missing.map((k) => this.I[k].name).join('、')}不夠了`, 'warn');
+        }
+        return;
+      }
+      need.forEach((k) => this.stock[k]--);
+      this._syncScene();
+      h.order = b.id; h.parts = parts; h.wrong = wrong; h.t = 0; h.shown = 0;
+      h.dur = spec.speed * (0.9 + R() * 0.2);
+      h.tray = new THREE.Group();
+      h.tray.position.set(HELPER_AT, this.k.assemblyAt.y, this.k.assemblyAt.z);
+      h.tray.add(makeBentoTray());
+      this.root.add(h.tray);
+      if (h.id === 'burly' && R() < 0.15) this._say('work0');
+      return;
+    }
+    // 依進度一項一項放進盒子
+    h.t += dt;
+    const steps = h.parts.length + 1;
+    const want = Math.min(steps, Math.floor((h.t / h.dur) * (steps + 1)));
+    while (h.shown < want) {
+      if (h.shown < h.parts.length) h.tray.add(makeFoodPart(h.parts[h.shown], this.F, this.B[h.order]));
+      else h.tray.add(makeBentoLid(this.B[h.order].sticker));
+      h.shown++;
+    }
+    if (h.t >= h.dur) {
+      const item = { order: h.order, parts: h.parts, by: h.id };
+      this.root.remove(h.tray);
+      item.obj = this._contentOk(item) ? this._bentoModel(item.order) : h.tray;
+      item.obj.position.set(0, 0, 0);
+      this._pushStack(item);
+      if (h.wrong && R() < 0.5) this._say(`oops${(R() * 2) | 0}`);
+      h.order = null;
+      h.tray = null;
+    }
+  }
+
   _end(success) {
     if (this.endTimer !== null) return;
     this.success = success;
@@ -706,6 +993,8 @@ export class KitchenPhase {
       reason: success ? null : `出車時間到,只做好 ${s.made}/${this.cfg.quota} 個便當。`,
       made: s.made, quota: this.cfg.quota, level: this.L.title, mistakes: s.mistakes, fines: s.fines, burnt: s.burnt,
       wrongContent: s.wrongContent, wrongRack: s.wrongRack, timeLeft: Math.max(0, Math.round(this.left)), log: s.log,
+      dropped: s.dropped, dropValue: s.dropValue, stolen: s.stolen, stolenValue: s.stolenValue,
+      helper: this.helper ? `${this.helper.spec.name}(${this.helper.spec.title})` : null, helperMade: s.helperMade, leftOnTable: this.stack.length,
       timeLimit: this.cfg.timeLimit,
     };
   }
@@ -726,11 +1015,13 @@ export class KitchenPhase {
       <div class="k-carry" data-k="carry"></div>
       <div class="k-prompt" data-k="prompt"></div>
       <div class="k-panel hidden" data-k="panel"></div>
+      <div class="k-modal hidden" data-k="modal"></div>
       <div class="k-touch">
         <div class="k-pad">
           <button data-hold="ArrowUp" class="u">▲</button><button data-hold="ArrowLeft" class="l">◀</button>
           <button data-hold="ArrowRight" class="r">▶</button><button data-hold="ArrowDown" class="d">▼</button>
         </div>
+        <button class="k-f" data-key="KeyF">F<small>拿便當</small></button>
         <button class="k-e" data-key="KeyE">E<small>操作</small></button>
         <button class="k-mini" data-key="KeyP" title="暫停/設定(P)">⚙</button>
       </div>`;
@@ -740,11 +1031,14 @@ export class KitchenPhase {
     el.addEventListener('click', (e) => {
       const go = e.target.closest('[data-go]');
       if (go) this._goTo(go.dataset.go);
+      const hire = e.target.closest('[data-hire]');
+      if (hire) this._hire(hire.dataset.hire);
       const b = e.target.closest('[data-act]');
       if (b) {
         const [kind, arg] = b.dataset.act.split(':');
         if (kind === 'add') this._add(arg);
         else if (kind === 'discard') this._discard();
+        else if (kind === 'take') this._takeStack();
         else if (kind === 'start') this._start(this.panel.station, arg);
         else if (kind === 'close') this._closePanel();
       }
@@ -760,7 +1054,7 @@ export class KitchenPhase {
     this.$('time').parentElement.classList.toggle('urgent', this.left < 60);
     this._set('made', `${this.stats.made} <i>/ ${this.cfg.quota}</i>`);
     this._set('pts', `${this.stats.mistakes}`);
-    this._set('fine', `$${this.stats.fines}`);
+    this._set('fine', `$${this.stats.fines + this.stats.dropValue}`);
   }
 
   _renderOrder() {
@@ -772,7 +1066,8 @@ export class KitchenPhase {
       ${thumb ? `<img src="${thumb}" alt="">` : ''}
       <ul>${this.asm.box ? '<li class="ok">✓ 便當盒</li>' : '<li>○ 便當盒</li>'}${lines}<li>○ 蓋子</li></ul>
       ${extra.length ? `<p class="k-warn">多放了:${extra.map((k) => esc(this.F[k].name)).join('、')}</p>` : ''}
-      <p class="k-hint">完成後放到「${esc(this._sname(`rack_${b.id}`))}」</p>`);
+      <p class="k-hint">完成後放在桌邊,按 F 一次拿起搬到成品架</p>
+      <p class="k-stackn">桌邊成品 <b>${this.stack.length}</b> 個${this.helper ? `・${esc(this.helper.spec.name)}${this.helper.order ? '裝便當中' : ''}` : ''}</p>`);
   }
 
   _renderStations() {
@@ -804,7 +1099,14 @@ export class KitchenPhase {
 
   _renderCarry() {
     const c = this.carry;
-    this._set('carry', c ? `手上:<b>${c.bento ? `${esc(this.B[c.order].name)}(放到${esc(this._sname(`rack_${c.order}`))})` : esc(this.CA[c].name)}</b>` : '');
+    let txt = '';
+    if (c?.bentos) {
+      const cnt = {};
+      c.bentos.forEach((b) => { cnt[b.order] = (cnt[b.order] || 0) + 1; });
+      const risk = dropChance(c.bentos.length);
+      txt = `手上:<b>便當 ×${c.bentos.length}</b>(${Object.entries(cnt).map(([o, n]) => `${esc(this.B[o].name.replace('便當', ''))} ${n}`).join('、')})${risk > 0 ? ` <i class="k-risk">每步掉落 ${Math.round(risk * 100)}%</i>` : ''}`;
+    } else if (c) txt = `手上:<b>${esc(this.CA[c].name)}</b>`;
+    this._set('carry', txt);
     this.$('carry').classList.toggle('hidden', !c);
   }
 
@@ -818,10 +1120,10 @@ export class KitchenPhase {
       const s = this._nearStation();
       if (s) {
         const st = this.st[s];
-        const what = s === 'assembly' ? (typeof this.carry === 'string' && this.CA[this.carry].yields ? '補料' : this.carry?.bento ? '' : '組裝便當')
-          : s.startsWith('rack_') ? (this.carry?.bento ? '放上架' : '') : s === 'trash' ? (this.carry ? '倒掉' : '')
+        const what = s === 'assembly' ? (typeof this.carry === 'string' && this.CA[this.carry].yields ? '補料' : this.carry?.bentos ? '' : '組裝便當')
+          : s.startsWith('rack_') ? (this.carry?.bentos?.some((b) => b.order === s.slice(5)) ? '放上這款' : '') : s === 'trash' ? (this.carry ? '倒掉' : '')
             : st?.state === 'done' ? '起鍋' : st?.state === 'burnt' ? '撈出燒焦的' : st?.state === 'cook' ? '' : '選擇工作';
-        html = `<b>${esc(this._sname(s))}</b>${what ? `<span><kbd>E</kbd>${what}</span>` : ''}`;
+        html = `<b>${esc(this._sname(s))}</b>${what ? `<span><kbd>E</kbd>${what}</span>` : ''}${s === 'assembly' && this.stack.length && (!this.carry || this.carry.bentos) ? `<span><kbd>F</kbd>拿起桌邊便當 ×${this.stack.length}</span>` : ''}`;
       } else html = this.cam.mode === 'first'
         ? '<span><kbd>W</kbd><kbd>S</kbd> 前後</span><span><kbd>A</kbd><kbd>D</kbd> 轉向</span><span><kbd>V</kbd> 切換視角</span>'
         : '<span><kbd>WASD</kbd>/方向鍵 移動</span><span>點地板或右側工作站自動走過去</span><span><kbd>V</kbd> 第一人稱</span>';
@@ -847,7 +1149,8 @@ export class KitchenPhase {
         const dis = (k !== 'box' && !a.box) || (k === 'box' && a.box);
         return `<button class="k-ing ${n === 0 ? 'out' : ''} ${dis ? 'dim' : ''}" data-act="add:${k}"><kbd>${v.label}</kbd><b>${esc(v.name)}</b><small>${n === 0 ? '沒了' : `剩 ${n}`}</small></button>`;
       }).join('')}</div>
-      <div class="k-asm-row"><button class="k-discard" data-act="discard" ${a.box ? '' : 'disabled'}><kbd>⌫</kbd>倒掉重做</button><span class="grow"></span><button class="k-close" data-act="close">離開(E)</button></div>`;
+      <div class="k-asm-row"><button class="k-discard" data-act="discard" ${a.box ? '' : 'disabled'}><kbd>⌫</kbd>倒掉重做</button>
+        <button class="k-discard" data-act="take" ${this.stack.length ? '' : 'disabled'}><kbd>F</kbd>拿起桌邊便當 ×${this.stack.length}</button><span class="grow"></span><button class="k-close" data-act="close">離開(E)</button></div>`;
   }
 
   _closePanel() {

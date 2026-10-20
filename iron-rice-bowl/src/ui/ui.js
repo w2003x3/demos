@@ -237,7 +237,8 @@ export class UI {
         <p>${esc(m.brief)}</p>
         <table class="kv">
           <tr><th>任務目標</th><td>出車前 <b>${Math.round(ph.timeLimit / 60)} 分鐘</b>內做好 <b>${ph.quota}</b> 個便當(製作單隨機:排骨/雞腿/素食,做完一個才來下一個)</td></tr>
-          <tr><th>組裝順序</th><td>便當盒 → 飯 → 主菜與配菜 → 蓋子,再拿到對應款式的成品架</td></tr>
+          <tr><th>組裝順序</th><td>便當盒 → 飯 → 主菜與配菜 → 蓋子;做好的放在桌邊,按 <kbd>F</kbd> 一次拿起來,再到各款式的成品架放下。一次拿越多,每走一步越容易掉(掉了要賠)</td></tr>
+          <tr><th>協助同事</th><td>裝好 5 個便當後,可以挑一位新同事幫忙裝便當(不負責料理)</td></tr>
           <tr><th>裝錯</th><td>內容不符或放錯架子:賠償售價、記點 1</td></tr>
           <tr><th>缺料</th><td>到對應的工作站自己做(炊飯機、滷鍋、炒鍋、油炸機、煎台、砧板),便當盒/蓋子去倉庫搬。有些要多道工序(例如先炸後滷、先切再炒)。烹煮時可去做別的事,完成後太久沒起鍋會燒焦</td></tr>
         </table>
@@ -399,7 +400,9 @@ export class UI {
           <tr><th>完成便當</th><td>${r.made} / ${r.quota}</td><th>剩餘時間</th><td>${fmt(r.timeLeft)}</td></tr>
           <tr><th>記點</th><td>${r.mistakes} 點</td><th>賠償</th><td>$${r.fines}</td></tr>
           <tr><th>內容裝錯</th><td>${r.wrongContent} 個</td><th>放錯架子</th><td>${r.wrongRack} 個</td></tr>
-          <tr><th>燒焦</th><td>${r.burnt} 鍋</td><th></th><td></td></tr>
+          <tr><th>燒焦</th><td>${r.burnt} 鍋</td><th>搬運掉落</th><td>${r.dropped || 0} 個,賠 $${r.dropValue || 0}</td></tr>
+          <tr><th>協助同事</th><td>${r.helper ? `${esc(r.helper)},做了 ${r.helperMade} 個` : '無'}</td><th>被偷吃</th><td>${r.stolen?.length ? `${r.stolen.length} 份,扣 $${r.stolenValue}` : '無'}</td></tr>
+          <tr><th>扣款合計</th><td colspan="3"><b>$${r.fines + (r.dropValue || 0) + (r.stolenValue || 0)}</b>(裝錯 $${r.fines} + 掉落 $${r.dropValue || 0} + 偷吃 $${r.stolenValue || 0})${r.leftOnTable ? `・桌邊還有 ${r.leftOnTable} 個沒上架` : ''}</td></tr>
         </table>
         <h3>裝錯紀錄 ${r.log.length} 筆</h3>
         ${r.log.length ? `<ul class="complaints">${r.log.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>` : '<p class="muted-txt">全部正確,做得好!</p>'}

@@ -7,6 +7,7 @@ import { ITEMS } from './items.js';
 import { INCIDENTS } from './incidents.js';
 import { MISSIONS } from './missions.js';
 import { outLines } from './kitchen.js';
+import { HELPERS, HELPER_LINES } from './helpers.js';
 
 // 角色 → Azure Neural 語音與語調(SSML prosody)
 // 聲音分配:廣播一律男聲(雲哲 / 英文男聲);販售員 = 曉臻;乘客 = 雲哲・曉雨・曉臻 三聲混用
@@ -23,6 +24,10 @@ export const VOICES = {
   station:     { voice: 'zh-TW-YunJheNeural', lang: 'zh-TW', rate: '-8%' },
   stationEn:   { voice: 'en-US-ChristopherNeural', lang: 'en-US', rate: '-5%' },
   kitchenBoss: { voice: 'zh-TW-YunJheNeural', lang: 'zh-TW', pitch: '-6%', rate: '+4%' },
+  helperAunt:  { voice: 'zh-TW-HsiaoYuNeural', lang: 'zh-TW', pitch: '-9%', rate: '+6%' },
+  helperStudent: { voice: 'zh-TW-YunJheNeural', lang: 'zh-TW', pitch: '+7%', rate: '+8%' },
+  helperYoung: { voice: 'zh-TW-HsiaoChenNeural', lang: 'zh-TW', pitch: '+3%', rate: '+12%' },
+  helperBurly: { voice: 'zh-TW-YunJheNeural', lang: 'zh-TW', pitch: '-15%', rate: '-10%' },
 };
 
 // 便當廚房:廚房主任
@@ -34,6 +39,8 @@ export const KITCHEN_LINES = {
   hurry: '剩一分鐘了,快一點!',
   done: '辛苦了,便當全部到齊,準時出車!',
   fail: '時間到了還沒做完,列車要開了啦!',
+  drop: '小心一點啦!掉了要扣錢!',
+  helper_pick: '做得不錯!有新來的同事,挑一個來幫你裝便當吧。',
   good: '很好,繼續保持!',
 };
 // 缺料提醒:依各關卡食材產生(kboss_out_<食材>)
@@ -126,6 +133,7 @@ export function buildVoiceLines() {
   AMBIENT_GRANDMA_CHATS.forEach((chat, c) => chat.forEach(([role, t], i) => add(`amb_gma_${c}_${i}`, role, t)));
   for (const [k, t] of Object.entries(CONDUCTOR_LINES)) add(`conductor_${k}`, 'conductor', t);
   for (const [k, t] of Object.entries(KITCHEN_LINES)) add(`kboss_${k}`, 'kitchenBoss', t);
+  for (const [h, lines] of Object.entries(HELPER_LINES)) for (const [k, t] of Object.entries(lines)) add(`helper_${h}_${k}`, HELPERS[h].voice, t);
   for (const [k, t] of Object.entries(PASSENGER_LINES)) {
     add(`pax_${k}_m`, 'passengerM', t);
     add(`pax_${k}_f`, 'passengerF', t);
