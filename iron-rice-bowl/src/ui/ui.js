@@ -116,7 +116,7 @@ export class UI {
    * 整備畫面(任務載入中):顯示模型/語音載入進度,同時可瀏覽今天推車上的便當菜色與飲料;
    * 全部載入完成後「開始服勤」才能按。回傳 { progress(key, p), ready() → Promise(按下開始) }。
    */
-  prepare(items, thumbs = {}) {
+  prepare(items, thumbs = {}, opt = {}) {
     const cards = items.map((it) => `
       <div class="food-card">
         ${thumbs[it.id] ? `<img src="${thumbs[it.id]}" alt="${esc(it.name)}">` : '<div class="food-ph">🍱</div>'}
@@ -128,7 +128,7 @@ export class UI {
       </div>`).join('');
     const s = this.showScreen(`
       <div class="card tall prep">
-        <h2>列車整備中<small>今天推車上的菜色</small></h2>
+        <h2>${esc(opt.title || '列車整備中')}<small>${esc(opt.sub || '今天推車上的菜色')}</small></h2>
         <div class="prep-bars">
           <label>3D 模型 <div class="meter wide"><div data-k="model" style="width:0%"></div></div></label>
           <label>語音 <div class="meter wide"><div data-k="voice" style="width:0%"></div></div></label>
@@ -141,7 +141,7 @@ export class UI {
       progress: (k, p) => { const el = s.querySelector(`[data-k="${k}"]`); if (el) el.style.width = `${Math.round(p * 100)}%`; },
       ready: () => new Promise((res) => {
         btn.disabled = false;
-        btn.textContent = '開始服勤(Enter)';
+        btn.textContent = `${opt.go || '開始服勤'}(Enter)`;
         const go = () => { removeEventListener('keydown', key); res(); };
         const key = (e) => { if (e.key === 'Enter') { e.preventDefault(); go(); } };
         btn.addEventListener('click', go, { once: true });

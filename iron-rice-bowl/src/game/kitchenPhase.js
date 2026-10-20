@@ -40,6 +40,11 @@ export class KitchenPhase {
     Object.keys(this.B).forEach((id, i) => { this.pos[`rack_${id}`] = { x: 5.85, z: zs[i] }; });
   }
 
+  /** 整備畫面標題(依關卡) */
+  prepTitle() {
+    return { title: `${this.L.title}・廚房備料中`, sub: `${this.L.branch}今天要做的便當`, go: '進入廚房' };
+  }
+
   /** 整備畫面:本關便當(名稱、內容) */
   prepItems() {
     return Object.values(this.B).map((b) => ({ id: b.id, name: b.name, price: b.price, desc: `${this.L.branch}${b.vegan ? '・全素' : ''}`, dishes: b.parts.map((k) => this.F[k].name) }));
@@ -146,9 +151,83 @@ export class KitchenPhase {
 
   begin() {
     this.g.ui.showHud(false);
+    this.el.classList.remove('pre');
+    this._startTour();
+  }
+
+  /** 開工(導覽結束後) */
+  _go() {
     this.g.voice.talk('kboss_start', this.bossHead);
     this._toast(`${this.L.title}:要在 ${fmt(this.cfg.timeLimit)} 內做出 ${this.cfg.quota} 個便當`);
   }
+
+  // ================================================================ 作業環境導覽
+  _tourSteps() {
+    const V = (x, y, z) => new THREE.Vector3(x, y, z);
+    const names = (keys) => keys.map((k) => this.F[k].name).join('、');
+    const foods = Object.values(this.F);
+    const rice = foods.filter((f) => f.shape === 'rice').map((f) => f.key);
+    const pans = foods.filter((f) => f.shape !== 'rice').map((f) => f.key);
+    const at = (st) => {
+      const list = Object.values(this.RC).filter((r) => r.station === st && r.food);
+      return list.length ? list.map((r) => r.label).join('、') : '本關用不到';
+    };
+    const racks = Object.values(this.B).map((b) => `${b.name}架`).join('、');
+    return [
+      { t: '組裝台(廚房中央)', mark: V(0, 1.15, 0.6), pos: V(0, 3.1, 4.0), look: V(0, 0.9, 0.6),
+        d: `你主要待的地方。上方吊著<b>製作單</b>;檯面北側的<b>保溫餐檯</b>放 ${esc(names(pans))};西端<b>保溫飯鍋</b>是 ${esc(names(rice))};東端堆著<b>便當盒</b>和<b>蓋子</b>。做好的便當會疊在桌邊,按 <kbd>F</kbd> 一次拿起。` },
+      { t: '炊飯機', mark: V(-6.3, 1.9, -4.9), pos: V(-6.3, 2.7, -1.4), look: V(-6.3, 1.0, -5.0), d: `煮飯:${esc(at('rice'))}。洗米下鍋後可以先去忙別的,煮好再回來起鍋。` },
+      { t: '滷鍋', mark: V(-3.9, 1.5, -5.0), pos: V(-3.9, 2.7, -1.4), look: V(-3.9, 0.9, -5.0), d: `${esc(at('braise'))}。滷好太久沒起鍋會滷過頭(燒焦)。` },
+      { t: '炒鍋爐', mark: V(-1.3, 1.5, -5.0), pos: V(-1.3, 2.7, -1.4), look: V(-1.3, 0.9, -5.0), d: `${esc(at('wok'))}。有些菜要先在砧板切好才能下鍋。` },
+      { t: '油炸機', mark: V(1.4, 1.5, -5.0), pos: V(1.4, 2.7, -1.4), look: V(1.4, 0.9, -5.0), d: `${esc(at('fryer'))}。炸好要盡快起鍋,不然會炸焦。` },
+      { t: '煎台', mark: V(3.9, 1.5, -5.0), pos: V(3.9, 2.7, -1.4), look: V(3.9, 0.9, -5.0), d: `${esc(at('griddle'))}。` },
+      { t: '備料區(水槽與砧板)', mark: V(-7.55, 1.4, -0.7), pos: V(-4.6, 2.8, 0.9), look: V(-7.5, 0.9, -1.0), d: `${esc(at('board'))}。切菜時要站著不動,走開會中斷。` },
+      { t: '倉庫(西側門後)', mark: V(-11.6, 2.4, 1.5), pos: V(-8.2, 3.4, 4.2), look: V(-11.2, 1.0, 1.3), d: `層架上是<b>便當盒</b>與<b>蓋子</b>的紙箱,沒了來這裡一次搬一箱(20 個)${Object.values(this.RC).some((r) => r.station === 'storage' && r.food) ? `;也可以拿 ${esc(at('storage'))}` : ''}。` },
+      { t: '成品架(東側)', mark: V(7.15, 2.2, Object.values(this.k.racks)[0].z), pos: V(4.0, 3.0, 3.2), look: V(7.0, 1.0, 0), d: `${esc(racks)}。手上的便當走到架前按 <kbd>E</kbd>,會放下同款的。一次拿越多越容易摔掉。` },
+      { t: '廚餘桶・主任・出車倒數', mark: V(4.97, 1.1, 3.65), pos: V(2.6, 2.8, 6.2), look: V(5.4, 1.0, 2.6), d: '燒焦的食物倒進<b>廚餘桶</b>。廚房主任站在出餐窗口旁盯場,北牆的<b>出車倒數鐘</b>歸零前要做完。準備好就開工吧!' },
+    ];
+  }
+
+  _startTour() {
+    this.tour = { i: 0, steps: this._tourSteps() };
+    this.modal = 'tour';
+    this.dialog = 'tour';    // 讓 Esc 用來略過導覽,而不是開暫停選單
+    const m = new THREE.Mesh(new THREE.ConeGeometry(0.16, 0.36, 18), new THREE.MeshStandardMaterial({ color: '#f08a24', emissive: '#f08a24', emissiveIntensity: 0.8 }));
+    m.rotation.x = Math.PI;
+    this.tourMark = m;
+    this.root.add(m);
+    this.el.classList.add('touring');
+    this._renderTour();
+  }
+
+  _tourStep(d) {
+    const t = this.tour;
+    if (!t) return;
+    t.i += d;
+    if (t.i < 0) t.i = 0;
+    if (t.i >= t.steps.length) return this._endTour();
+    this._renderTour();
+  }
+
+  _endTour() {
+    this.tour = null;
+    this.modal = null;
+    this.dialog = null;
+    this.root.remove(this.tourMark);
+    this.$('tour').classList.add('hidden');
+    this.el.classList.remove('touring');
+    this._go();
+  }
+
+  _renderTour() {
+    const t = this.tour, st = t.steps[t.i], last = t.i === t.steps.length - 1;
+    const el = this.$('tour');
+    el.classList.remove('hidden');
+    el.innerHTML = `<div class="k-tour-head"><span>作業環境介紹 ${t.i + 1}/${t.steps.length}</span><button data-tour="skip">略過(Esc)</button></div>
+      <h3>${st.t}</h3><p>${st.d}</p>
+      <div class="k-tour-btns"><button data-tour="prev" ${t.i ? '' : 'disabled'}>上一步</button><button class="primary" data-tour="next">${last ? '開工!' : '下一步(Enter)'}</button></div>`;
+  }
+
 
   dispose() {
     const g = this.g;
@@ -691,7 +770,12 @@ export class KitchenPhase {
       if (this.endTimer <= 0) return this._result();
       return null;
     }
-    if (this.modal) { this._visual(dt); return null; }   // 選同事時暫停計時
+    if (this.modal === 'tour') {
+      if (inp.wasPressed('Enter', 'NumpadEnter', 'Space', 'ArrowRight', 'KeyE')) this._tourStep(1);
+      else if (inp.wasPressed('ArrowLeft')) this._tourStep(-1);
+      else if (inp.wasPressed('Escape')) this._endTour();
+    }
+    if (this.modal) { this._visual(dt); return null; }   // 導覽、選同事時暫停計時
     this.left -= dt;
     if (this.left <= 60 && !this._hurry) { this._hurry = true; g.voice.talk('kboss_hurry', this.bossHead); }
     if (this.left <= 0) { this._end(false); return null; }
@@ -770,7 +854,12 @@ export class KitchenPhase {
     // 第一人稱:隱藏自己的身體(手上端的東西仍看得到)
     for (const o of this.chef.children) if (o !== this.carryAnchor && o !== this.head) o.visible = !first;
     this.carryAnchor.position.set(first ? 0.6 : 0.42, first ? 1.22 : 0.98, 0);   // 第一人稱時抬到視線下緣
-    if (this.panel?.kind === 'assembly') {
+    if (this.tour) {
+      const st = this.tour.steps[this.tour.i];
+      pos = st.pos.clone(); look = st.look.clone(); fov = 50;
+      this.tourMark.position.copy(st.mark).add(new THREE.Vector3(0, Math.abs(Math.sin(this.time * 4)) * 0.12, 0));
+      this.tourMark.rotation.y += dt * 2;
+    } else if (this.panel?.kind === 'assembly') {
       // 組裝:靠近島台由上往下看便當與保溫餐檯
       // 鏡頭往下壓:正在組裝的便當在畫面上半(面板在下半),上方看得到保溫餐檯
       pos = new THREE.Vector3(0, 1.55, 1.75); look = new THREE.Vector3(0, 0.81, 1.08); fov = 55;
@@ -785,7 +874,7 @@ export class KitchenPhase {
       look = new THREE.Vector3(x, 0.6, P.z - 0.4);
       fov = 50;
     }
-    const k = snap ? 1 : 1 - Math.exp(-dt * (first && !this.panel ? 14 : 5));
+    const k = snap ? 1 : 1 - Math.exp(-dt * (this.tour ? 3 : first && !this.panel ? 14 : 5));
     c.pos.lerp(pos, k); c.look.lerp(look, k);
     c.fov += (fov - c.fov) * k;
     cam.position.copy(c.pos);
@@ -1002,7 +1091,7 @@ export class KitchenPhase {
   // ================================================================ 介面
   _buildHud() {
     const el = this.el = document.createElement('div');
-    el.className = 'k-hud';
+    el.className = 'k-hud pre';   // 進入廚房(begin)前不顯示
     el.innerHTML = `
       <div class="k-top">
         <div class="k-timer"><small>出車倒數</small><b data-k="time"></b></div>
@@ -1016,6 +1105,7 @@ export class KitchenPhase {
       <div class="k-prompt" data-k="prompt"></div>
       <div class="k-panel hidden" data-k="panel"></div>
       <div class="k-modal hidden" data-k="modal"></div>
+      <div class="k-tour hidden" data-k="tour"></div>
       <div class="k-touch">
         <div class="k-pad">
           <button data-hold="ArrowUp" class="u">▲</button><button data-hold="ArrowLeft" class="l">◀</button>
@@ -1023,6 +1113,7 @@ export class KitchenPhase {
         </div>
         <button class="k-f" data-key="KeyF">F<small>拿便當</small></button>
         <button class="k-e" data-key="KeyE">E<small>操作</small></button>
+        <button class="k-mini k-stbtn" data-tg="st" title="工作站清單">☰</button>
         <button class="k-mini" data-key="KeyP" title="暫停/設定(P)">⚙</button>
       </div>`;
     this.g.ui.root.appendChild(el);
@@ -1030,7 +1121,10 @@ export class KitchenPhase {
     // 工作站清單:點一下自動走過去
     el.addEventListener('click', (e) => {
       const go = e.target.closest('[data-go]');
-      if (go) this._goTo(go.dataset.go);
+      if (go) { this._goTo(go.dataset.go); el.classList.remove('show-st'); }
+      if (e.target.closest('[data-tg="st"]')) el.classList.toggle('show-st');
+      const tb = e.target.closest('[data-tour]');
+      if (tb) { const a = tb.dataset.tour; if (a === 'skip') this._endTour(); else this._tourStep(a === 'next' ? 1 : -1); }
       const hire = e.target.closest('[data-hire]');
       if (hire) this._hire(hire.dataset.hire);
       const b = e.target.closest('[data-act]');
@@ -1126,7 +1220,9 @@ export class KitchenPhase {
         html = `<b>${esc(this._sname(s))}</b>${what ? `<span><kbd>E</kbd>${what}</span>` : ''}${s === 'assembly' && this.stack.length && (!this.carry || this.carry.bentos) ? `<span><kbd>F</kbd>拿起桌邊便當 ×${this.stack.length}</span>` : ''}`;
       } else html = this.cam.mode === 'first'
         ? '<span><kbd>W</kbd><kbd>S</kbd> 前後</span><span><kbd>A</kbd><kbd>D</kbd> 轉向</span><span><kbd>V</kbd> 切換視角</span>'
-        : '<span><kbd>WASD</kbd>/方向鍵 移動</span><span>點地板或右側工作站自動走過去</span><span><kbd>V</kbd> 第一人稱</span>';
+        : this._touch()
+          ? '<span>方向鍵移動・點地板走過去</span><span>☰ 工作站清單</span>'
+          : '<span><kbd>WASD</kbd>/方向鍵 移動</span><span>點地板或右側工作站自動走過去</span><span><kbd>V</kbd> 第一人稱</span>';
     }
     this._set('prompt', html);
   }
@@ -1135,6 +1231,7 @@ export class KitchenPhase {
     const p = this.panel, el = this.$('panel');
     el.classList.toggle('hidden', !p);
     el.classList.toggle('asm', p?.kind === 'assembly');
+    this.el.classList.toggle('panel-open', !!p);
     if (!p) { el.innerHTML = ''; return; }
     if (p.kind === 'station') {
       el.innerHTML = `<h3>${STATIONS_K[p.station]}</h3>
@@ -1158,6 +1255,9 @@ export class KitchenPhase {
     this.panel = null;
     this._renderPanel();
   }
+
+  /** 觸控/小螢幕(與 CSS 的手機版條件一致) */
+  _touch() { return matchMedia('(hover: none), (max-width: 900px), (max-height: 520px)').matches; }
 
   _toast(msg, type = 'info') { this.g.ui.toast(msg, type); }
 }

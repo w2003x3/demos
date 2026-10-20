@@ -252,7 +252,7 @@ class Game {
     this.foodThumbs ??= renderFoodThumbs();
     // 整備畫面:便當廚房顯示本關便當款式,其他顯示推車上的商品
     this.prep = this.phase.prepItems
-      ? this.ui.prepare(this.phase.prepItems(), await this.phase.prepThumbs())
+      ? this.ui.prepare(this.phase.prepItems(), await this.phase.prepThumbs(), this.phase.prepTitle?.())
       : this.ui.prepare(ITEM_LIST, this.foodThumbs);
     const voiceReady = this.voice.mode === 'browser' ? Promise.resolve() : this.voice.preload((p) => this.prep?.progress('voice', p));
     if (this.voice.mode === 'browser') this.prep.progress('voice', 1);
