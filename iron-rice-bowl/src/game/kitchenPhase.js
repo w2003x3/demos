@@ -413,7 +413,9 @@ export class KitchenPhase {
       g.add(m);
     } else if (food?.shape === 'rice') {
       g.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(0.2, 0.18, 0.2, 24), steel), { castShadow: true }));
-      g.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.02, 24), new THREE.MeshStandardMaterial({ color: food.color, roughness: 0.85 })), { position: new THREE.Vector3(0, 0.09, 0) }));
+      const top = new THREE.Mesh(new THREE.CylinderGeometry(0.19, 0.19, 0.02, 24), new THREE.MeshStandardMaterial({ color: food.color, roughness: 0.85 }));
+      top.position.y = 0.09;   // position 是唯讀屬性,不能用 Object.assign 覆寫
+      g.add(top);
     } else if (info.stage !== undefined) {
       // 半成品:不鏽鋼調理盆
       g.add(Object.assign(new THREE.Mesh(new THREE.CylinderGeometry(0.17, 0.11, 0.1, 20), new THREE.MeshStandardMaterial({ color: '#d9dde0', metalness: 0.8, roughness: 0.3 })), { castShadow: true }));

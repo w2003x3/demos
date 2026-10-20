@@ -75,7 +75,17 @@ class Game {
     this.mouse = { dragging: false, dx: 0, dy: 0 };
     this._bindEvents();
     this.clock = new THREE.Clock();
-    renderer.setAnimationLoop(() => this._frame());
+    // 單一幀出錯不可讓整個迴圈停止(three.js 的動畫迴圈在回呼拋錯時不會再排下一幀,畫面會凍結)
+    renderer.setAnimationLoop(() => {
+      try { this._frame(); } catch (err) {
+        console.error(err);
+        this.input.endFrame();
+        if (!this._errShown || performance.now() - this._errShown > 5000) {
+          this._errShown = performance.now();
+          this.ui.toast(`發生錯誤,已略過該動作:${err.message}`, 'bad');
+        }
+      }
+    });
   }
 
   _bindEvents() {
