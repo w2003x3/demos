@@ -11,7 +11,7 @@ const VIEW = (() => {
   const SCRIPTS_3D = [
     ['assets/atlas.js', 350e3],
     ['models/map_models.js', 13.9e6],
-    ['models/char_models.js', 7.9e6],
+    ['models/char_models.js?v=' + V + 'c', 5.3e6],
     ['models/extra_models.js?v=' + V, 0.78e6],
     ['vendor/three.min.js', 0.6e6],
     ['vendor/OrbitControls.js', 30e3],
