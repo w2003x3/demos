@@ -1227,6 +1227,7 @@ window.addEventListener('keydown', (ev) => {
   if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) {
     ev.preventDefault();
   }
+  if (k === 'escape' && gameState !== 'playing' && gameState !== 'menu') { backToMainMenu(); return; } // 結算畫面 Esc 回主選單
   if (k === 'r' || (k === 'enter' && gameState !== 'playing')) {
     // 重新開始:教學中=重來這一步;連線中只有房主能重開
     if (k === 'r' && window.tutorial && tutorial.active) tutorial.retry();
@@ -1912,6 +1913,14 @@ function showResult() {
   sfx(winner && winner === player.team ? 'win' : 'lose');
   if (NET.online) NET.onResult();
 }
+// 結算後回主選單(單機);連線中改用房間內的按鈕
+function backToMainMenu() {
+  if (NET.online) return;
+  showOverlay('result-overlay', false);
+  restart();
+  gameState = 'menu';
+  showOverlay('menu-overlay', true);
+}
 function startMatch() {
   restart();
   sfx('start');
@@ -2168,6 +2177,8 @@ loadAssets().then(() => {
   const bs = $el('btn-start'), ba = $el('btn-again');
   if (bs) bs.addEventListener('click', startMatch);
   if (ba) ba.addEventListener('click', startMatch);
+  const bm = $el('btn-menu');
+  if (bm) bm.addEventListener('click', backToMainMenu);
   // 地圖選擇:點選即切換主題並即時預覽(選單背後的場景跟著換)
   document.querySelectorAll('.mapbtn').forEach((btn) => {
     btn.addEventListener('click', () => {

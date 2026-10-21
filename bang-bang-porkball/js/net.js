@@ -564,6 +564,8 @@ const lobbyUI = {
     }
     const again = document.getElementById('btn-again');
     if (again) again.style.display = 'none';
+    const menu = document.getElementById('btn-menu');
+    if (menu) menu.style.display = 'none';
     box.innerHTML = NET.role === 'host'
       ? '<button type="button" class="big primary" data-ol="again">🔄 再來一場</button>' +
         '<button type="button" class="big" data-ol="lobby">🏠 回房間</button>'
@@ -575,6 +577,8 @@ const lobbyUI = {
 function restoreResultButtons() {
   const again = document.getElementById('btn-again');
   if (again) again.style.display = '';
+  const menu = document.getElementById('btn-menu');
+  if (menu) menu.style.display = '';
   const box = document.querySelector('#result-overlay .ol-result');
   if (box) box.remove();
 }
