@@ -16,7 +16,7 @@ const ONLINE_SERVER = (() => {
   const q = new URLSearchParams(location.search).get('server');
   if (q) return q === 'local' ? 'ws://127.0.0.1:8787' : q;
   if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return 'ws://127.0.0.1:8787';
-  return 'wss://bang-bang-porkball.w2003x3.workers.dev'; // 部署後若網址不同請改這裡
+  return 'wss://bang-bang-porkball.bang-bang-porkball-server.workers.dev'; // Cloudflare Workers(server/)
 })();
 
 const SNAP_INTERVAL = 1 / 15;   // 房主送快照的間隔(秒)
