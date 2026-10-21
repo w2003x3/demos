@@ -52,7 +52,7 @@
   function setCamMode(m) {
     camMode = m;
     controls.enabled = (m === 'free'); // 跟隨/第一人稱時停用滑鼠環繞
-    document.querySelectorAll('.view-btns .icon-btn').forEach((b) => {
+    document.querySelectorAll('.view-btns button').forEach((b) => {
       if (b.classList) b.classList.toggle('active',
         (m === 'follow' && b.id === 'view-follow') ||
         (m === 'fps' && b.id === 'view-fps') ||
@@ -1736,6 +1736,7 @@
   // ---------- 渲染迴圈 ----------
   function frame() {
     requestAnimationFrame(frame);
+    if (window.VIEW && VIEW.mode !== '3d') return; // 2D 模式:3D 暫停,不耗效能
     if (typeof player === 'undefined' || !player || !grid.length) {
       renderer.render(scene, camera);
       return;

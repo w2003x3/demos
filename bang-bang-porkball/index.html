@@ -4,20 +4,51 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>爆爆丸 — 貢丸版炸彈超人</title>
-  <link rel="stylesheet" href="css/style.css?v=20261022" />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css?v=20261022b" />
 </head>
 <body>
 <div id="app">
 
-  <!-- 頂部狀態列 -->
+  <!-- 頂部列 -->
   <header class="topbar">
-    <div class="brand">💣 爆爆丸 <small>2D</small></div>
-    <div id="stat-enemies" class="timer"></div>
+    <div class="top-left">
+      <button id="btn-home" class="dark-btn" type="button" title="回主選單">
+        <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        主選單
+      </button>
+      <div class="brand">爆爆丸</div>
+    </div>
+    <div id="stat-enemies" class="scoreboard"></div>
     <div class="top-tools">
-      <div id="stat-weather" class="pill"></div>
-      <a class="icon-btn" href="3d.html">🧊 3D版</a>
-      <button id="btn-sound" class="icon-btn" type="button" title="音效/音樂">🔊</button>
-      <button id="btn-help" class="icon-btn" type="button">❓ 說明</button>
+      <div class="view-toggle" role="group" aria-label="畫面模式">
+        <button type="button" data-view="2d" aria-pressed="true" title="2D 俯視(` 鍵切換)">2D</button>
+        <button type="button" data-view="3d" aria-pressed="false" title="3D 立體(` 鍵切換)">3D</button>
+      </div>
+      <div class="view-btns only-3d">
+        <button id="view-iso" class="dark-btn" type="button" title="45° 斜視(自由環繞)">45°</button>
+        <button id="view-top" class="dark-btn" type="button" title="正上方俯視(自由環繞)">俯視</button>
+        <button id="view-side" class="dark-btn" type="button" title="低角度側視(自由環繞)">側視</button>
+        <button id="view-follow" class="dark-btn" type="button" title="第三人稱近距離跟隨">跟隨</button>
+        <button id="view-lock" class="dark-btn" type="button" title="跟隨模式:鏡頭固定方向,不隨人物轉動">固定向</button>
+        <button id="view-fps" class="dark-btn" type="button" title="第一人稱視角">第一人稱</button>
+        <button id="view-wide" class="dark-btn" type="button" title="第一人稱:廣角視野(FOV 100°)">廣角</button>
+      </div>
+      <label class="dark-btn quality-pick only-3d" title="3D 畫質 / 效能:電腦較慢(內顯)選「低」或「省電」;「自動」會依實際流暢度自行調整">畫質
+        <select id="quality-sel" aria-label="3D 畫質">
+          <option value="auto">自動</option>
+          <option value="off">省電</option>
+          <option value="low">低</option>
+          <option value="mid">中</option>
+          <option value="high">高</option>
+        </select>
+        <span id="fps-meter" class="fps-meter"></span>
+      </label>
+      <div id="stat-weather" class="weather"></div>
+      <button id="btn-sound" class="dark-btn square" type="button" title="音效/音樂">🔊</button>
+      <button id="btn-help" class="dark-btn square" type="button" title="說明" aria-label="說明">?</button>
     </div>
   </header>
 
@@ -25,11 +56,11 @@
 
     <!-- 左:玩家狀態 -->
     <aside class="panel side-left">
-      <h3>🧑‍🤝‍🧑 戰隊名單</h3>
-      <div id="roster" class="roster"></div>
-      <h3>👤 玩家狀態</h3>
-      <div id="stat-hp" class="stat"></div>
-      <div id="stat-mp" class="stat"></div>
+      <h3 class="ribbon">玩家狀態</h3>
+      <div class="card">
+        <div id="stat-hp" class="stat"></div>
+        <div id="stat-mp" class="stat"></div>
+      </div>
       <div class="pill-grid">
         <div id="stat-power" class="pill"></div>
         <div id="stat-speed" class="pill"></div>
@@ -39,49 +70,27 @@
         <div id="stat-tools" class="pill wide"></div>
         <div id="stat-poison" class="pill wide"></div>
       </div>
-      <p class="ctl-hint">🖱️/👆 點地圖一下:走過去<br>點兩下:放貢丸<br>⌨️ WASD / ↑↓←→ 移動</p>
+      <h3 class="ribbon">戰隊</h3>
+      <div id="roster" class="roster"></div>
+      <p class="ctl-hint only-2d">點地圖一下:走過去・點兩下:放貢丸<br>WASD / ↑↓←→ 移動</p>
+      <p class="ctl-hint only-3d">拖曳:旋轉視角・滾輪/雙指:縮放<br>跟隨/第一人稱:方向鍵以鏡頭前方為準<br>點地圖一下:走過去・點兩下:放貢丸</p>
     </aside>
 
-    <!-- 中:遊戲畫面 -->
+    <!-- 中:遊戲畫面(2D 畫布 / 3D 畫面二選一) -->
     <section class="stage-wrap">
       <div class="stage">
         <canvas id="game"></canvas>
-
-        <div id="menu-overlay" class="overlay hidden">
-          <div class="opanel">
-            <div class="logo">💣 爆爆丸</div>
-            <p class="sub">貢丸炸彈對戰・2 隊限時淘汰</p>
-            <div class="map-pick">
-              <button type="button" class="mapbtn active" data-map="park">🌳 公園</button>
-              <button type="button" class="mapbtn" data-map="market">🥬 菜市場</button>
-              <button type="button" class="mapbtn" data-map="night">🏮 夜市</button>
-            </div>
-            <button id="btn-start" class="big primary">🎮 開始對戰</button>
-            <button id="btn-tutorial" class="big" type="button">🎓 新手教學</button>
-            <button id="btn-guide" class="big" type="button">📖 玩法說明</button>
-            <button id="btn-online" class="big" type="button">🌐 多人連線</button>
-            <p class="mini">🔵 你 + 2 名 AI 隊友 vs 🔴 3 名 AI・限時 2 分鐘<br>炸光敵隊獲勝;時間到比存活人數</p>
-          </div>
-        </div>
-
-        <div id="result-overlay" class="overlay hidden">
-          <div class="opanel">
-            <div id="result-title" class="logo"></div>
-            <p id="result-sub" class="sub"></p>
-            <button id="btn-again" class="big primary">🔄 再來一場</button>
-            <button id="btn-menu" class="big" type="button">🏠 回主選單</button>
-            <p class="mini">Enter 再來一場・Esc 回主選單</p>
-          </div>
-        </div>
+        <div id="game3d"></div>
+        <div id="ink-overlay"></div>
       </div>
     </section>
 
     <!-- 右:貢丸 + 動作 -->
     <aside class="panel side-right">
-      <h3>🍡 貢丸 <span>(1~9)</span></h3>
+      <h3 class="ribbon right">貢丸</h3>
       <div id="selector" class="mb-bar"></div>
       <div id="mb-desc" class="mb-desc"></div>
-      <h3>⚡ 動作</h3>
+      <h3 class="ribbon right">動作</h3>
       <div class="actions">
         <button type="button" class="act primary" data-key=" "><img class="act-img" src="assets/meatballs/mb_1.webp" alt=""><span>放貢丸</span><kbd>空白</kbd></button>
         <button type="button" class="act" data-key="e">👟<span>踢/騎</span><kbd>E</kbd></button>
@@ -100,35 +109,119 @@
   </main>
 </div>
 
-<!-- 說明彈窗 -->
-<div id="help-modal" class="modal hidden">
-  <div class="modal-panel">
-    <button id="btn-help-close" class="icon-btn close" type="button">✕ 關閉</button>
-    <div id="guide"></div>
-    <h2>操作說明</h2>
-    <ul class="help">
-      <li>🖱️ 點地圖一下=自動走過去 · 點兩下=放貢丸(滑鼠/觸控皆可)</li>
-      <li><kbd>↑↓←→</kbd> / <kbd>WASD</kbd> 移動(一步一格)</li>
-      <li><kbd>空白鍵</kbd> 放置貢丸 · <kbd>1</kbd>~<kbd>9</kbd> 切換貢丸</li>
-      <li><kbd>E</kbd>/<kbd>J</kbd> 踢/騎乘前方貢丸(耗 MP)</li>
-      <li><kbd>G</kbd> 防護盾(耗 MP,擋一次爆炸)</li>
-      <li><kbd>Q</kbd> 吸塵器 · <kbd>F</kbd> 垃圾車(清前方貢丸)</li>
-      <li><kbd>Z</kbd> 食物夾(夾起/放下) · <kbd>X</kbd> 隔熱手套(丟)</li>
-      <li><kbd>C</kbd> 彈弓(射向前方第一人,立即爆)</li>
-      <li><kbd>V</kbd> 藍白拖(踩附近寵物)</li>
-      <li><kbd>K</kbd> 放出/收起 🐭老鼠 · <kbd>L</kbd> 🪳蟑螂</li>
-      <li><kbd>R</kbd> 隨時重新開始</li>
-    </ul>
+<!-- ===== 主選單(全螢幕) ===== -->
+<div id="menu-overlay" class="screen menu-screen hidden">
+  <div class="cloud c1" aria-hidden="true"></div>
+  <div class="cloud c2" aria-hidden="true"></div>
+  <div class="cloud c3" aria-hidden="true"></div>
 
+  <div class="menu-left">
+    <div class="menu-title">
+      <div class="menu-kicker"><span class="badge-star" aria-hidden="true"></span>BANG BANG PORKBALL</div>
+      <h1>爆爆丸</h1>
+      <p class="menu-sub">夜市小吃大亂鬥・2 隊限時淘汰</p>
+    </div>
+    <button id="btn-start" class="start-btn" type="button">
+      <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z" fill="currentColor"/></svg>
+      開始對戰
+    </button>
+    <div class="map-pick" role="group" aria-label="選擇地圖">
+      <button type="button" class="mapbtn active" data-map="park">公園</button>
+      <button type="button" class="mapbtn" data-map="market">菜市場</button>
+      <button type="button" class="mapbtn" data-map="night">夜市</button>
+    </div>
+    <nav class="menu-nav" aria-label="主選單">
+      <button id="btn-tutorial" class="flag" type="button"><small>一步步學</small>新手教學</button>
+      <button id="btn-guide" class="flag" type="button"><small>貢丸・道具</small>玩法說明</button>
+      <button id="btn-online" class="flag" type="button"><small>最多 6 人</small>多人連線</button>
+      <button id="btn-settings" class="flag" type="button" onclick="document.getElementById('btn-sound').click()"><small>音效・音樂</small>切換音效</button>
+    </nav>
+  </div>
+
+  <div class="menu-hero" aria-hidden="true">
+    <div class="sunburst"></div>
+    <div class="sun-inner"></div>
+    <div class="hero-floor"></div>
+    <div class="hero-chars">
+      <svg class="hc-side" viewBox="0 0 120 165"><rect x="40" y="118" width="16" height="32" rx="7" fill="#f2c9a0" stroke="#262626" stroke-width="4"/><rect x="64" y="118" width="16" height="32" rx="7" fill="#f2c9a0" stroke="#262626" stroke-width="4"/><path d="M34 146 h24 a6 6 0 0 1 0 12 h-24 a6 6 0 0 1 0 -12z M62 146 h24 a6 6 0 0 1 0 12 h-24 a6 6 0 0 1 0 -12z" fill="#262626"/><path d="M32 100 h56 v24 h-56 z" fill="#3a8ee6" stroke="#262626" stroke-width="4"/><path d="M28 78 q32 -8 64 0 l-4 26 h-56 z" fill="#fff" stroke="#262626" stroke-width="4" stroke-linejoin="round"/><path d="M28 82 L18 104 M92 82 L102 104" stroke="#262626" stroke-width="12" stroke-linecap="round"/><path d="M28 82 L18 104 M92 82 L102 104" stroke="#f2c9a0" stroke-width="5" stroke-linecap="round"/><path d="M96 40 q18 6 12 34 q-8 -6 -14 -12 z" fill="#4a3426" stroke="#262626" stroke-width="4" stroke-linejoin="round"/><circle cx="60" cy="44" r="38" fill="#f2c9a0" stroke="#262626" stroke-width="4"/><path d="M22 40 a38 38 0 0 1 76 0 z" fill="#3a8ee6" stroke="#262626" stroke-width="4" stroke-linejoin="round"/><path d="M60 30 h-44 a5 5 0 0 0 0 10 h44 z" fill="#3a8ee6" stroke="#262626" stroke-width="4"/><ellipse cx="46" cy="52" rx="5" ry="6.5" fill="#262626"/><ellipse cx="74" cy="52" rx="5" ry="6.5" fill="#262626"/><ellipse cx="38" cy="62" rx="6" ry="3.5" fill="#f08a80" opacity=".6"/><ellipse cx="82" cy="62" rx="6" ry="3.5" fill="#f08a80" opacity=".6"/><path d="M54 65 q6 5 12 0" stroke="#262626" stroke-width="3.5" fill="none" stroke-linecap="round"/></svg>
+      <svg class="hc-main" viewBox="0 0 120 165"><rect x="40" y="118" width="16" height="32" rx="7" fill="#f2c9a0" stroke="#262626" stroke-width="4"/><rect x="64" y="118" width="16" height="32" rx="7" fill="#f2c9a0" stroke="#262626" stroke-width="4"/><path d="M34 146 h24 a6 6 0 0 1 0 12 h-24 a6 6 0 0 1 0 -12z M62 146 h24 a6 6 0 0 1 0 12 h-24 a6 6 0 0 1 0 -12z" fill="#262626"/><path d="M32 100 h56 v24 h-56 z" fill="#3a8ee6" stroke="#262626" stroke-width="4"/><path d="M28 78 q32 -8 64 0 l-4 26 h-56 z" fill="#fff" stroke="#262626" stroke-width="4" stroke-linejoin="round"/><path d="M28 82 L14 102 M92 82 L106 62" stroke="#262626" stroke-width="12" stroke-linecap="round"/><path d="M28 82 L14 102 M92 82 L106 62" stroke="#f2c9a0" stroke-width="5" stroke-linecap="round"/><circle cx="60" cy="44" r="38" fill="#f2c9a0" stroke="#262626" stroke-width="4"/><path d="M22 40 a38 38 0 0 1 76 0 z" fill="#f7c51e" stroke="#262626" stroke-width="4" stroke-linejoin="round"/><path d="M60 30 h44 a5 5 0 0 1 0 10 h-44 z" fill="#f7c51e" stroke="#262626" stroke-width="4"/><circle cx="60" cy="14" r="5" fill="#262626"/><ellipse cx="46" cy="52" rx="5" ry="6.5" fill="#262626"/><ellipse cx="74" cy="52" rx="5" ry="6.5" fill="#262626"/><circle cx="47.5" cy="50" r="1.8" fill="#fff"/><circle cx="75.5" cy="50" r="1.8" fill="#fff"/><ellipse cx="38" cy="62" rx="6" ry="3.5" fill="#f08a80" opacity=".6"/><ellipse cx="82" cy="62" rx="6" ry="3.5" fill="#f08a80" opacity=".6"/><path d="M52 64 q8 8 16 0" stroke="#262626" stroke-width="3.5" fill="#fff" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      <svg class="hc-side" viewBox="0 0 120 165"><rect x="40" y="118" width="16" height="32" rx="7" fill="#f2c9a0" stroke="#262626" stroke-width="4"/><rect x="64" y="118" width="16" height="32" rx="7" fill="#f2c9a0" stroke="#262626" stroke-width="4"/><path d="M34 146 h24 a6 6 0 0 1 0 12 h-24 a6 6 0 0 1 0 -12z M62 146 h24 a6 6 0 0 1 0 12 h-24 a6 6 0 0 1 0 -12z" fill="#262626"/><path d="M32 100 h56 v24 h-56 z" fill="#d9483b" stroke="#262626" stroke-width="4"/><path d="M28 78 q32 -8 64 0 l-4 26 h-56 z" fill="#fff" stroke="#262626" stroke-width="4" stroke-linejoin="round"/><path d="M28 82 L22 106 M92 82 L104 98" stroke="#262626" stroke-width="12" stroke-linecap="round"/><path d="M28 82 L22 106 M92 82 L104 98" stroke="#f2c9a0" stroke-width="5" stroke-linecap="round"/><circle cx="60" cy="44" r="38" fill="#f2c9a0" stroke="#262626" stroke-width="4"/><path d="M22 40 a38 38 0 0 1 76 0 z" fill="#d9483b" stroke="#262626" stroke-width="4" stroke-linejoin="round"/><path d="M60 30 h-44 a5 5 0 0 0 0 10 h44 z" fill="#d9483b" stroke="#262626" stroke-width="4"/><path d="M38 44 l14 5 M82 44 l-14 5" stroke="#262626" stroke-width="4.5" stroke-linecap="round"/><ellipse cx="46" cy="55" rx="4.5" ry="5.5" fill="#262626"/><ellipse cx="74" cy="55" rx="4.5" ry="5.5" fill="#262626"/><path d="M50 66 q10 6 20 -2" stroke="#262626" stroke-width="3.5" fill="none" stroke-linecap="round"/></svg>
+    </div>
+    <svg class="hero-ball" viewBox="0 0 96 110"><path d="M50 30 L58 4" stroke="#8d6e63" stroke-width="6" stroke-linecap="round"/><circle cx="59" cy="4" r="5" fill="#e2552e"/><circle cx="48" cy="66" r="40" fill="#b07a45" stroke="#262626" stroke-width="5"/><ellipse cx="34" cy="50" rx="11" ry="8" fill="#d8a978"/><circle cx="62" cy="78" r="4" fill="#8a5a30"/></svg>
+    <svg class="hero-sausage" viewBox="0 0 54 130"><rect x="10" y="10" width="34" height="104" rx="17" fill="#c2412a" stroke="#262626" stroke-width="5"/><path d="M14 36 l26 -10 M14 60 l26 -10 M14 84 l26 -10" stroke="#7a2414" stroke-width="4" stroke-linecap="round"/><path d="M27 114 V128" stroke="#8d6e63" stroke-width="5" stroke-linecap="round"/></svg>
+    <svg class="hero-boba" viewBox="0 0 64 120"><path d="M42 4 L36 40" stroke="#e2552e" stroke-width="5" stroke-linecap="round"/><path d="M8 30 h48 l-6 86 h-36 z" fill="#f5e6c8" stroke="#262626" stroke-width="5" stroke-linejoin="round"/><path d="M10 56 h44 l-4 58 h-36 z" fill="#c9905a"/><circle cx="22" cy="104" r="5" fill="#262626"/><circle cx="34" cy="108" r="5" fill="#262626"/><circle cx="42" cy="98" r="5" fill="#262626"/><rect x="6" y="26" width="52" height="8" fill="#262626"/></svg>
+    <svg class="hero-pig" viewBox="0 0 44 44"><circle cx="22" cy="24" r="17" fill="#3a2b2b" stroke="#262626" stroke-width="3"/><path d="M10 10 l-4 -8 l10 4z M34 10 l4 -8 l-10 4z" fill="#3a2b2b" stroke="#262626" stroke-width="2.5" stroke-linejoin="round"/><ellipse cx="22" cy="29" rx="8" ry="5.5" fill="#e39a9a" stroke="#262626" stroke-width="2.5"/><circle cx="16" cy="20" r="2" fill="#fff"/><circle cx="28" cy="20" r="2" fill="#fff"/></svg>
+  </div>
+
+  <div class="menu-bottom">
+    <div class="mb-view">
+      <span>畫面模式</span>
+      <div class="view-toggle big" role="group" aria-label="畫面模式">
+        <button type="button" data-view="2d" aria-pressed="true">2D</button>
+        <button type="button" data-view="3d" aria-pressed="false">3D</button>
+      </div>
+      <span class="mb-note">遊戲中也能隨時切換</span>
+    </div>
+    <div class="mb-info">🔵 你 + 2 名隊友 vs 🔴 3 名對手・限時 2 分鐘・炸光敵隊獲勝</div>
   </div>
 </div>
 
-<script src="js/config.js?v=20261022"></script>
-<script src="js/audio.js?v=20261022"></script>
-<script src="js/net.js?v=20261022"></script>
-<script src="js/game.js?v=20261022"></script>
-<script src="js/controls.js?v=20261022"></script>
-<script src="js/guide.js?v=20261022"></script>
-<script src="js/tutorial.js?v=20261022"></script>
+<!-- ===== 結算(全螢幕) ===== -->
+<div id="result-overlay" class="screen result-screen hidden">
+  <div class="result-rays" aria-hidden="true"></div>
+  <div class="result-box">
+    <div class="result-kicker">MATCH END</div>
+    <div id="result-title" class="result-title"></div>
+    <p id="result-sub" class="result-sub"></p>
+    <button id="btn-again" class="start-btn" type="button">再來一場</button>
+    <button id="btn-menu" class="home-btn" type="button">
+      <svg width="22" height="22" viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-7 8 7v9h-5v-6H9v6H4z" fill="currentColor"/></svg>
+      回主選單
+    </button>
+    <p class="result-hint">Enter 再來一場・Esc 回主選單</p>
+  </div>
+</div>
+
+<!-- 3D 素材載入中 -->
+<div id="load3d" class="load3d hidden" role="status" aria-live="polite">
+  <div class="load3d-box">
+    <div class="load3d-text">載入 3D 素材… 0%</div>
+    <div class="load3d-bar"><div class="load3d-fill"></div></div>
+    <div class="load3d-note">第一次切到 3D 需要下載約 22MB,之後切換是即時的</div>
+  </div>
+</div>
+
+<!-- 說明彈窗 -->
+<div id="help-modal" class="modal hidden">
+  <div class="modal-panel">
+    <button id="btn-help-close" class="dark-btn close" type="button">✕ 關閉</button>
+    <div id="guide"></div>
+    <h2>操作說明</h2>
+    <ul class="help">
+      <li>點地圖一下=自動走過去・點兩下=放貢丸(滑鼠/觸控皆可)</li>
+      <li><kbd>↑↓←→</kbd> / <kbd>WASD</kbd> 移動(一步一格)</li>
+      <li><kbd>空白鍵</kbd> 放置貢丸・<kbd>1</kbd>~<kbd>9</kbd> 切換貢丸(夜市 <kbd>O</kbd> 香腸、<kbd>P</kbd> 米腸)</li>
+      <li><kbd>E</kbd>/<kbd>J</kbd> 踢/騎乘前方貢丸(耗 MP)・<kbd>G</kbd> 防護盾(耗 MP,擋一次爆炸)</li>
+      <li><kbd>Q</kbd> 吸塵器・<kbd>F</kbd> 垃圾車(清前方貢丸)</li>
+      <li><kbd>Z</kbd> 食物夾(夾起/放下)・<kbd>X</kbd> 隔熱手套(丟)・<kbd>C</kbd> 彈弓・<kbd>V</kbd> 藍白拖</li>
+      <li><kbd>K</kbd> 放出/收起 老鼠・<kbd>L</kbd> 蟑螂・<kbd>R</kbd> 重新開始</li>
+      <li><kbd>`</kbd>(Esc 下方)切換 2D / 3D 畫面</li>
+    </ul>
+    <h2 class="only-3d">3D 視角操作</h2>
+    <ul class="help only-3d">
+      <li><b>左鍵拖曳 / 單指滑動</b>:旋轉視角・<b>滾輪 / 雙指捏合</b>:縮放・<b>右鍵拖曳</b>:平移</li>
+      <li>上方按鈕可切換 45° / 俯視 / 側視 / 跟隨 / 第一人稱</li>
+    </ul>
+  </div>
+</div>
+
+<script src="js/config.js?v=20261022b"></script>
+<script src="js/audio.js?v=20261022b"></script>
+<script src="js/net.js?v=20261022b"></script>
+<script src="js/game.js?v=20261022b"></script>
+<script src="js/controls.js?v=20261022b"></script>
+<script src="js/guide.js?v=20261022b"></script>
+<script src="js/tutorial.js?v=20261022b"></script>
+<script src="js/view.js?v=20261022b"></script>
 </body>
 </html>

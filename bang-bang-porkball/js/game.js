@@ -1292,7 +1292,7 @@ function readPlayerInput(dt) {
   // (由 render3d.js 提供轉換;2D 版無此函式,維持絕對方向)
   // 轉換結果若帶 keepFacing,表示「移動但不轉身」(如第一人稱倒退)
   let keepFacing = false;
-  if (want && typeof window !== 'undefined' && window.moveTransform) {
+  if (want && typeof window !== 'undefined' && window.moveTransform && (!window.VIEW || VIEW.mode === '3d')) {
     want = window.moveTransform(want);
     keepFacing = !!(want && want.keepFacing);
   }
@@ -1514,6 +1514,7 @@ function updateEnemy(e, dt) {
 function update(dt) {
   if (NET.role === 'guest') { NET.guestUpdate(dt); return; } // 連線玩家:不自己模擬
   if (gameState !== 'playing') return;
+  if (window.VIEW && VIEW.busy && !NET.online) return;        // 單機:載入 3D 素材時暫停
   elapsed += dt;
 
   driftWeather(dt);
@@ -1906,7 +1907,7 @@ function showResult() {
   const title = $el('result-title'), sub = $el('result-sub');
   const winner = gameState === 'win' ? 'blue' : gameState === 'lose' ? 'red' : null;
   if (title) title.textContent = !winner ? '🤝 平手!' :
-    winner === player.team ? '🎉 你的隊伍獲勝!' : '💀 你的隊伍輸了';
+    winner === player.team ? '你的隊伍獲勝!' : '你的隊伍輸了';
   if (sub) sub.textContent = (winner ? TEAM_NAME[winner] + '勝利 · ' : '') +
     `存活 🔵 ${teamAlive('blue')} vs 🔴 ${teamAlive('red')}`;
   showOverlay('result-overlay', true);
@@ -1916,10 +1917,23 @@ function showResult() {
 // 結算後回主選單(單機);連線中改用房間內的按鈕
 function backToMainMenu() {
   if (NET.online) return;
+  if (window.tutorial && tutorial.active) tutorial.stop();
   showOverlay('result-overlay', false);
   restart();
   gameState = 'menu';
   showOverlay('menu-overlay', true);
+}
+// 頂部「主選單」按鈕:對戰中先確認;連線中=離開攤位
+function goHome() {
+  if (NET.online) {
+    if (!confirm('離開攤位並回到主選單?')) return;
+    NET.leave(true);
+    lobbyUI.hide();
+    backToMainMenu();
+    return;
+  }
+  if (gameState === 'playing' && !(window.tutorial && tutorial.active) && !confirm('放棄這一局,回到主選單?')) return;
+  backToMainMenu();
 }
 function startMatch() {
   restart();
@@ -1995,16 +2009,17 @@ function updateHud() {
   if (player.blindT > 0) st.push('🦑黑畫面' + player.blindT.toFixed(1) + 's');
   if (st.length) {
     poisonEl.textContent = st.join(' ');
-    poisonEl.style.background = '#3a4d1a';
+    poisonEl.style.background = '#e8f5c8';
   } else {
     poisonEl.textContent = '🟢 健康';
-    poisonEl.style.background = '#223040';
+    poisonEl.style.background = '';
   }
   const mm = Math.floor(Math.max(0, matchTime) / 60);
   const ss = Math.floor(Math.max(0, matchTime) % 60);
-  document.getElementById('stat-enemies').textContent =
-    `⏱️ ${mm}:${ss.toString().padStart(2, '0')}  ` +
-    `🔵${teamAlive('blue')} vs 🔴${teamAlive('red')}`;
+  setHtml('stat-enemies',
+    `<span class="sc-blue">藍 ${teamAlive('blue')}</span>` +
+    `<span class="sc-time">${mm}:${ss.toString().padStart(2, '0')}</span>` +
+    `<span class="sc-red">紅 ${teamAlive('red')}</span>`);
 
   // 戰隊名單:更新每個人的存活/HP 顯示
   updateRoster();
@@ -2157,7 +2172,7 @@ function loop(now) {
   const dt = Math.min((now - last) / 1000, 0.05);
   last = now;
   update(dt);
-  draw();
+  if (!window.VIEW || VIEW.mode === '2d') draw(); // 3D 模式由 render3d.js 畫,2D 畫布不用畫
   requestAnimationFrame(loop);
 }
 
@@ -2179,6 +2194,8 @@ loadAssets().then(() => {
   if (ba) ba.addEventListener('click', startMatch);
   const bm = $el('btn-menu');
   if (bm) bm.addEventListener('click', backToMainMenu);
+  const bh = $el('btn-home');
+  if (bh) bh.addEventListener('click', () => { bh.blur(); goHome(); });
   // 地圖選擇:點選即切換主題並即時預覽(選單背後的場景跟著換)
   document.querySelectorAll('.mapbtn').forEach((btn) => {
     btn.addEventListener('click', () => {

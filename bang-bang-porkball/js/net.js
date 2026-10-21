@@ -552,7 +552,7 @@ const lobbyUI = {
   },
   // 結算畫面:連線時換成房主的「再來一場/回大廳」或玩家的等待提示
   resultButtons() {
-    const panel = document.querySelector('#result-overlay .opanel');
+    const panel = document.querySelector('#result-overlay .result-box');
     if (!panel) return;
     let box = panel.querySelector('.ol-result');
     if (!box) {
