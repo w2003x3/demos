@@ -25,7 +25,8 @@ export class CooSim {
     this.q = 0;                       // 已結算的季數
     this.stations = net.stations.map((s) => ({ ...s, isNew: false }));
     this.byId = Object.fromEntries(this.stations.map((s) => [s.id, s]));
-    this.lines = net.lines.filter((l) => l.type === 'rail').map((l) => ({ ...l, nodes: l.nodes.filter((n) => n.type === 'station' && !this.byId[n.id]?.name.includes('-')), isNew: false }));
+    // shape:實際線形(車站 + 轉折點),畫地圖用;nodes 只留車站(運量與建設計算用)
+    this.lines = net.lines.filter((l) => l.type === 'rail').map((l) => ({ ...l, shape: l.nodes.map((n) => (n.type === 'station' ? this.byId[n.id] : n)).filter(Boolean).map((p) => [p.lat, p.lng]), nodes: l.nodes.filter((n) => n.type === 'station' && !this.byId[n.id]?.name.includes('-')), isNew: false }));
     this.freq = Object.fromEntries(this.lines.map((l) => [l.id, l.nodes.length >= 20 ? 3 : 2]));
     this.fare = 1.0;
     this.menu = [{ id: 'pork', price: 80 }, { id: 'chicken', price: 100 }, { id: 'veg', price: 80 }];

@@ -133,7 +133,8 @@ export class CooPhase {
       L.marker([h.lat, h.lng], { icon: L.divIcon({ className: 'coo-hot', html: `<span>${esc(h.name)}</span>` }) }).addTo(ly);
     }
     for (const l of sim.lines) {
-      const pts = l.nodes.map((n) => sim.byId[n.id]).filter(Boolean).map((s) => [s.lat, s.lng]);
+      // 既有路線依實際線形畫(加站後改依站序)
+      const pts = l.shape && !this.sim.projects.some((p) => p.kind === 'station' && l.nodes.some((n) => n.id === p.id)) ? l.shape : l.nodes.map((n) => sim.byId[n.id]).filter(Boolean).map((s) => [s.lat, s.lng]);
       const PAL = ['#1f4e9a', '#2a7d4f', '#8e44ad', '#c0392b', '#16a085', '#b9770e', '#2c3e50', '#d35400', '#7f8c8d', '#2980b9', '#27ae60', '#a04000'];
       L.polyline(pts, { color: l.isNew ? '#e8730c' : PAL[sim.lines.indexOf(l) % PAL.length], weight: l.isNew ? 5 : 4, opacity: 0.9, dashArray: l.isNew && l.opensAt > sim.q ? '8 6' : null }).addTo(ly)
         .bindTooltip(`${esc(l.name)} · 每小時 ${sim.freq[l.id]} 班`, { sticky: true });
