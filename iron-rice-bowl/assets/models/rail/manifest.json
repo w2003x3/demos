@@ -13,6 +13,178 @@
     "images": "EXT_texture_webp"
   },
   "slots": {
+    "train/taipei-hc/lead": [
+      {
+        "id": "taipei-hc-lead",
+        "file": "models/train/taipei-hc/lead/taipei-hc-lead.glb",
+        "bytes": 42812,
+        "tris": 2630,
+        "bounds": {
+          "min": [
+            -1.64,
+            0,
+            -0.22
+          ],
+          "max": [
+            1.64,
+            3.88,
+            24
+          ]
+        },
+        "materials": [
+          "Bogie",
+          "DestLED",
+          "Glass",
+          "HeadLight",
+          "Rubber",
+          "Steel",
+          "SteelDark",
+          "TailLight",
+          "TrainCeilingLight",
+          "TrainDoor",
+          "TrainFrontDark",
+          "TrainFrontMask",
+          "TrainInteriorFloor",
+          "TrainInteriorWall",
+          "TrainPole",
+          "TrainRoof",
+          "TrainSeat",
+          "TrainStainless",
+          "TrainStripeBlue",
+          "TrainStripeWhite",
+          "TrainUnderframe",
+          "TrainWindowFrame",
+          "Wheel",
+          "Windshield"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "TaipeiHC_Lead",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "train/taipei-hc/middle": [
+      {
+        "id": "taipei-hc-middle",
+        "file": "models/train/taipei-hc/middle/taipei-hc-middle.glb",
+        "bytes": 31792,
+        "tris": 2322,
+        "bounds": {
+          "min": [
+            -1.612,
+            0,
+            -0.5
+          ],
+          "max": [
+            1.612,
+            3.88,
+            24
+          ]
+        },
+        "materials": [
+          "Bogie",
+          "Glass",
+          "Rubber",
+          "SteelDark",
+          "TrainCeilingLight",
+          "TrainDoor",
+          "TrainInteriorFloor",
+          "TrainInteriorWall",
+          "TrainPole",
+          "TrainRoof",
+          "TrainSeat",
+          "TrainStainless",
+          "TrainStripeBlue",
+          "TrainStripeWhite",
+          "TrainUnderframe",
+          "TrainWindowFrame",
+          "Wheel"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "TaipeiHC_Middle",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "train/taipei-hc/cab": [
+      {
+        "id": "taipei-hc-cab",
+        "file": "models/train/taipei-hc/cab/taipei-hc-cab.glb",
+        "bytes": 21784,
+        "tris": 720,
+        "bounds": {
+          "min": [
+            -1.55,
+            -0.05,
+            -1.45
+          ],
+          "max": [
+            1.55,
+            2.11,
+            1.5
+          ]
+        },
+        "materials": [
+          "BtnGreen",
+          "BtnRed",
+          "BtnYellow",
+          "CabDesk",
+          "CabFloor",
+          "CabPanel",
+          "CabSeat",
+          "CabWall",
+          "Glass",
+          "LeverGrip",
+          "LightPanel",
+          "Screen",
+          "Steel"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "TaipeiHC_Cab",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "platform/underground": [
+      {
+        "id": "platform-underground",
+        "file": "models/platform/underground/platform-underground.glb",
+        "bytes": 1273232,
+        "tris": 226,
+        "bounds": {
+          "min": [
+            -3.3,
+            -1,
+            -5
+          ],
+          "max": [
+            7.9,
+            4.8,
+            5
+          ]
+        },
+        "materials": [
+          "Ceiling",
+          "Concrete",
+          "ConcreteDark",
+          "LightPanel",
+          "PlatformEdge",
+          "PlatformTile",
+          "StationAccent",
+          "StationWall",
+          "SteelDark",
+          "Tactile"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "PlatformUnderground",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
     "platform/open": [
       {
         "id": "platform-open",
@@ -45,6 +217,96 @@
         "license": "CC0-1.0",
         "author": "rail-assets(Blender 程序化建模)",
         "title": "PlatformOpen",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "platform/psd-full": [
+      {
+        "id": "psd-full",
+        "file": "models/platform/psd-full/psd-full.glb",
+        "bytes": 5248,
+        "tris": 96,
+        "bounds": {
+          "min": [
+            1.67,
+            1.1,
+            -5
+          ],
+          "max": [
+            1.81,
+            4.5,
+            5
+          ]
+        },
+        "materials": [
+          "DoorFrame",
+          "Glass",
+          "StationWall",
+          "SteelDark"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "PSDFull",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "platform/psd-half": [
+      {
+        "id": "psd-half",
+        "file": "models/platform/psd-half/psd-half.glb",
+        "bytes": 4240,
+        "tris": 84,
+        "bounds": {
+          "min": [
+            1.675,
+            1.1,
+            -5
+          ],
+          "max": [
+            1.805,
+            2.6,
+            5
+          ]
+        },
+        "materials": [
+          "DoorFrame",
+          "Glass",
+          "SteelDark"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "PSDHalf",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "platform/pillar": [
+      {
+        "id": "pillar",
+        "file": "models/platform/pillar/pillar.glb",
+        "bytes": 2528,
+        "tris": 24,
+        "bounds": {
+          "min": [
+            -0.32,
+            1.1,
+            -0.32
+          ],
+          "max": [
+            0.32,
+            4.5,
+            0.32
+          ]
+        },
+        "materials": [
+          "StationWall",
+          "SteelDark"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "Pillar",
         "source": "",
         "provider": "procedural"
       }
@@ -108,6 +370,156 @@
         "provider": "polyhaven"
       }
     ],
+    "platform/ceiling-light": [
+      {
+        "id": "fluorescent-lights",
+        "file": "models/platform/ceiling-light/fluorescent-lights.glb",
+        "bytes": 65880,
+        "tris": 800,
+        "bounds": {
+          "min": [
+            -0.65,
+            0,
+            -0.46
+          ],
+          "max": [
+            0.65,
+            0.052,
+            0.46
+          ]
+        },
+        "materials": [
+          "mounted_fluorescent_lights",
+          "mounted_fluorescent_lights_glass"
+        ],
+        "license": "CC0-1.0",
+        "author": "Ulan Cabanilla",
+        "title": "Mounted Fluorescent Lights",
+        "source": "https://polyhaven.com/a/mounted_fluorescent_lights",
+        "provider": "polyhaven"
+      }
+    ],
+    "platform/camera": [
+      {
+        "id": "security-camera",
+        "file": "models/platform/camera/security-camera.glb",
+        "bytes": 73000,
+        "tris": 800,
+        "bounds": {
+          "min": [
+            -0.105,
+            0,
+            -0.339
+          ],
+          "max": [
+            0.105,
+            0.35,
+            0.339
+          ]
+        },
+        "materials": [
+          "security_camera_01",
+          "security_camera_01_glass"
+        ],
+        "license": "CC0-1.0",
+        "author": "Alexander Otterbeck, Yann Kervran",
+        "title": "Security Camera 01",
+        "source": "https://polyhaven.com/a/security_camera_01",
+        "provider": "polyhaven"
+      }
+    ],
+    "trackside/signal-post": [
+      {
+        "id": "signal-post",
+        "file": "models/trackside/signal-post/signal-post.glb",
+        "bytes": 7916,
+        "tris": 272,
+        "bounds": {
+          "min": [
+            -0.22,
+            0,
+            -0.12
+          ],
+          "max": [
+            0.22,
+            4.4,
+            0.16
+          ]
+        },
+        "materials": [
+          "CabPanel",
+          "Rubber",
+          "SignalGreen",
+          "SignalRed",
+          "Steel"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "SignalPost",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "trackside/stop-marker": [
+      {
+        "id": "stop-marker",
+        "file": "models/trackside/stop-marker/stop-marker.glb",
+        "bytes": 3584,
+        "tris": 42,
+        "bounds": {
+          "min": [
+            -0.36,
+            0,
+            -0.05
+          ],
+          "max": [
+            0.36,
+            2.22,
+            0.05
+          ]
+        },
+        "materials": [
+          "Steel",
+          "SteelDark",
+          "StopFace"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "StopMarker",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "trackside/speed-limit": [
+      {
+        "id": "speed-limit",
+        "file": "models/trackside/speed-limit/speed-limit.glb",
+        "bytes": 4984,
+        "tris": 212,
+        "bounds": {
+          "min": [
+            -0.37,
+            0,
+            -0.05
+          ],
+          "max": [
+            0.37,
+            3.12,
+            0.05
+          ]
+        },
+        "materials": [
+          "LimitFace",
+          "Steel",
+          "SteelDark"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "SpeedLimitSign",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
     "trackside/mast": [
       {
         "id": "mast",
@@ -133,6 +545,63 @@
         "license": "CC0-1.0",
         "author": "rail-assets(Blender 程序化建模)",
         "title": "Mast",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "trackside/pier": [
+      {
+        "id": "pier",
+        "file": "models/trackside/pier/pier.glb",
+        "bytes": 575148,
+        "tris": 24,
+        "bounds": {
+          "min": [
+            -3.6,
+            -12,
+            -1.4
+          ],
+          "max": [
+            3.6,
+            -0.3,
+            1.4
+          ]
+        },
+        "materials": [
+          "Concrete"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "Pier",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "trackside/tunnel-light": [
+      {
+        "id": "tunnel-light",
+        "file": "models/trackside/tunnel-light/tunnel-light.glb",
+        "bytes": 2696,
+        "tris": 24,
+        "bounds": {
+          "min": [
+            -0.08,
+            -0.08,
+            -0.32
+          ],
+          "max": [
+            0.06,
+            0.08,
+            0.32
+          ]
+        },
+        "materials": [
+          "LightPanel",
+          "SteelDark"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "TunnelLight",
         "source": "",
         "provider": "procedural"
       }
@@ -1019,6 +1488,34 @@
         "source": "https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Professions/Business_Male_02",
         "provider": "rocketbox"
       }
+    ],
+    "platform/payphone": [
+      {
+        "id": "payphone",
+        "file": "models/platform/payphone/payphone.glb",
+        "bytes": 114760,
+        "tris": 2000,
+        "bounds": {
+          "min": [
+            -0.195,
+            0,
+            -0.146
+          ],
+          "max": [
+            0.195,
+            0.72,
+            0.146
+          ]
+        },
+        "materials": [
+          "korean_public_payphone_01"
+        ],
+        "license": "CC0-1.0",
+        "author": "UM JOORIN",
+        "title": "Korean Public Payphone 01",
+        "source": "https://polyhaven.com/a/korean_public_payphone_01",
+        "provider": "polyhaven"
+      }
     ]
   },
   "textures": {
@@ -1046,6 +1543,19 @@
       "author": "Rob Tuytel",
       "title": "Concrete Floor 02",
       "source": "https://polyhaven.com/a/concrete_floor_02",
+      "provider": "polyhaven"
+    },
+    "tunnel": {
+      "maps": {
+        "color": "textures/tunnel/color.webp",
+        "normal": "textures/tunnel/normal.webp",
+        "arm": "textures/tunnel/arm.webp"
+      },
+      "repeat": 4,
+      "license": "CC0-1.0",
+      "author": "Dimitrios Savva, Rico Cilliers",
+      "title": "Concrete Wall 003",
+      "source": "https://polyhaven.com/a/concrete_wall_003",
       "provider": "polyhaven"
     },
     "platform-floor": {
@@ -1085,6 +1595,32 @@
       "author": "Charlotte Baglioni",
       "title": "Leafy Grass",
       "source": "https://polyhaven.com/a/leafy_grass",
+      "provider": "polyhaven"
+    },
+    "facade-tile": {
+      "maps": {
+        "color": "textures/facade-tile/color.webp",
+        "normal": "textures/facade-tile/normal.webp",
+        "arm": "textures/facade-tile/arm.webp"
+      },
+      "repeat": 2,
+      "license": "CC0-1.0",
+      "author": "Rob Tuytel",
+      "title": "Red Brick 03",
+      "source": "https://polyhaven.com/a/red_brick_03",
+      "provider": "polyhaven"
+    },
+    "facade-plaster": {
+      "maps": {
+        "color": "textures/facade-plaster/color.webp",
+        "normal": "textures/facade-plaster/normal.webp",
+        "arm": "textures/facade-plaster/arm.webp"
+      },
+      "repeat": 3,
+      "license": "CC0-1.0",
+      "author": "Rob Tuytel",
+      "title": "White Plaster 02",
+      "source": "https://polyhaven.com/a/white_plaster_02",
       "provider": "polyhaven"
     },
     "metal": {

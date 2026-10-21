@@ -8,7 +8,7 @@ import { Tex, rng, canvasTexture } from '../core/textures.js';
 import { makeInstanced, pickPerson } from '../core/assets.js';
 
 const RAIL_Y = -1.1;          // 軌面高度(車廂地板 = 0;月台面 = 軌面 + 1.1)
-const GAUGE = 1.067;          // 台鐵軌距
+const GAUGE = 1.067;          // 鈦鐵軌距
 const TRACK2 = 4.3;           // 第二線中心
 // warmth:車內燈光偏鵝黃的程度(0~1);glow:夜間發光(路燈、窗戶、招牌)強度;env:環境反射強度;
 // tint/tintI:窗外照進來的色光(黃昏的橘紅夕照),隧道內消失

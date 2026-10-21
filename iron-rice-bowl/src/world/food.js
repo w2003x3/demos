@@ -1,4 +1,4 @@
-// 推車上的商品模型(three.js 程序化建模):臺鐵便當(黑色餐盒 + 透明上蓋,看得到菜色)與飲料(PET 瓶綠茶、礦泉水、罐裝咖啡)。
+// 推車上的商品模型(three.js 程序化建模):鈦鐵便當(黑色餐盒 + 透明上蓋,看得到菜色)與飲料(PET 瓶綠茶、礦泉水、罐裝咖啡)。
 // 尺寸以公尺計;原點在底面中心,便當長邊沿 X(0.18 × 0.13 m)。
 // 每個便當只有 5 個網格(餐盒、霧面食物、亮面食物、上蓋、貼紙):食物以頂點色合併,推車上擺滿也不會太多 draw call。
 import * as THREE from 'three';
@@ -125,7 +125,7 @@ function lidLabel(it) {
       c.fillStyle = '#f7f1e2'; c.fillRect(0, 0, w, h);
       c.fillStyle = col; c.fillRect(0, 0, w, 30); c.fillRect(0, h - 18, w, 18);
       c.fillStyle = '#fff'; c.font = `bold 22px ${font}`; c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.fillText('臺鐵便當', w / 2, 16);
+      c.fillText('鈦鐵便當', w / 2, 16);
       c.fillStyle = '#1b1b1b'; c.font = `bold 50px ${font}`;
       const label = it.label || it.name.replace('便當', '');
       c.font = `bold ${label.length > 3 ? Math.floor(150 / label.length) + 6 : 50}px ${font}`;
@@ -268,7 +268,7 @@ export function makeBentoLid(recipe = null) {
   return g;
 }
 
-/** 臺鐵便當成品:黑色餐盒、白飯、主菜與配菜、透明上蓋、上蓋貼紙(推車與廚房成品共用) */
+/** 鈦鐵便當成品:黑色餐盒、白飯、主菜與配菜、透明上蓋、上蓋貼紙(推車與廚房成品共用) */
 export function makeBento(id) {
   const it = ITEMS[id], S = mats();
   const g = new THREE.Group();

@@ -149,7 +149,7 @@ export function buildTaichung({ assets, variant = 'normal', quality = {} }) {
   for (let i = 0; i < 6; i++) { const z = -9 + i * 3.6; b.box(M.tileDark, 2.6, 1.1, 0.8, -LX + 8, F2, z); }
   b.solid('2F', -LX + 6.5, -10, -LX + 9.5, 10);
   sign(b, textTex('售票處', { sub: 'Ticket Office', bg: '#1f4e9a', h: 100, w: 420 }), 4, 0.9, -LX + 8, F2 + 3.2, 0, Math.PI / 2);
-  const shops = [['全家便利商店', 'FamilyMart', '#00a0e9'], ['臺鐵便當本舖', 'TRA Bento', '#b23a2a'], ['太陽餅', '伴手禮', '#c58a1b'], ['星巴克', 'Coffee', '#00704a'], ['旅遊服務中心', 'Tourist Info', '#2a7d4f'], ['書報', 'News', '#555']];
+  const shops = [['全家便利商店', 'FamilyMart', '#00a0e9'], ['鈦鐵便當本舖', 'TZR Bento', '#b23a2a'], ['太陽餅', '伴手禮', '#c58a1b'], ['星巴克', 'Coffee', '#00704a'], ['旅遊服務中心', 'Tourist Info', '#2a7d4f'], ['書報', 'News', '#555']];
   shops.forEach((s, i) => {
     const x0 = -46 + i * 14;
     shopfront(b, M, s[0], s[1], s[2], x0, x0 + 9, -DZ + 0.2, F2, 4.2, 1, R);

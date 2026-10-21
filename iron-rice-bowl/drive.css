@@ -1,0 +1,237 @@
+/* 司機員駕駛畫面(移植自「路網連連看」駕駛模式,沿用其 HUD 與駕駛台樣式) */
+.drive-overlay {
+  --font: "Noto Sans TC", "Microsoft JhengHei", sans-serif; --mono: "JetBrains Mono", Consolas, monospace;
+  --accent: #1f4ea3; --accent-dark: #0e2a1f; --action: #2fb36b; --action-hover: #27985b; --danger: #d33a2c;
+  --panel: #fbfaf7; --text: #1b1c1f; --text-2: #5c6066; --line: #e2ddd2; --hover: #efece5;
+  z-index: 40 !important;
+}
+.drive-overlay .btn { display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 12px; border-radius: 6px; border: 1px solid var(--line); background: #fff; color: var(--text); font: 600 13px var(--font); cursor: pointer; }
+.drive-overlay .btn:hover { background: var(--hover); }
+.drive-overlay .btn-primary { background: var(--action); border-color: var(--action); color: #fff; }
+.drive-overlay .btn-danger { color: var(--danger); }
+.drive-overlay .btn.block { width: 100%; justify-content: center; }
+.drive-overlay .hint { font-size: 12px; color: var(--text-2); line-height: 1.6; margin: 6px 0 0; }
+.drive-overlay .help-table { width: 100%; border-collapse: collapse; font-size: 12.5px; }
+.drive-overlay .help-table th, .drive-overlay .help-table td { border-bottom: 1px solid var(--line); padding: 7px 8px; text-align: left; vertical-align: top; }
+.drive-overlay .help-table th { color: var(--text-2); font-weight: 700; background: #f5f3ee; }
+.drive-overlay .code-badge { display: inline-block; border-radius: 4px; font-weight: 800; font-family: var(--mono); }
+.drive-overlay kbd { font: 600 11px var(--mono); padding: 1px 5px; border: 1px solid #ccc; border-radius: 4px; background: #f3f3f3; color: #333; }
+.dv-driver-tag { position: absolute; left: 16px; bottom: 250px; background: rgba(16,28,24,.78); border: 1px solid rgba(255,255,255,.12); border-radius: 6px; padding: 6px 10px; font-size: 12px; color: #C9DED6; pointer-events: none; }
+.dv-goal { font-size: 12px; color: #FFD58A; padding: 6px 10px; background: rgba(16,28,24,.78); border-radius: 6px; border: 1px solid rgba(255,255,255,.12); }
+@media (max-width: 760px), (max-height: 520px) { .dv-driver-tag { display: none; } }
+/* =====================================================
+   駕駛模式
+   ===================================================== */
+
+.drive-overlay { position: fixed; inset: 0; z-index: 3600; background: #000; color: #fff; user-select: none; }
+.dv-canvas { position: absolute; inset: 0; }
+.dv-canvas canvas { width: 100% !important; height: 100% !important; display: block; cursor: grab; }
+.dv-loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: var(--accent-dark); z-index: 5; }
+.dv-load-box { width: 360px; display: flex; flex-direction: column; gap: 10px; }
+.dv-load-box b { font-size: 18px; font-weight: 900; }
+.dv-load-box small { color: #C9DED6; }
+.dv-bar { height: 6px; background: rgba(255, 255, 255, 0.15); border-radius: 3px; overflow: hidden; }
+.dv-bar i { display: block; height: 100%; width: 0; background: var(--action); transition: width 0.2s; }
+
+.dv-hud { position: absolute; inset: 0; pointer-events: none; font-family: var(--font); }
+.dv-hud > * { pointer-events: auto; }
+.dv-hud .code-badge { font-size: 14px; padding: 4px 8px; }
+.dv-top-left { position: absolute; left: 16px; top: 16px; display: flex; flex-direction: column; gap: 8px; max-width: 380px; }
+.dv-line, .dv-next, .dv-route, .dv-clock, .dv-msg, .dv-caption {
+    background: rgba(16, 28, 24, 0.78); backdrop-filter: blur(6px); border: 1px solid rgba(255, 255, 255, 0.12); border-radius: 6px; }
+.dv-line { display: flex; align-items: center; gap: 10px; padding: 8px 12px; }
+.dv-line small { display: block; font-size: 11px; color: #A9C7B8; }
+.dv-line b { font-size: 17px; font-weight: 900; }
+.dv-next { padding: 10px 14px; display: grid; grid-template-columns: 1fr auto; column-gap: 12px; }
+.dv-next small { grid-column: 1 / -1; font-size: 11px; color: var(--action); font-weight: 700; }
+.dv-next b { font-size: 26px; font-weight: 900; line-height: 1.2; }
+.dv-next span { grid-column: 1; font-size: 12px; color: #C9DED6; }
+.dv-next em { grid-column: 2; grid-row: 2 / 4; align-self: center; font-style: normal; font-family: var(--mono); font-size: 18px; font-weight: 700; color: #7CFFB2; }
+.dv-top-center { position: absolute; left: 50%; top: 16px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 8px; }
+.dv-clock { font-family: var(--mono); font-size: 16px; padding: 4px 12px; }
+.dv-msg { padding: 8px 16px; font-weight: 700; font-size: 15px; border-color: var(--action); white-space: nowrap; }
+.dv-msg.warn { border-color: #E5484D; background: rgba(90, 20, 20, 0.85); }
+/* 廣播跑馬燈:畫面正上方中央(LED 點陣風格,由右往左捲動) */
+.dv-marquee { width: min(680px, 72vw); height: 36px; overflow: hidden; position: relative; border-radius: 6px;
+    background: #0B0705; border: 2px solid #2A2A2A; box-shadow: inset 0 0 12px rgba(0,0,0,.9), 0 2px 8px rgba(0,0,0,.5); }
+.dv-marquee::after { content: ""; position: absolute; inset: 0; pointer-events: none;
+    background: repeating-linear-gradient(90deg, rgba(0,0,0,.45) 0 1px, transparent 1px 3px), repeating-linear-gradient(0deg, rgba(0,0,0,.45) 0 1px, transparent 1px 3px); }
+.dv-marquee span { position: absolute; top: 0; left: 0; line-height: 32px; white-space: nowrap; font-size: 20px; font-weight: 900; letter-spacing: 2px;
+    color: #FF9A1F; text-shadow: 0 0 6px rgba(255,140,20,.85); padding-left: 100%; animation: dv-marquee 12s linear infinite; }
+@keyframes dv-marquee { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+/* 車內廣播輸入 */
+.dv-pa { width: min(520px, 90vw); background: rgba(16, 28, 24, 0.92); border: 1px solid var(--action); border-radius: 8px; padding: 10px; display: flex; flex-direction: column; gap: 8px; pointer-events: auto; }
+.dv-pa textarea { width: 100%; resize: none; font: inherit; font-size: 15px; border-radius: 6px; border: 1px solid rgba(255,255,255,.2); background: rgba(0,0,0,.35); color: #fff; padding: 8px; box-sizing: border-box; }
+.dv-pa-row { display: flex; gap: 8px; align-items: center; }
+.dv-pa-row .grow { flex: 1; }
+.dv-pa [data-pa-mic].rec { background: #8A1F1F; color: #fff; border-color: #E5484D; }
+.pb.atp-btn { background: linear-gradient(180deg, #2E6B45, #1B4229); }
+.pb.atp-btn.off { background: linear-gradient(180deg, #8A5A10, #5A3A08); }
+.pb.pa-btn { background: linear-gradient(180deg, #4A4F55, #2E3236); }
+/* 出軌事故 */
+.dv-crash::after { content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 3; animation: dv-crash-flash 1.2s ease-out forwards; }
+@keyframes dv-crash-flash { 0% { background: rgba(255, 60, 30, 0.55); } 100% { background: rgba(120, 0, 0, 0.18); } }
+.dv-gameover h3 { color: #FF6B6B; }
+.dv-go-title { font-size: 20px; font-weight: 900; margin: 4px 0; }
+.dv-route { position: absolute; right: 16px; top: 16px; padding: 10px 12px; max-height: calc(100vh - 260px); overflow-y: auto; min-width: 170px; }
+.dv-rs { display: grid; grid-template-columns: 14px 1fr auto; align-items: center; gap: 8px; padding: 3px 0; font-size: 13px; color: #C9DED6; position: relative; }
+.dv-rs i { width: 11px; height: 11px; border-radius: 50%; border: 2px solid #A9C7B8; background: transparent; }
+.dv-rs:not(:last-child)::after { content: ""; position: absolute; left: 6px; top: 16px; width: 2px; height: 12px; background: rgba(255, 255, 255, 0.2); }
+.dv-rs.done { color: #6C8279; }
+.dv-rs.done i { background: #6C8279; border-color: #6C8279; }
+.dv-rs.here, .dv-rs.next { color: #fff; font-weight: 800; }
+.dv-rs.here i { background: var(--action); border-color: var(--action); }
+.dv-rs.next i { border-color: var(--action); animation: dv-blink 1s infinite; }
+.dv-rs em { font-style: normal; font-size: 10.5px; padding: 1px 5px; border-radius: 3px; color: #fff; }
+@keyframes dv-blink { 50% { background: var(--action); } }
+.dv-grade { display: inline-block; padding: 1px 8px; border-radius: 3px; font-size: 12px; font-weight: 700; color: #fff; }
+.dv-grade.perfect, .dv-rs em.perfect { background: #1E9E5A; }
+.dv-grade.great, .dv-rs em.great { background: #2F7FB8; }
+.dv-grade.good, .dv-rs em.good { background: #5A7F3A; }
+.dv-grade.ok, .dv-rs em.ok { background: #B07A2A; }
+.dv-grade.miss, .dv-rs em.miss { background: #B42318; }
+
+/* ===== 駕駛台 ===== */
+.drive-overlay { touch-action: none; -webkit-user-select: none; -webkit-touch-callout: none; overscroll-behavior: none; }
+.dv-route-toggle { display: none; }
+.dv-console {
+    position: absolute; left: 50%; bottom: 0; transform: translateX(-50%);
+    width: min(1100px, calc(100vw - 24px)); display: grid; grid-template-columns: auto auto 1fr auto; gap: 12px; align-items: stretch;
+    padding: 12px 16px 14px; border-radius: 14px 14px 0 0;
+    background:
+        linear-gradient(180deg, rgba(255,255,255,.07), rgba(255,255,255,0) 30%),
+        repeating-linear-gradient(90deg, rgba(255,255,255,.012) 0 2px, rgba(0,0,0,.02) 2px 4px),
+        linear-gradient(180deg, #3A4045, #23272B 60%, #1A1D20);
+    border: 1px solid #555D63; border-bottom: 0;
+    box-shadow: 0 -10px 30px rgba(0,0,0,.45), inset 0 1px 0 rgba(255,255,255,.18);
+}
+.cs-unit {
+    position: relative; border-radius: 10px; padding: 8px;
+    background: linear-gradient(180deg, #1C2023, #15181A); border: 1px solid #0C0E0F;
+    box-shadow: inset 0 2px 6px rgba(0,0,0,.7), 0 1px 0 rgba(255,255,255,.08);
+}
+/* 主控制器 */
+.cs-mc { display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 6px 10px 10px; }
+.mc-label { font-size: 10px; letter-spacing: .15em; color: #8E979C; }
+.mc-body { display: flex; gap: 14px; align-items: stretch; }
+.mc-plate { display: flex; flex-direction: column; font-family: var(--mono); font-size: 11px; font-weight: 700; }
+.mc-plate span { flex: 1; min-height: 17px; display: flex; align-items: center; justify-content: flex-end; padding: 0 4px; color: #6F7A80; cursor: pointer; border-radius: 3px; }
+.mc-plate span.p { color: #7FB4E6; } .mc-plate span.n { color: #E9EEF0; } .mc-plate span.b { color: #E8B65A; } .mc-plate span.eb { color: #FF6B6B; }
+.mc-plate span.cur { background: rgba(255,255,255,.12); }
+.mc-slot {
+    --n: 13; position: relative; width: 30px; border-radius: 15px; cursor: grab; touch-action: none;
+    background: linear-gradient(90deg, #060708, #23282B 45%, #060708); border: 1px solid #000;
+    box-shadow: inset 0 0 6px rgba(0,0,0,.9), 0 1px 0 rgba(255,255,255,.1);
+}
+.mc-slot.grab { cursor: grabbing; }
+.mc-slot::before { content: ""; position: absolute; left: 50%; top: 6px; bottom: 6px; width: 4px; margin-left: -2px; border-radius: 2px; background: #000; }
+.mc-knob {
+    --i: 0; position: absolute; left: 50%; top: calc((var(--i) + .5) / var(--n) * 100%);
+    width: 44px; height: 24px; transform: translate(-50%, -50%); border-radius: 7px; pointer-events: none;
+    background: linear-gradient(180deg, #F2F4F5, #A7AFB4 55%, #6E777C); border: 1px solid #2B3134;
+    box-shadow: 0 3px 6px rgba(0,0,0,.6), inset 0 1px 0 #fff; transition: top .08s ease-out;
+    display: flex; align-items: center; justify-content: center;
+}
+.mc-knob i { position: absolute; left: 6px; right: 6px; top: 50%; height: 2px; margin-top: -1px; background: rgba(0,0,0,.25); border-radius: 1px; }
+.mc-knob b { position: relative; font-family: var(--mono); font-size: 11px; font-weight: 800; color: #111; background: rgba(255,255,255,.75); padding: 0 4px; border-radius: 3px; }
+.mc-knob.p { box-shadow: 0 3px 6px rgba(0,0,0,.6), inset 0 1px 0 #fff, 0 0 0 2px #3C88D0; }
+.mc-knob.b { box-shadow: 0 3px 6px rgba(0,0,0,.6), inset 0 1px 0 #fff, 0 0 0 2px #E0A010; }
+.mc-knob.eb { box-shadow: 0 3px 6px rgba(0,0,0,.6), inset 0 1px 0 #fff, 0 0 0 2px #E5484D; }
+/* 速度表 */
+.cs-gauge { width: 210px; padding: 6px; display: flex; align-items: center; justify-content: center; }
+.cs-dial { width: 196px; height: 196px; display: block; }
+.cs-ticks text { fill: #E9EEF0; font: 700 12px var(--mono); text-anchor: middle; }
+.cs-unit-txt { fill: #8E979C; font: 600 10px var(--mono); text-anchor: middle; }
+.cs-dial [data-needle] { transition: transform .12s linear; filter: drop-shadow(0 2px 2px rgba(0,0,0,.6)); }
+.cs-digital { position: absolute; left: 50%; top: 62%; transform: translateX(-50%); padding: 2px 10px; border-radius: 4px;
+    background: #071A10; border: 1px solid #000; box-shadow: inset 0 0 6px rgba(0,0,0,.9); display: flex; align-items: baseline; gap: 4px; }
+.cs-digital b { font: 700 22px var(--mono); color: #7CFFB2; text-shadow: 0 0 6px rgba(124,255,178,.6); min-width: 42px; text-align: right; }
+.cs-digital small { font-size: 10px; color: #4FA77A; }
+/* 指示燈與 TIMS 螢幕 */
+.cs-mid { display: flex; flex-direction: column; gap: 10px; min-width: 0; }
+.cs-lamps { display: flex; gap: 10px; flex-wrap: wrap; }
+.lamp { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10.5px; color: #8E979C; min-width: 38px; }
+.lamp i { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #3A4045;
+    background: radial-gradient(circle at 35% 30%, #4A5257, #1D2124 70%); box-shadow: inset 0 -2px 3px rgba(0,0,0,.6); }
+.lamp.green i { background: radial-gradient(circle at 35% 30%, #D8FFE7, #2FD27A 45%, #0B6B37); box-shadow: 0 0 10px #2FD27A; }
+.lamp.amber i { background: radial-gradient(circle at 35% 30%, #FFF4D2, #F2B01E 45%, #8A5A00); box-shadow: 0 0 10px #F2B01E; }
+.lamp.red i { background: radial-gradient(circle at 35% 30%, #FFE0E0, #FF4B4B 45%, #8A1010); box-shadow: 0 0 12px #FF4B4B; }
+.lamp.blue i { background: radial-gradient(circle at 35% 30%, #E2F1FF, #3C9BFF 45%, #0C4A8A); box-shadow: 0 0 10px #3C9BFF; }
+.lamp.blink i { animation: dv-lamp .5s steps(2) infinite; }
+@keyframes dv-lamp { 50% { filter: brightness(.35); box-shadow: none; } }
+.cs-tims { flex: 1; border-radius: 6px; padding: 8px 10px; background: #061109; border: 2px solid #000;
+    box-shadow: inset 0 0 14px rgba(0,0,0,.95), 0 0 0 3px #2C3236; font-family: var(--mono); color: #7CFFB2; display: flex; flex-direction: column; gap: 4px; min-height: 92px; }
+.tims-row { display: flex; align-items: baseline; gap: 8px; font-size: 12px; color: #4FA77A; white-space: nowrap; overflow: hidden; }
+.tims-row b { color: #9DFFC6; font-size: 17px; text-shadow: 0 0 6px rgba(124,255,178,.45); }
+.tims-row b[data-tims-name] { font-family: var(--font); font-size: 20px; font-weight: 900; }
+.tims-limit { font-size: 11.5px; color: #FFD58A; min-height: 14px; }
+.tims-guide { display: flex; flex-direction: column; gap: 4px; }
+.tims-guide span { color: #FFD58A; }
+.dv-ruler { position: relative; height: 16px; background: rgba(124, 255, 178, 0.08); border-radius: 3px; }
+.dv-ruler .dv-target { position: absolute; left: 50%; top: -3px; bottom: -3px; width: 2px; margin-left: -1px; background: #E5484D; }
+.dv-ruler .dv-tol { position: absolute; left: 50%; top: 0; bottom: 0; transform: translateX(-50%); background: rgba(30, 158, 90, 0.45); }
+.dv-ruler .dv-me { position: absolute; top: 1px; width: 12px; height: 14px; margin-left: -6px; background: #F2B01E; clip-path: polygon(0 0, 100% 50%, 0 100%); transition: left 0.1s linear; }
+/* 按鈕 */
+.cs-btns { display: grid; grid-template-columns: repeat(4, 64px); grid-auto-rows: 64px; gap: 8px; align-content: center; }
+.pb { position: relative; border: 0; border-radius: 10px; cursor: pointer; color: #E9EEF0; font-family: inherit; touch-action: none;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px;
+    background: linear-gradient(180deg, #4A5257, #2B3135); box-shadow: 0 4px 0 #0E1012, 0 5px 8px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.2); }
+.pb:active, .pb.on { transform: translateY(3px); box-shadow: 0 1px 0 #0E1012, 0 2px 4px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.1); }
+.pb span { font-size: 19px; line-height: 1; }
+.pb small { font-size: 10.5px; color: #C2CACE; }
+.pb.door { background: linear-gradient(180deg, #2F7A4F, #1C4E32); }
+.pb.door span { font-size: 15px; color: #CFFFE0; }
+.pb.ato .key { width: 26px; height: 26px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #DDE3E6, #6E777C); border: 2px solid #1A1D20; position: relative; transition: transform .15s; }
+.pb.ato .key i { position: absolute; left: 50%; top: 3px; bottom: 3px; width: 4px; margin-left: -2px; background: #1A1D20; border-radius: 2px; }
+.pb.ato.on { background: linear-gradient(180deg, #2E6FB3, #1B4677); }
+.pb.ato.on .key { transform: rotate(90deg); }
+.pb.eb { background: linear-gradient(180deg, #3A3F43, #24282B); }
+.pb.eb span { width: 40px; height: 40px; border-radius: 50%; background: radial-gradient(circle at 35% 30%, #FF9A9A, #E02424 45%, #7A0B0B); box-shadow: 0 3px 0 #4A0606, 0 0 0 4px #F2C230; }
+.pb.eb small { display: none; }
+.pb.horn.on { background: linear-gradient(180deg, #8A6A1F, #5A4412); }
+
+/* 手機/窄螢幕:主控制器在右側方便拇指操作,速度表縮小,站序收合 */
+@media (max-width: 760px), (max-height: 520px) {
+    .dv-hud .code-badge { font-size: 12px; padding: 2px 6px; }
+    .dv-top-left { left: 8px; top: 8px; gap: 6px; max-width: 58vw; }
+    .dv-line { padding: 6px 8px; } .dv-line b { font-size: 14px; } .dv-line small { display: none; }
+    .dv-next { padding: 6px 10px; } .dv-next b { font-size: 18px; } .dv-next em { font-size: 14px; } .dv-next span { display: none; }
+    .dv-top-center { top: 8px; } .dv-msg { font-size: 12.5px; white-space: normal; max-width: 70vw; text-align: center; }
+    .dv-route { display: none; right: 8px; top: 52px; max-height: 40vh; }
+    .dv-hud.show-route .dv-route { display: block; }
+    .dv-route-toggle { display: block; position: absolute; right: 8px; top: 8px; width: 38px; height: 38px; border-radius: 8px; border: 1px solid rgba(255,255,255,.2); background: rgba(16, 28, 24, 0.78); color: #fff; font-size: 18px; }
+    .dv-marquee { width: 92vw; height: 30px; } .dv-marquee span { font-size: 16px; line-height: 26px; }
+    .dv-console { width: 100vw; grid-template-columns: auto 1fr auto; grid-template-rows: auto auto; gap: 8px; padding: 8px; border-radius: 12px 12px 0 0; }
+    .cs-gauge { grid-column: 1; grid-row: 1 / 3; width: 132px; padding: 4px; }
+    .cs-dial { width: 124px; height: 124px; }
+    .cs-digital b { font-size: 16px; min-width: 30px; }
+    .cs-mid { grid-column: 2; grid-row: 1; gap: 6px; }
+    .cs-lamps { gap: 4px; } .lamp { min-width: 30px; font-size: 9.5px; } .lamp i { width: 14px; height: 14px; }
+    .cs-tims { min-height: 0; padding: 5px 7px; } .tims-row b { font-size: 14px; } .tims-row b[data-tims-name] { font-size: 15px; }
+    .cs-btns { grid-column: 2; grid-row: 2; grid-template-columns: repeat(8, 1fr); grid-auto-rows: 48px; gap: 5px; }
+    .pb small { font-size: 9px; } .pb span { font-size: 15px; } .pb.eb span { width: 28px; height: 28px; }
+    .cs-mc { grid-column: 3; grid-row: 1 / 3; padding: 4px 6px 6px; }
+    .mc-label { display: none; }
+    .mc-plate { font-size: 10px; } .mc-plate span { min-height: 13px; }
+    .mc-slot { width: 34px; } .mc-knob { width: 46px; height: 24px; }
+}
+@media (max-height: 520px) and (orientation: landscape) {
+    .dv-console { width: min(100vw, 820px); }
+    .cs-btns { grid-auto-rows: 40px; }
+    .mc-plate span { min-height: 10px; }
+}
+
+.dv-pause { position: absolute; inset: 0; background: rgba(0, 0, 0, 0.55); display: flex; align-items: center; justify-content: center; z-index: 4; }
+.dv-card { background: var(--panel); color: var(--text); border-radius: 6px; padding: 20px; width: 320px; display: flex; flex-direction: column; gap: 8px; position: relative; overflow: hidden; }
+.dv-card.wide { width: min(720px, 92vw); max-height: 86vh; overflow-y: auto; }
+.dv-card::before { content: ""; position: absolute; left: 0; top: 0; border-top: 36px solid var(--action); border-right: 36px solid transparent; }
+.dv-card h3 { margin: 0 0 6px 24px; font-weight: 900; }
+.dv-card .mono { font-family: var(--mono); }
+.dv-rank { position: absolute; right: 20px; top: 12px; font-family: var(--mono); font-size: 56px; font-weight: 800; color: var(--accent); }
+.dv-rank.S { color: #C48C31; }
+.dv-rank.D { color: var(--danger); }
+.drive-overlay [hidden] { display: none !important; }
+@media (max-height: 760px) and (min-width: 761px) {
+  .dv-console { transform: translateX(-50%) scale(.78); transform-origin: 50% 100%; }
+  .dv-driver-tag { bottom: 200px; }
+}

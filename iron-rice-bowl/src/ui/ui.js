@@ -174,7 +174,7 @@ export class UI {
     const s = this.showScreen(`
       <div class="title-block">
         <h1>鐵飯碗</h1>
-        <p class="sub">IRON RICE BOWL · 新自強號 EMU3000</p>
+        <p class="sub">IRON RICE BOWL · 鈦直鐵路有限公司(鈦鐵)· 新自強號 EMU3000</p>
       </div>
       <div class="career">
         ${status}
@@ -212,6 +212,65 @@ export class UI {
   brief(m, onStart, onBack) {
     const ph = m.phases[0];
     if (ph.type === 'kitchen') return this.kitchenBrief(m, onStart, onBack);
+    if (ph.type === 'ticketing') {
+      const s = this.showScreen(`<div class="card brief tall"><h2>${esc(m.title)} <small>${esc(m.subtitle)}</small></h2><p>${esc(m.brief)}</p>
+        <table class="kv">
+          <tr><th>① 目的地</th><td>照旅客說的車站點選(旅客需求會一直顯示在左上角)</td></tr>
+          <tr><th>② 車次</th><td>注意旅客指定的車種(自強/區間)與「幾點以後」;客滿的車不能賣</td></tr>
+          <tr><th>③ 票種張數</th><td>全票、半票(孩童)、敬老 / 愛心票,張數要和旅客說的一樣</td></tr>
+          <tr><th>④ 座位</th><td>A、D 靠窗,B、C 靠走道;「坐一起」要同一排相鄰。其他窗口也在劃位,座位會被搶走!</td></tr>
+          <tr><th>⑤ 收款找零</th><td>按「收款」→ 自己算找零、用數字鍵輸入 → 出票。多找 = 帳款短少,少找 = 客訴</td></tr>
+        </table>
+        <p class="tip">旅客排太久會生氣離開(客訴)。服務四分之三以上的旅客、客訴不超過上限即過關。</p>
+        <div class="actions"><button class="ghost" id="b-back">返回</button><button id="b-start">開窗(Enter)</button></div></div>`, 'dim');
+      $('#b-start', s).addEventListener('click', onStart);
+      $('#b-back', s).addEventListener('click', onBack);
+      return;
+    }
+    if (ph.type === 'operations') {
+      const s = this.showScreen(`<div class="card brief tall"><h2>${esc(m.title)} <small>${esc(m.subtitle)}</small></h2><p>${esc(m.brief)}</p>
+        <table class="kv">
+          <tr><th>路網</th><td>📍 新增車站:點鈦鐵路線附近 3 公里內的位置;🛤 新增路線:依序點選車站或空地。紅圈是需求熱點,有車站服務才吸引得到旅客</td></tr>
+          <tr><th>班次票價</th><td>各路線每小時班次(擁擠程度、營運成本)、票價倍率(票收與旅客流失)</td></tr>
+          <tr><th>便當菜色</th><td>經典款與騰雲座艙各分處便當,最多上架 5 種並訂售價</td></tr>
+          <tr><th>結算</th><td>每季按「結算本季」看董事會報告;一年 4 季,達成年度目標才算成功</td></tr>
+        </table>
+        <p class="tip">右下角會即時試算本季損益與滿意度,可以邊調整邊看。地圖需要連網載入。</p>
+        <div class="actions"><button class="ghost" id="b-back">返回</button><button id="b-start">進辦公室(Enter)</button></div></div>`, 'dim');
+      $('#b-start', s).addEventListener('click', onStart);
+      $('#b-back', s).addEventListener('click', onBack);
+      return;
+    }
+    if (ph.type === 'dispatch') {
+      const s = this.showScreen(`<div class="card brief tall"><h2>${esc(m.title)} <small>${esc(m.subtitle)}</small></h2><p>${esc(m.brief)}</p>
+        <table class="kv">
+          <tr><th>巨大資訊牆</th><td>上方南下線、下方北上線;橘色 = 自強號、藍色 = 區間車,框紅 = 延誤超過 5 分;紅色虛線 = 封鎖區間,黃底 = 單線雙向運轉</td></tr>
+          <tr><th>待避</th><td>區間車走在自強號前面時,指示它在前方有待避線的車站(圖上有小迴圈的站)待避,自強號就能通過</td></tr>
+          <tr><th>扣車 / 放行</th><td>號誌故障的車站、進入單線雙向區間的列車,都要你按「放行」才會出發</td></tr>
+          <tr><th>單線雙向運轉</th><td>軌道被故障列車或異物堵住時啟用;區間內同時只能有一個方向的列車,對向還在裡面就放行 → 險些相撞!</td></tr>
+          <tr><th>操作</th><td>點選左下清單或資訊牆上的列車;<kbd>Space</kbd> 暫停、<kbd>1</kbd><kbd>2</kbd><kbd>3</kbd> 模擬速度 ×10 / ×20 / ×40;拖曳環顧控制室</td></tr>
+        </table>
+        <p class="tip">目標:加權平均延誤(自強號權重 2)低於關卡門檻,而且不能發生險些相撞。</p>
+        <div class="actions"><button class="ghost" id="b-back">返回</button><button id="b-start">就座(Enter)</button></div></div>`, 'dim');
+      $('#b-start', s).addEventListener('click', onStart);
+      $('#b-back', s).addEventListener('click', onBack);
+      return;
+    }
+    if (ph.type === 'driver') {
+      const s = this.showScreen(`<div class="card brief tall"><h2>${esc(m.title)} <small>${esc(m.subtitle)}</small></h2><p>${esc(m.brief)}</p>
+        <table class="kv">
+          <tr><th><kbd>↑</kbd>/<kbd>W</kbd> <kbd>↓</kbd>/<kbd>S</kbd></th><td>主控制器:牽引 P1~P5 ⇄ 惰行 N ⇄ 制動 B1~B8(滾輪、拖曳握把也可)</td></tr>
+          <tr><th><kbd>E</kbd> / <kbd>N</kbd></th><td>緊急制動 EB / 回到惰行</td></tr>
+          <tr><th><kbd>D</kbd></th><td>開關車門:要停妥在「停」字停車位置標(容許誤差內)並施加制動才能開門</td></tr>
+          <tr><th><kbd>V</kbd></th><td>視角:駕駛室 / 司機員(看得到自己)/ 車外追蹤 / 車側 / 空拍;滑鼠拖曳環顧</td></tr>
+          <tr><th><kbd>H</kbd> <kbd>B</kbd> <kbd>A</kbd> <kbd>T</kbd></th><td>鳴笛 / 車內廣播(輸入文字)/ 自動駕駛 / ATP 開關</td></tr>
+        </table>
+        <p class="tip">停車誤差 ≤ 0.5 m 計入「精準停車」,> 2 m 會記點;超速被 ATP 制動、誤點超過 3 分鐘都會影響考核。ATP 切除時彎道過速會出軌!</p>
+        <div class="actions"><button class="ghost" id="b-back">返回</button><button id="b-start">上車(Enter)</button></div></div>`, 'dim');
+      $('#b-start', s).addEventListener('click', onStart);
+      $('#b-back', s).addEventListener('click', onBack);
+      return;
+    }
     if (ph.role) {
       const ws = CHASE_WEAPONS[ph.role];
       const s = this.showScreen(`<div class="card brief tall"><h2>${esc(m.title)} <small>${esc(m.subtitle)}</small></h2><p>${esc(m.brief)}</p>
@@ -377,6 +436,10 @@ export class UI {
   result(m, r, career, onRetry, onMenu) {
     if (r.kind === 'kitchen') return this.kitchenResult(m, r, career, onRetry, onMenu);
     if (r.kind === 'chase') return this.chaseResult(m, r, career, onRetry, onMenu);
+    if (r.kind === 'transfer' || r.kind === 'ticket') return this.simpleResult(m, r, career, onRetry, onMenu);
+    if (r.kind === 'driver') return this.driverResult(m, r, career, onRetry, onMenu);
+    if (r.kind === 'dispatch') return this.dispatchResult(m, r, career, onRetry, onMenu);
+    if (r.kind === 'coo') return this.cooResult(m, r, career, onRetry, onMenu);
     const stars = r.success ? 1 + (r.sat >= 70 && !r.complaints.length ? 1 : 0) + (r.sat >= 90 && r.missed <= 2 && !r.underCount ? 1 : 0) : 0;
     // career = 本次人事異動紀錄(null = 沒有異動)
     const notice = !career ? ''
@@ -402,6 +465,95 @@ export class UI {
         <div class="actions"><button class="ghost" id="b-menu">回任務選單</button>${career && career.to !== '列車餐服員' ? '' : '<button id="b-retry">再挑戰一次(Enter)</button>'}</div>
       </div>`, 'dim');
     $('#b-retry', s)?.addEventListener('click', onRetry);
+    $('#b-menu', s).addEventListener('click', onMenu);
+  }
+
+  /** 營運長年度結算 */
+  cooResult(m, r, career, onRetry, onMenu) {
+    const notice = !career ? '' : `<div class="c-status ${career.kind === 'promote' ? 'good' : 'bad'} big">${career.clear ? '👑 榮升局長 — 通關!' : `${career.kind === 'promote' ? '🎉' : '📋'} 人事命令:${esc(career.from)} ${esc(career.verb)}「${esc(career.to)}」`}<br><small>${esc(career.reason)}</small></div>`;
+    const G = r.goals;
+    const s = this.showScreen(`
+      <div class="card result ${r.success ? 'ok' : 'fail'}">
+        <h2>${r.success ? '年度目標達成!' : '年度目標未達成'} <small>${esc(r.level)}</small></h2>
+        ${r.reason ? `<p class="reason">${esc(r.reason)}</p>` : ''}
+        ${notice}
+        <table class="kv">
+          <tr><th>獲利季度</th><td>${r.profitable} / ${G.profitable || 0}</td><th>滿意度 ≥ 85 季度</th><td>${r.happy} / ${G.happy || 0}</td></tr>
+          <tr><th>新車站 / 新路線</th><td>${r.newLines} / ${G.newLines || 0}</td><th>全年損益</th><td>${(r.totalProfit / 1e8).toFixed(2)} 億</td></tr>
+        </table>
+        <table class="kv"><tr><th>季</th><th>運量</th><th>損益</th><th>滿意度</th></tr>
+          ${r.quarters.map((q) => `<tr><td>Q${q.q}</td><td>${(q.riders / 1e6).toFixed(1)} 百萬</td><td>${(q.profit / 1e8).toFixed(2)} 億</td><td>${q.sat.toFixed(0)}</td></tr>`).join('')}</table>
+        <div class="actions"><button class="ghost" id="b-menu">回任務選單</button><button id="b-retry">再挑戰一次(Enter)</button></div>
+      </div>`, 'dim');
+    $('#b-retry', s).addEventListener('click', onRetry);
+    $('#b-menu', s).addEventListener('click', onMenu);
+  }
+
+  /** 行控結算 */
+  dispatchResult(m, r, career, onRetry, onMenu) {
+    const notice = !career ? '' : `<div class="c-status ${career.kind === 'promote' ? 'good' : 'bad'} big">${career.kind === 'promote' ? '🎉' : '📋'} 人事命令:${esc(career.from)} ${esc(career.verb)}「${esc(career.to)}」<br><small>${esc(career.reason)}</small></div>`;
+    const stars = !r.success ? 0 : 1 + (r.wDelay <= r.goal * 0.6 ? 1 : 0) + (r.wDelay <= r.goal * 0.3 ? 1 : 0);
+    const s = this.showScreen(`
+      <div class="card result ${r.success ? 'ok' : 'fail'}">
+        <h2>${r.success ? '班次順利交班' : '調度考核未通過'} <small>${esc(r.level)}</small></h2>
+        ${r.reason ? `<p class="reason">${esc(r.reason)}</p>` : ''}
+        ${notice}
+        <div class="big-stars">${'★'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>
+        <table class="kv">
+          <tr><th>加權平均延誤</th><td>${r.wDelay.toFixed(1)} 分(目標 ≤ ${r.goal})</td><th>準點率(≤5 分)</th><td>${Math.round(r.ontime * 100)}%</td></tr>
+          <tr><th>延誤 &gt; 10 分</th><td>${r.major} 列</td><th>險些相撞</th><td>${r.conflicts} 次</td></tr>
+          <tr><th>排除的事故</th><td>${r.resolved} / ${r.incidents}</td><th>車次</th><td>${r.list.length} 列</td></tr>
+        </table>
+        <table class="kv"><tr><th>車次</th><th>種類</th><th>延誤</th></tr>${r.list.map((x) => `<tr><td>${esc(x.no)}</td><td>${x.type === 'exp' ? '自強' : '區間'}${x.dir > 0 ? ' 南下' : ' 北上'}</td><td>${Math.round(x.delay)} 分${x.done ? '' : '(未到站)'}</td></tr>`).join('')}</table>
+        <div class="actions"><button class="ghost" id="b-menu">回任務選單</button><button id="b-retry">再挑戰一次(Enter)</button></div>
+      </div>`, 'dim');
+    $('#b-retry', s).addEventListener('click', onRetry);
+    $('#b-menu', s).addEventListener('click', onMenu);
+  }
+
+  /** 司機員結算 */
+  driverResult(m, r, career, onRetry, onMenu) {
+    const notice = !career ? '' : `<div class="c-status ${career.kind === 'promote' ? 'good' : 'bad'} big">${career.kind === 'promote' ? '🎉' : '📋'} 人事命令:${esc(career.from)} ${esc(career.verb)}「${esc(career.to)}」<br><small>${esc(career.reason)}</small></div>`;
+    const fmt = (s) => `${Math.floor(s / 60)}:${String(Math.round(s % 60)).padStart(2, '0')}`;
+    const s = this.showScreen(`
+      <div class="card result ${r.success ? 'ok' : 'fail'}">
+        <h2>${r.crash ? '出軌事故' : r.success ? '準點到站!' : '考核未通過'} <small>${esc(r.level)}</small></h2>
+        ${r.reason ? `<p class="reason">${esc(r.reason)}</p>` : ''}
+        ${notice}
+        <div class="big-stars" style="font-size:42px">${r.crash ? '✖' : r.rank}</div>
+        <table class="kv">
+          <tr><th>停車平均得分</th><td>${r.avg}</td><th>ATP 超速制動</th><td>${r.atpHits} 次</td></tr>
+          <tr><th>行駛</th><td>${(r.odo / 1000).toFixed(2)} km・${fmt(r.time)}</td><th>誤點</th><td>${r.lateSec >= 180 ? `<b>${fmt(r.lateSec)}</b>` : r.lateSec ? fmt(r.lateSec) : '準點'}</td></tr>
+        </table>
+        <table class="kv"><tr><th>車站</th><th>停車誤差</th><th>評等</th><th>站間 / 參考</th></tr>
+          ${r.stops.map((x) => `<tr><td>${esc(x.name)}</td><td>${x.err >= 0 ? '+' : ''}${(x.err * 100).toFixed(0)} cm</td><td>${esc(x.grade)}</td><td>${fmt(x.legTime)} / ${fmt(x.ideal)}</td></tr>`).join('')}</table>
+        <div class="actions"><button class="ghost" id="b-menu">回任務選單</button><button id="b-retry">再開一次(Enter)</button></div>
+      </div>`, 'dim');
+    $('#b-retry', s).addEventListener('click', onRetry);
+    $('#b-menu', s).addEventListener('click', onMenu);
+  }
+
+  /** 轉乘 / 售票窗口結算 */
+  simpleResult(m, r, career, onRetry, onMenu) {
+    const notice = !career ? '' : `<div class="c-status ${career.kind === 'promote' ? 'good' : 'bad'} big">${career.kind === 'promote' ? '🎉' : '📋'} 人事命令:${esc(career.from)} ${esc(career.verb)}「${esc(career.to)}」<br><small>${esc(career.reason)}</small></div>`;
+    const tk = r.kind === 'ticket';
+    const stars = !r.success ? 0 : tk ? 1 + (r.complaints === 0 ? 1 : 0) + (!r.cashShort && !r.cashOver && !r.seatErrors ? 1 : 0) : 1 + (r.timeLeft > 40 ? 1 : 0) + (r.timeLeft > 80 ? 1 : 0);
+    const s = this.showScreen(`
+      <div class="card result ${r.success ? 'ok' : 'fail'}">
+        <h2>${tk ? (r.success ? '售票班次完成' : '售票考核未通過') : (r.success ? '轉乘成功' : '轉乘失敗')} <small>${esc(r.level || m.title)}</small></h2>
+        ${r.reason ? `<p class="reason">${esc(r.reason)}</p>` : ''}
+        ${notice}
+        <div class="big-stars">${'★'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>
+        ${tk ? `<table class="kv">
+          <tr><th>服務旅客</th><td>${r.servedN} / ${r.customers}</td><th>售出車票</th><td>${r.sold} 張</td></tr>
+          <tr><th>劃錯</th><td>${r.seatErrors} 次</td><th>客訴</th><td>${r.complaints} / ${r.maxComplaints} 件</td></tr>
+          <tr><th>帳款短少</th><td>${r.cashShort} 元</td><th>少找(客訴)</th><td>${r.cashOver} 元</td></tr>
+          <tr><th>排太久離開</th><td colspan="3">${r.leftN} 位</td></tr></table>
+          ${r.log.length ? `<ul class="complaints">${r.log.map((x) => `<li>${esc(x)}</li>`).join('')}</ul>` : '<p class="muted-txt">全部正確,帳款零差額!</p>'}`
+        : `<p>剩餘時間 ${r.timeLeft ?? 0} 秒</p>`}
+        <div class="actions"><button class="ghost" id="b-menu">回任務選單</button><button id="b-retry">再挑戰一次(Enter)</button></div>
+      </div>`, 'dim');
+    $('#b-retry', s).addEventListener('click', onRetry);
     $('#b-menu', s).addEventListener('click', onMenu);
   }
 

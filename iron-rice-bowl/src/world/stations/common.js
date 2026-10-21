@@ -404,7 +404,7 @@ export function maskFloor(b, mat, x0, z0, x1, z1, y, test, uvScale = 1.2) {
   for (const [a, c, d, e] of maskToBoxes(mask, nx, nz, 1, x0, z0)) b.floor(mat, a, c, d, e, y, uvScale);
 }
 
-/** 臺鐵列車(EMU 白色車體 + 黑窗帶 + 色帶、車門、車頂設備;端車有斜面車頭)沿 x 停放 */
+/** 鈦鐵列車(EMU 白色車體 + 黑窗帶 + 色帶、車門、車頂設備;端車有斜面車頭)沿 x 停放 */
 export function trainSet(b, M, x0, cars, y, z, { stripe = '#e8730c', len = 20, dir = 1 } = {}) {
   const body = M._trainWhite ??= new THREE.MeshStandardMaterial({ color: '#eef0f0', roughness: 0.32, metalness: 0.45 });
   const band = M._trainBand ??= new THREE.MeshStandardMaterial({ color: '#16181c', roughness: 0.15, metalness: 0.3 });

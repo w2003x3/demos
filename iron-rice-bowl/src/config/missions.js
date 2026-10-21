@@ -1,3 +1,7 @@
+import { DRIVER_LEVELS } from './driver.js';
+import { DISPATCH_LEVELS } from './dispatch.js';
+import { COO_LEVELS } from './coo.js';
+import { TICKET_LEVELS } from './ticket.js';
 import { KITCHEN_LEVELS } from './kitchen.js';
 // 任務 = 依序執行的階段(phases)。目前實作 'onboard'(車上販售);
 // 'station'(大站下車 → 換月台 → 等指定列車領便當 → 上另一班車)已預留介面,見 src/game/stationPhase.js。
@@ -74,13 +78,19 @@ export const MISSIONS = [
   },
   {
     id: 'x1',
-    locked: true,
     title: '大站轉乘補貨',
-    subtitle: '開發中',
+    subtitle: '宜蘭 → 臺北(轉乘)→ 新竹',
     difficulty: 4,
-    brief: '在臺北站下車,穿過穿堂到指定月台,等候指定列車送來便當,再登上另一班列車繼續販售。',
+    brief: '先在北上列車販售;到臺北站下車後,穿過 B1 穿堂到便當交接點領補貨,再限時趕到另一個月台,搭上往新竹的列車繼續販售。',
     phases: [
-      { type: 'onboard', trainType: 'EMU3000', route: ['yilan', 'taipei'] /* … */ },
+      {
+        type: 'onboard', trainType: 'EMU3000', trainNo: '自強 223',
+        route: ['yilan', 'ruifang', 'nangang', 'songshan', 'taipei'],
+        legTimes: [95, 75, 45, 48], dwell: 12, serviceCars: [5, 6], tripsRequired: 1, preorders: 1,
+        stock: { pork: 5, chicken: 4, veg: 2, tea: 5, coffee: 4, water: 4 },
+        occupancy: 0.66, buyers: { interval: [2.6, 5], max: 4, patience: [42, 66] },
+        incidents: { initial: 1, perStop: [0, 1] }, scenery: { theme: 'town', time: 'noon' },
+      },
       {
         type: 'station', station: 'taipei',
         arriveTrack: '3A',
@@ -88,23 +98,27 @@ export const MISSIONS = [
         departTrack: '2A',
         timeLimit: 180,
       },
-      { type: 'onboard', trainType: 'EMU3000', route: ['taipei', 'hsinchu'] /* … */ },
+      {
+        type: 'onboard', trainType: 'EMU3000', trainNo: '自強 151',
+        route: ['taipei', 'hsinchu'],
+        legTimes: [170], dwell: 12, serviceCars: [3, 4, 5], tripsRequired: 2, preorders: 2,
+        stock: { pork: 10, chicken: 8, veg: 3, tea: 7, coffee: 5, water: 6 },
+        occupancy: 0.74, buyers: { interval: [2.2, 4.4], max: 6, patience: [38, 60] },
+        incidents: { initial: 2, perStop: [1, 1] }, scenery: { theme: 'town', time: 'sunset' },
+      },
     ],
   },
 ];
 
 // 升遷後的工作(預留):司機員駕駛列車
-export const DRIVER_MISSION = {
-  id: 'd1',
-  locked: true,
-  title: '司機員見習',
-  subtitle: '升遷後 · 開發中',
-  difficulty: 3,
-  brief: '升任司機員!坐進 EMU3000 駕駛室,看著前方路線控制速度,準點並準確停靠每一站。',
-  phases: [{ type: 'driver', trainType: 'EMU3000' }],
-};
+/** 司機員:各路段一關(src/config/driver.js) */
+export const DRIVER_MISSIONS = DRIVER_LEVELS.map((L) => ({
+  id: L.id, title: `司機員・${L.title}`, subtitle: `${L.line} · ${{ day: '白天', dusk: '黃昏', night: '夜間', overcast: '陰天' }[L.time]} · 停車 ±${L.tol} m${L.atp ? '' : ' · ATP 切除'}`,
+  difficulty: L.difficulty, brief: L.brief, role: 'driver',
+  phases: [{ type: 'driver', level: L.id }],
+}));
 
-// 被調職後的工作(預留):台鐵便當廚房
+// 被調職後的工作(預留):鈦鐵便當廚房
 /** 便當廚房:每個關卡一個任務(經典款 + 騰雲座艙各餐旅分處) */
 export const KITCHEN_MISSIONS = KITCHEN_LEVELS.map((L) => ({
   id: L.id,
@@ -119,7 +133,7 @@ export const KITCHEN_MISSION = KITCHEN_MISSIONS[0];
 /** 車站場景(站長、不良乘客共用):巡覽模式 */
 export const STATION_MISSIONS = [
   { id: 's-taipei', station: 'taipei', title: '臺北車站', difficulty: 3, subtitle: '1F 黑白棋盤格大廳 · B1 迷宮般的地下街',
-    brief: '台鐵、高鐵、捷運共構。1F 大廳四面各三個門、黑白棋盤格石材地板與挑高天井;B1 五條南北向通道、南北迴廊連接 K/Y/Z 區地下街與機場捷運,路線錯綜複雜。',
+    brief: '鈦鐵、高鐵、捷運共構。1F 大廳四面各三個門、黑白棋盤格石材地板與挑高天井;B1 五條南北向通道、南北迴廊連接 K/Y/Z 區地下街與機場捷運,路線錯綜複雜。',
     features: ['棋盤格大廳', '挑高天井天窗', 'LED 時刻看板', '報時火車', 'B1 五條通道', '付費區閘門', '地下街店面'] },
   { id: 's-kaohsiung', station: 'kaohsiung', title: '高雄車站', difficulty: 3, subtitle: '綠之丘天棚 · 雲朵天花 · 帝冠式舊站',
     brief: '鐵路地下化後的新站。地面是 Mecanoo 設計的「綠之丘」天棚:造型各異的花柱撐起起伏的圓頂,下方雲朵鋁板與圓形天窗;中軸線保留 1941 年帝冠式舊站;下沉廣場通往圓拱天花、燈籠照明的地下大廳。',
@@ -151,3 +165,27 @@ export const CHASE_MISSIONS = STATION_MISSIONS.flatMap((s) => ['stationmaster', 
     phases: [{ type: role, role, station: s.station, title: s.title, time, tags }],
   };
 }));
+
+/** 各職位的任務清單(選單依目前職位開放) */
+/** 行控人員:行車控制中心的調度班次(src/config/dispatch.js) */
+export const DISPATCH_MISSIONS = DISPATCH_LEVELS.map((L) => ({
+  id: L.id, title: `行控中心・${L.title}`, subtitle: `西部幹線 臺北—新竹 · ${L.trains.length} 車次 · ${L.incidents.length ? `${L.incidents.length} 起事故` : '無事故'}`,
+  difficulty: L.difficulty, brief: L.brief, role: 'dispatcher',
+  phases: [{ type: 'dispatch', level: L.id }],
+}));
+
+/** 營運長:年度經營計畫(src/config/coo.js) */
+export const COO_MISSIONS = COO_LEVELS.map((L) => ({
+  id: L.id, title: `營運長・${L.title}`, subtitle: `建設預算 ${L.budget} 億 · ${(L.hotspots || []).length} 個需求熱點`,
+  difficulty: L.difficulty, brief: L.brief, role: 'coo',
+  phases: [{ type: 'operations', level: L.id }],
+}));
+
+/** 站務員:售票窗口(src/config/ticket.js) */
+export const TICKET_MISSIONS = TICKET_LEVELS.map((L) => ({
+  id: L.id, title: `站務員・${L.title}`, subtitle: `臺北車站售票窗口 · ${L.customers} 位旅客 · ${Math.round(L.time / 60)} 分鐘`,
+  difficulty: L.difficulty, brief: L.brief, role: 'ticket',
+  phases: [{ type: 'ticketing', level: L.id }],
+}));
+
+export const ROLE_MISSIONS = { driver: DRIVER_MISSIONS, ticket: TICKET_MISSIONS, dispatcher: DISPATCH_MISSIONS, coo: COO_MISSIONS };

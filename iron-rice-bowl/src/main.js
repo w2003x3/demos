@@ -1,14 +1,16 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
-import { MISSIONS, DRIVER_MISSION, KITCHEN_MISSIONS, STATION_MISSIONS, CHASE_MISSIONS } from './config/missions.js';
+import { MISSIONS, ROLE_MISSIONS, KITCHEN_MISSIONS, STATION_MISSIONS, CHASE_MISSIONS } from './config/missions.js';
 import { StationExplorePhase } from './game/stationExplorePhase.js';
 import { StationChasePhase } from './game/stationChasePhase.js';
 import { RANKS, rankById } from './config/careerLadder.js';
 import { Career } from './game/career.js';
 import { KitchenPhase } from './game/kitchenPhase.js';
 import { DriverPhase } from './game/driverPhase.js';
-import { TicketingPhase, DispatchPhase, OperationsPhase } from './game/reservedPhases.js';
+import { TicketPhase } from './game/ticketPhase.js';
+import { CooPhase } from './game/cooPhase.js';
+import { DispatchPhase } from './game/dispatchPhase.js';
 import { Input } from './core/input.js';
 import { Sfx, Voice } from './core/audio.js';
 import { loadAssets } from './core/assets.js';
@@ -32,7 +34,7 @@ const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } cat
 
 const PHASES = {
   onboard: OnboardPhase, station: StationPhase, kitchen: KitchenPhase, driver: DriverPhase,
-  ticketing: TicketingPhase, stationmaster: StationChasePhase, dispatch: DispatchPhase, operations: OperationsPhase,
+  ticketing: TicketPhase, stationmaster: StationChasePhase, dispatch: DispatchPhase, operations: CooPhase,
   troublemaker: StationChasePhase, stationExplore: StationExplorePhase,
 };
 const MODEL_BASE = 'assets/models';
@@ -138,23 +140,30 @@ class Game {
     this.ui.showHud(false);
     const c = this.career, rank = c.rank;
     // 只能玩「目前職位」的任務;其他職位玩法尚未開放時以鎖定卡片顯示
-    const list = MISSIONS.map((m) => (rank.phase !== 'onboard' && !m.locked
+    const anyRole = new URLSearchParams(location.search).has('all');
+    const list = MISSIONS.map((m) => (rank.phase !== 'onboard' && !m.locked && !anyRole
       ? { ...m, locked: true, subtitle: `${m.subtitle} · 目前職位:${rank.title}` } : m));
     // 其他職位的任務:還沒到達該職位前不揭露內容
     const mask = (m, id) => (c.knows(id) ? m : { ...m, title: '？？？', subtitle: '未知職位', brief: '到達該職位後揭曉。' });
     // 便當廚房:目前職位是廚房時可玩;網址加 ?kitchen 可直接試玩
-    const tryKitchen = new URLSearchParams(location.search).has('kitchen');
-    list.push(mask(DRIVER_MISSION, 'driver'));
+    const tryAll = new URLSearchParams(location.search).has('all');
+    const tryKitchen = tryAll || new URLSearchParams(location.search).has('kitchen');
+    // 司機員、站務員、行控人員、營運長:到達該職位才可玩;網址加 ?all 可直接試玩全部職位
+    for (const [role, ms] of Object.entries(ROLE_MISSIONS)) {
+      if (tryAll || new URLSearchParams(location.search).has(role)) { list.push(...ms.map((m) => ({ ...m, locked: false }))); continue; }
+      if (!c.knows(role)) { list.push({ ...mask(ms[0], role), locked: true }); continue; }
+      list.push(...ms.map((m) => ({ ...m, locked: rank.id !== role })));
+    }
     for (const km of KITCHEN_MISSIONS) {
       const kitchen = { ...km, locked: !(rank.phase === 'kitchen' || tryKitchen) };
       list.push(tryKitchen ? kitchen : mask(kitchen, 'kitchen'));
       if (!tryKitchen && !c.knows('kitchen')) break;   // 還沒到過廚房:只顯示一張未知卡片
     }
     // 車站場景巡覽:站長或不良乘客職位可進入;網址加 ?stations 可直接看
-    const tryStations = new URLSearchParams(location.search).has('stations');
+    const tryStations = tryAll || new URLSearchParams(location.search).has('stations');
     if (tryStations || c.knows('stationmaster') || c.knows('troublemaker')) list.push(...STATION_MISSIONS.map((m) => ({ ...m, locked: false })));
     // 車站追逐:目前職位是站長 / 不良乘客時可玩;網址加 ?chase 可直接試玩兩方
-    const tryChase = new URLSearchParams(location.search).has('chase');
+    const tryChase = tryAll || new URLSearchParams(location.search).has('chase');
     for (const role of ['stationmaster', 'troublemaker']) {
       if (!(tryChase || c.knows(role))) continue;
       list.push(...CHASE_MISSIONS.filter((m) => m.role === role).map((m) => ({ ...m, locked: !(tryChase || rank.phase === role) })));
@@ -335,7 +344,7 @@ class Game {
       if (inp.wasPressed('Enter', 'NumpadEnter') && this.mission.phases[0].type === this.career.rank.phase) this.play(this.mission);
     }
     inp.endFrame();
-    if (this.phase && this.state !== 'loading') this.renderer.render(this.scene, this.camera);
+    if (this.phase && this.state !== 'loading' && !this.phase.ownRender) this.renderer.render(this.scene, this.camera);
   }
 
   _pauseMenu() {

@@ -133,7 +133,7 @@ export class OnboardPhase {
     this.exclaimTex = Tex.bubble('❗');
     this._makeTickets(cfg.preorders || 0);
     for (let i = 0; i < cfg.incidents.initial; i++) this.spawnIncident(6);
-    this.crew.setPos('臺鐵便當', 'READY');
+    this.crew.setPos('鈦鐵便當', 'READY');
 
     this._placeCamera(1, true);
   }
@@ -977,7 +977,7 @@ export class OnboardPhase {
   }
 
   _closeDialog() {
-    if (this.dialog?.kind === 'order') this.crew.setPos('臺鐵便當', 'READY');
+    if (this.dialog?.kind === 'order') this.crew.setPos('鈦鐵便當', 'READY');
     this.dialog = null;
   }
 

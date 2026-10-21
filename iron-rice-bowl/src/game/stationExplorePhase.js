@@ -190,7 +190,8 @@ export class StationExplorePhase {
       look = head.clone().add(new THREE.Vector3(0, -0.2, 0));
       cam.fov = 60;
     }
-    cam.position.lerp(pos, Math.min(1, dt * 10));
+    // 第一幀(或瞬間移動後)直接就定位,之後平滑跟隨
+    if (!this._camInit || cam.position.distanceTo(pos) > 25) { cam.position.copy(pos); this._camInit = true; } else cam.position.lerp(pos, Math.min(1, dt * 10));
     cam.lookAt(look);
     cam.updateProjectionMatrix();
   }

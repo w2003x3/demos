@@ -1,4 +1,4 @@
-// 台鐵便當廚房(three.js 程序化建模):
+// 鈦鐵便當廚房(three.js 程序化建模):
 //   北牆 — 烹調線:炊飯機、滷鍋、炒鍋爐、油炸機、煎台,上方不鏽鋼排油煙罩
 //   西牆 — 備料檯:水槽、砧板;西側門通往倉庫(層架、紙箱、米袋)
 //   中央 — 組裝島台:保溫餐檯(9 格 GN 餐盤)、保溫飯鍋、便當盒與蓋子堆、組裝位
@@ -100,7 +100,7 @@ function cartonTexture(text) {
     c.fillStyle = 'rgba(120,80,40,0.5)'; c.fillRect(0, h * 0.46, w, 16);   // 膠帶
     c.fillStyle = '#2b2b2b'; c.textAlign = 'center'; c.textBaseline = 'middle';
     c.font = `900 40px ${font}`; c.fillText(text, w / 2, h * 0.28);
-    c.font = `500 22px ${font}`; c.fillText('臺鐵便當 專用', w / 2, h * 0.74);
+    c.font = `500 22px ${font}`; c.fillText('鈦鐵便當 專用', w / 2, h * 0.74);
     c.strokeStyle = '#2b2b2b'; c.lineWidth = 3; c.strokeRect(w * 0.3, h * 0.82, w * 0.4, 26);
   }, { wrap: false });
 }
@@ -847,7 +847,7 @@ export class KitchenScene {
     const c = this.ticketTex.image.getContext('2d'), w = 256, h = 320;
     c.fillStyle = '#fffdf6'; c.fillRect(0, 0, w, h);
     c.fillStyle = '#222'; c.textAlign = 'center';
-    c.font = `500 22px ${font}`; c.fillText('臺鐵便當 製作單', w / 2, 34);
+    c.font = `500 22px ${font}`; c.fillText('鈦鐵便當 製作單', w / 2, 34);
     c.fillRect(20, 46, w - 40, 2);
     if (bento) {
       const name = bento.name.replace('便當', '').replace('餐盒', '');

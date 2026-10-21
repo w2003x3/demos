@@ -140,9 +140,9 @@ export class CartCrew {
       c.fillStyle = '#fff';
       c.font = `bold 62px ${font}`;
       c.textAlign = 'center'; c.textBaseline = 'middle';
-      c.fillText('臺鐵便當', w / 2, h / 2 - 8);
+      c.fillText('鈦鐵便當', w / 2, h / 2 - 8);
       c.font = `bold 20px "Segoe UI",sans-serif`;
-      c.fillText('TRA BENTO · DRINKS', w / 2, h - 16);
+      c.fillText('TZR BENTO · DRINKS', w / 2, h - 16);
     }, 512, 120);
     const mat = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.5 });
     for (const side of [1, -1]) {

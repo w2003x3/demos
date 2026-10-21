@@ -82,7 +82,7 @@ export class TrainSet {
     this._buildSeatNumbers();
   }
 
-  /** 行李架邊緣的座號牌(台鐵車廂的座號就標在行李架上)。 */
+  /** 行李架邊緣的座號牌(鈦鐵車廂的座號就標在行李架上)。 */
   _buildSeatNumbers() {
     const I = this.type.interior;
     const cols = 8, rows = Math.ceil((I.seatRows * 2) / cols);

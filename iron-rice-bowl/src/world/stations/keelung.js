@@ -167,7 +167,7 @@ export function buildKeelung({ assets, variant = 'normal', quality = {} }) {
   for (let i = 0; i < 5; i++) b.box(M.steelPaint, 0.9, 1.7, 0.6, 40 + i * 1.3, B1, LZ0 + 0.7);
   b.solid('B1', 39.4, LZ0, 46.6, LZ0 + 1.1);
   sign(b, textTex('售票 · 旅客服務', { sub: 'Tickets · Information', bg: '#1f4e9a', h: 100, w: 520 }), 3.8, 0.7, 43, B1 + 2.8, LZ0 + 0.45, 0, { double: false });
-  shopfront(b, M, '臺鐵便當本舖', 'TRA Bento', '#b23a2a', 38, 46, LZ1 - 0.1, B1, 4.2, -1, R); b.solid('B1', 38, LZ1 - 1, 46, LZ1);
+  shopfront(b, M, '鈦鐵便當本舖', 'TZR Bento', '#b23a2a', 38, 46, LZ1 - 0.1, B1, 4.2, -1, R); b.solid('B1', 38, LZ1 - 1, 46, LZ1);
   shopfront(b, M, '全家便利商店', 'FamilyMart', '#00a0e9', 48, 56, LZ1 - 0.1, B1, 4.2, -1, R); b.solid('B1', 48, LZ1 - 1, 56, LZ1);
   // 往地面的大樓梯(北站量體內,沿 +x 上升到港西街側)+ 手扶梯
   const sa = 46, sb2 = 60;

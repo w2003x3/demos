@@ -1,4 +1,4 @@
-// 由 rail-assets/tools/sync.mjs 複製(2026-10-18),請勿在此修改,改 rail-assets/adapters/three/rail-assets.js
+// 由 rail-assets/tools/sync.mjs 複製(2026-10-21),請勿在此修改,改 rail-assets/adapters/three/rail-assets.js
 /**
  * rail-assets.js — three.js 載入器(由 rail-assets/tools/sync.mjs 複製到各專案,請勿在專案內修改)
  *

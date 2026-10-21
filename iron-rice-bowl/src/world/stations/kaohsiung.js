@@ -79,7 +79,7 @@ export function buildKaohsiung({ assets, variant = 'normal', quality = {} }) {
     b.solid('G', x - 0.9, z - 0.9, x + 0.9, z + 0.9);
   });
   // 天棚邊緣入口指標
-  sign(b, textTex('高雄車站', { sub: 'Kaohsiung Station · 臺鐵 TRA · 捷運 MRT', bg: '#1f5a3a', h: 110, w: 720 }), 7, 1.1, 0, 4.2, 12, 0);
+  sign(b, textTex('高雄車站', { sub: 'Kaohsiung Station · 鈦鐵 TZR · 捷運 MRT', bg: '#1f5a3a', h: 110, w: 720 }), 7, 1.1, 0, 4.2, 12, 0);
   exits.push({ name: '中山一路側', floor: 'G', x: 0, z: 82 }, { name: '舊站前', floor: 'G', x: 0, z: -20 }, { name: '建國路側', floor: 'G', x: -90, z: 30 }, { name: '九如路側', floor: 'G', x: 90, z: 30 });
 
   // ================================================================ 下沉廣場 → B1 地下大廳
@@ -130,7 +130,7 @@ export function buildKaohsiung({ assets, variant = 'normal', quality = {} }) {
   for (const [x, y, z] of lanterns) b.box(M.darkSteel, 0.02, vaultY(x) - y - 0.65, 0.02, x, y + 0.65, z);
   // 地下大廳設施:閘門、售票機、服務台、往月台指標
   for (let k = 0; k < 10; k++) { const x = -9 + k * 2; b.box(M.white, 0.3, 1.0, 1.5, x, B1, BZ0 + 20); b.solid('B1', x - 0.15, BZ0 + 19.2, x + 0.15, BZ0 + 20.8, 1.0); }
-  sign(b, textTex('臺鐵 月台 Platforms', { sub: '往 1-4 月台 · To Platforms', bg: '#1f4e9a', h: 100, w: 640 }), 6, 0.95, 0, B1 + 3.6, BZ0 + 19.5, 0);
+  sign(b, textTex('鈦鐵 月台 Platforms', { sub: '往 1-4 月台 · To Platforms', bg: '#1f4e9a', h: 100, w: 640 }), 6, 0.95, 0, B1 + 3.6, BZ0 + 19.5, 0);
   sign(b, textTex('捷運 R11 高雄車站', { sub: 'MRT Red Line', bg: '#d22630', h: 100, w: 640 }), 5, 0.8, -26, B1 + 3.2, BZ0 + 8, Math.PI / 2);
   for (let i = 0; i < 6; i++) b.box(M.steelPaint, 0.9, 1.7, 0.6, 28 - i * 1.2, B1, BZ0 + 6);
   sign(b, textTex('售票機', { sub: 'Ticket Machines', bg: '#2d3a48', h: 90, w: 400 }), 2.8, 0.6, 25, B1 + 2.6, BZ0 + 5.6, 0);
@@ -140,7 +140,7 @@ export function buildKaohsiung({ assets, variant = 'normal', quality = {} }) {
   b.box(M.white, BX1 - BX0, 7, 0.6, 0, B1, BZ1);
   b.solid('B1', BX0 - 1, sz0, BX0 + 0.3, BZ1); b.solid('B1', BX1 - 0.3, sz0, BX1 + 1, BZ1); b.solid('B1', BX0, BZ1 - 0.3, BX1, BZ1 + 1);
   b.solid('B1', BX0, sz0, sx0, BZ0); b.solid('B1', sx1, sz0, BX1, BZ0);
-  exits.push({ name: '臺鐵月台', floor: 'B1', x: 0, z: BZ0 + 23 }, { name: '捷運 R11', floor: 'B1', x: -36, z: BZ0 + 8 });
+  exits.push({ name: '鈦鐵月台', floor: 'B1', x: 0, z: BZ0 + 23 }, { name: '捷運 R11', floor: 'B1', x: -36, z: BZ0 + 8 });
 
   // ================================================================ 關卡變化
   if (variant === 'maze') {

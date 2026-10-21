@@ -1,6 +1,6 @@
-// 臺北車站(臺鐵/高鐵/捷運共構):1F 中央大廳 + B1 穿堂層與地下街。
+// 臺北車站(鈦鐵/高鐵/捷運共構):1F 中央大廳 + B1 穿堂層與地下街。
 // 依實際配置:1F 大廳四面各三個門(東/西/南/北一~三門),黑白棋盤格石材地板,
-//   大廳正上方為同面積的挑高天井(玻璃天窗),台鐵售票在西側、高鐵售票在東三門旁,四個角落樓梯通往 B1;
+//   大廳正上方為同面積的挑高天井(玻璃天窗),鈦鐵售票在西側、高鐵售票在東三門旁,四個角落樓梯通往 B1;
 // B1:五條南北向通道(西二、西、中央、東、東二)+ 南北兩條東西向迴廊,中央通道為付費區閘門,
 //   西二通道接機場捷運與 K 區地下街,四周連接 Y 區(台北地下街)、Z 區(站前地下街)、捷運站。
 // 關卡變化:variant = 'maze' 時 B1 以施工圍籬封閉部分路段成為迷宮(保證仍可走通);
@@ -69,8 +69,8 @@ export function buildTaipei({ assets, variant = 'normal', quality = {} }) {
     b.solid('1F', s.x0, s.z0, cx - 1.3, s.z1); b.solid('1F', cx + 1.3, s.z0, s.x1, s.z1);
     b.solid('B1', s.x0, s.z0, cx - 1.3, s.z1); b.solid('B1', cx + 1.3, s.z0, s.x1, s.z1);
     b.stairs.push({ box: [cx - 1.3, Math.min(top, bot), cx + 1.3, Math.max(top, bot)], axis: 'z', a: top, b: bot, yA: 0, yB: B1, fromFloor: '1F', toFloor: 'B1', label: 'B1 穿堂層' });
-    // 指標:往 B1(台鐵/高鐵/捷運)
-    sign(b, textTex('往 B1 穿堂層', { sub: 'To B1 · TRA / THSR / MRT', bg: '#1d3557', h: 110, w: 520 }), 3.4, 0.72, cx, 3.0, top - s.sz * 0.3, s.sz > 0 ? 0 : Math.PI);
+    // 指標:往 B1(鈦鐵/高鐵/捷運)
+    sign(b, textTex('往 B1 穿堂層', { sub: 'To B1 · TZR / THSR / MRT', bg: '#1d3557', h: 110, w: 520 }), 3.4, 0.72, cx, 3.0, top - s.sz * 0.3, s.sz > 0 ? 0 : Math.PI);
   }
 
   // ---- 牆、門、柱
@@ -165,7 +165,7 @@ export function buildTaipei({ assets, variant = 'normal', quality = {} }) {
   sign(b, textTex('臺北車站', { sub: 'TAIPEI MAIN STATION', bg: '#f4f0e6', fg: '#1b2b44', h: 140, w: 720 }), 10, 1.9, 0, 14.2, -HZ + 0.4, 0, { double: false, glow: false, frame: '#c9b98a' });
   // 報時火車(嘟嘟鐘):懸吊在北側看板上方
   b.extra.push(trainClock(-11, 13.6, -HZ + 1.2));
-  // ---- 西側:台鐵售票窗口;東三門旁:高鐵售票
+  // ---- 西側:鈦鐵售票窗口;東三門旁:高鐵售票
   for (let i = 0; i < 8; i++) {
     const z = -12 + i * 3.2;
     b.box(M.graniteDark, 0.8, 1.1, 2.8, -HX + 1.2, 0, z);
@@ -173,7 +173,7 @@ export function buildTaipei({ assets, variant = 'normal', quality = {} }) {
     sign(b, textTex(`${i + 1}`, { bg: '#1f4e9a', h: 64, w: 96 }), 0.45, 0.3, -HX + 1.65, 2.75, z, Math.PI / 2, { double: false });
   }
   b.solid('1F', -HX, -13.5, -HX + 1.8, 12);
-  sign(b, textTex('臺鐵售票', { sub: 'TRA Tickets', bg: '#1f4e9a', h: 110, w: 520 }), 6, 1.2, -HX + 0.7, 4.2, 0, Math.PI / 2, { double: false });
+  sign(b, textTex('鈦鐵售票', { sub: 'TZR Tickets', bg: '#1f4e9a', h: 110, w: 520 }), 6, 1.2, -HX + 0.7, 4.2, 0, Math.PI / 2, { double: false });
   for (let i = 0; i < 4; i++) { const z = 7 + i * 3; b.box(M.graniteDark, 0.8, 1.1, 2.6, HX - 1.2, 0, z); b.box(M.glass, 0.04, 1.4, 2.4, HX - 1.1, 1.1, z); }
   b.solid('1F', HX - 1.8, 5.5, HX, 18);
   sign(b, textTex('高鐵售票', { sub: 'THSR Tickets', bg: '#e8762b', h: 110, w: 520 }), 4.5, 1.0, HX - 0.7, 4.0, 11.5, -Math.PI / 2, { double: false });
@@ -321,15 +321,15 @@ export function buildTaipei({ assets, variant = 'normal', quality = {} }) {
     if (k < 6) { const f = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.6), M.glass); f.position.set(x + 0.85, B1 + 0.6, 0); f.rotation.y = Math.PI / 2; b.extra.push(f); }
     b.solid('B1', x - 0.14, -0.7, x + 0.14, 0.7, 1.0);
   }
-  sign(b, textTex('臺鐵 · 高鐵 付費區', { sub: 'TRA · THSR Paid Area', bg: '#1f4e9a', h: 100, w: 640 }), 6, 0.95, 0, B1 + 2.7, -0.2, 0);
-  // 通道名稱與方向指標(多色系:台鐵藍、高鐵橘、捷運、機捷紫、地下街綠)
+  sign(b, textTex('鈦鐵 · 高鐵 付費區', { sub: 'TZR · THSR Paid Area', bg: '#1f4e9a', h: 100, w: 640 }), 6, 0.95, 0, B1 + 2.7, -0.2, 0);
+  // 通道名稱與方向指標(多色系:鈦鐵藍、高鐵橘、捷運、機捷紫、地下街綠)
   PX.forEach((x, i) => {
     for (const z of [-28, 28]) sign(b, textTex(PN[i], { sub: ['West 2', 'West', 'Central', 'East', 'East 2'][i] + ' Passage', bg: '#2d3a48', h: 90, w: 420 }), 2.4, 0.52, x, B1 + 2.85, z - Math.sign(z) * 0.5, z > 0 ? 0 : Math.PI);
   });
   const way = [
     ['機場捷運 A1', 'Airport MRT', '#7b3f98', -48, 18], ['K 區地下街', 'K Mall', '#2a8a4a', -60, 0], ['捷運 淡水信義線', 'MRT Red Line', '#d22630', 0, -18],
     ['捷運 板南線', 'MRT Blue Line', '#0070bd', 12, -24], ['Y 區 台北地下街', 'Taipei City Mall', '#3a9a5a', -40, 24], ['Z 區 站前地下街', 'Zhongzheng Mall', '#3a9a5a', 40, -24],
-    ['高鐵 THSR', 'High Speed Rail', '#e8762b', 6, 12], ['臺鐵 TRA', 'Taiwan Railway', '#1f4e9a', -6, 12], ['M3 出口', 'Exit M3', '#f0a020', 48, 24], ['M8 出口', 'Exit M8', '#f0a020', -24, -24],
+    ['高鐵 THSR', 'High Speed Rail', '#e8762b', 6, 12], ['鈦鐵 TZR', 'Taizhi Railway', '#1f4e9a', -6, 12], ['M3 出口', 'Exit M3', '#f0a020', 48, 24], ['M8 出口', 'Exit M8', '#f0a020', -24, -24],
   ];
   for (const [t, s, col, x, z] of way) {
     // 在南北向通道內 → 牌面朝南北;在東西向迴廊 → 牌面朝東西
@@ -378,7 +378,7 @@ export function buildTaipei({ assets, variant = 'normal', quality = {} }) {
   };
 }
 
-/** LED 時刻看板(臺鐵/高鐵發車資訊) */
+/** LED 時刻看板(鈦鐵/高鐵發車資訊) */
 function boardTexture() {
   return canvasTexture(1024, 232, (c, w, h) => {
     c.fillStyle = '#050505'; c.fillRect(0, 0, w, h);
@@ -432,7 +432,7 @@ function trainClock(x, y, z) {
 function adBox(b, x, z, ry, R, side = false) {
   const ads = [['台灣好行', '#1f7a8c'], ['鐵道旅行', '#b23a2a'], ['夜市美食', '#d68910'], ['捷運悠遊卡', '#2e86c1'], ['阿里山', '#2e7d32'], ['日月潭', '#5b2c6f']];
   const a = ads[(R() * ads.length) | 0];
-  const tex = textTex(a[0], { sub: 'Taiwan Railway', bg: a[1], h: 300, w: 200 });
+  const tex = textTex(a[0], { sub: 'Taizhi Railway', bg: a[1], h: 300, w: 200 });
   sign(b, tex, 1.2, 1.8, x, -6 + 1.6, z, ry, { double: false, frame: '#d8d8d8' });
 }
 

@@ -1,5 +1,5 @@
 // 便當廚房關卡設定:食材目錄(造型與製程)、各關卡(便當款式、食材、時限、數量)。
-// 第 1 關:經典臺鐵便當(與推車上販售的排骨/雞腿/素食相同)。
+// 第 1 關:經典鈦鐵便當(與推車上販售的排骨/雞腿/素食相同)。
 // 第 2~7 關:臺鐵 EMU3000「騰雲座艙限定便當」各餐旅分處的款式(臺北、七堵、臺中、高雄、花蓮、臺東),
 //   內容依臺鐵官網菜單整理(季節時蔬、精選配菜等合併成一項);售價官網未列,遊戲中為設定值。
 
@@ -64,7 +64,7 @@ export const FOODS = {
 /** 關卡:foods 為該關會用到的食材(依保溫檯順序,飯類放保溫飯鍋;最多 10 種);bentos 為兩~三款便當 */
 export const KITCHEN_LEVELS = [
   {
-    id: 'k1', title: '經典臺鐵便當', branch: '臺鐵便當本舖', difficulty: 2, quota: 10, timeLimit: 420,
+    id: 'k1', title: '經典鈦鐵便當', branch: '鈦鐵便當本舖', difficulty: 2, quota: 10, timeLimit: 420,
     brief: '先從推車上賣的三款做起:排骨、雞腿、素食。',
     foods: ['rice', 'pork', 'chicken', 'vegpatty', 'egg', 'tofu', 'cabbage', 'pickle', 'radish', 'corn'],
     bentos: {

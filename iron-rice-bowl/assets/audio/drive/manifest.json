@@ -1,0 +1,559 @@
+{
+ "files": {
+  "zh_welcome": {
+   "file": "zh_welcome.mp3",
+   "text": "歡迎搭乘鈦鐵列車,本列車開往",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "en_welcome": {
+   "file": "en_welcome.mp3",
+   "text": "Welcome aboard Taizhi Railway. This train is bound for",
+   "voice": "en-US-GuyNeural"
+  },
+  "zh_next": {
+   "file": "zh_next.mp3",
+   "text": "下一站",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "en_next": {
+   "file": "en_next.mp3",
+   "text": "The next station is",
+   "voice": "en-US-GuyNeural"
+  },
+  "zh_arriving": {
+   "file": "zh_arriving.mp3",
+   "text": "到了",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "en_arriving": {
+   "file": "en_arriving.mp3",
+   "text": "We are now arriving at",
+   "voice": "en-US-GuyNeural"
+  },
+  "zh_terminal": {
+   "file": "zh_terminal.mp3",
+   "text": "終點站",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "zh_terminal_end": {
+   "file": "zh_terminal_end.mp3",
+   "text": "到了,請全部旅客下車,謝謝您的搭乘。",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "en_terminal": {
+   "file": "en_terminal.mp3",
+   "text": "This is the terminal station. All passengers please get off. Thank you for riding with us.",
+   "voice": "en-US-GuyNeural"
+  },
+  "zh_transfer": {
+   "file": "zh_transfer.mp3",
+   "text": "可轉乘",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "en_transfer": {
+   "file": "en_transfer.mp3",
+   "text": "Transfer to",
+   "voice": "en-US-GuyNeural"
+  },
+  "zh_out_transfer": {
+   "file": "zh_out_transfer.mp3",
+   "text": "可出站轉乘",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "en_out_transfer": {
+   "file": "en_out_transfer.mp3",
+   "text": "Out-of-station transfer to",
+   "voice": "en-US-GuyNeural"
+  },
+  "zh_doors_left": {
+   "file": "zh_doors_left.mp3",
+   "text": "左側車門將開啟。",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "zh_doors_right": {
+   "file": "zh_doors_right.mp3",
+   "text": "右側車門將開啟。",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "en_doors_left": {
+   "file": "en_doors_left.mp3",
+   "text": "Doors on the left side will open.",
+   "voice": "en-US-GuyNeural"
+  },
+  "en_doors_right": {
+   "file": "en_doors_right.mp3",
+   "text": "Doors on the right side will open.",
+   "voice": "en-US-GuyNeural"
+  },
+  "zh_gap": {
+   "file": "zh_gap.mp3",
+   "text": "下車時,請注意月台間隙。",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "en_gap": {
+   "file": "en_gap.mp3",
+   "text": "Please mind the gap when getting off.",
+   "voice": "en-US-GuyNeural"
+  },
+  "zh_doors_closing": {
+   "file": "zh_doors_closing.mp3",
+   "text": "車門即將關閉,請勿再上下車。",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "en_doors_closing": {
+   "file": "en_doors_closing.mp3",
+   "text": "The doors are closing. Please stand clear.",
+   "voice": "en-US-GuyNeural"
+  },
+  "zh_handrail": {
+   "file": "zh_handrail.mp3",
+   "text": "為了您的安全,請緊握扶手。",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "en_handrail": {
+   "file": "en_handrail.mp3",
+   "text": "For your safety, please hold the handrail.",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_920bfc85": {
+   "file": "name_zh_920bfc85.mp3",
+   "text": "七堵",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_e02f11cc": {
+   "file": "name_en_e02f11cc.mp3",
+   "text": "Qidu",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_e433a0aa": {
+   "file": "name_zh_e433a0aa.mp3",
+   "text": "百福",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_d5c8a54a": {
+   "file": "name_en_d5c8a54a.mp3",
+   "text": "Baifu",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_919aee82": {
+   "file": "name_zh_919aee82.mp3",
+   "text": "五堵",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_8ec75cb6": {
+   "file": "name_en_8ec75cb6.mp3",
+   "text": "Wudu",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_1eed4717": {
+   "file": "name_zh_1eed4717.mp3",
+   "text": "汐止",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_e53e1813": {
+   "file": "name_en_e53e1813.mp3",
+   "text": "Xizhi",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_90026ffa": {
+   "file": "name_zh_90026ffa.mp3",
+   "text": "汐科",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_e66b3da2": {
+   "file": "name_en_e66b3da2.mp3",
+   "text": "Xike",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_1b82dafb": {
+   "file": "name_zh_1b82dafb.mp3",
+   "text": "南港",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_5e3f8e29": {
+   "file": "name_en_5e3f8e29.mp3",
+   "text": "Nangang",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_2b275130": {
+   "file": "name_zh_2b275130.mp3",
+   "text": "松山",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_1b7b7704": {
+   "file": "name_en_1b7b7704.mp3",
+   "text": "Songshan",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_f8f9074e": {
+   "file": "name_zh_f8f9074e.mp3",
+   "text": "臺北",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_5e4589ed": {
+   "file": "name_en_5e4589ed.mp3",
+   "text": "Taipei",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_7ae8b6ac": {
+   "file": "name_zh_7ae8b6ac.mp3",
+   "text": "萬華",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_2403f741": {
+   "file": "name_en_2403f741.mp3",
+   "text": "Wanhua",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_0d0ed95f": {
+   "file": "name_zh_0d0ed95f.mp3",
+   "text": "板橋",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_ee557fc0": {
+   "file": "name_en_ee557fc0.mp3",
+   "text": "Banqiao",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_178cf330": {
+   "file": "name_zh_178cf330.mp3",
+   "text": "豐原",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_d2024e92": {
+   "file": "name_en_d2024e92.mp3",
+   "text": "Fengyuan",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_441abb93": {
+   "file": "name_zh_441abb93.mp3",
+   "text": "栗林",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_782aa081": {
+   "file": "name_en_782aa081.mp3",
+   "text": "Lilin",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_4546fdf8": {
+   "file": "name_zh_4546fdf8.mp3",
+   "text": "潭子",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_9bcafd1d": {
+   "file": "name_en_9bcafd1d.mp3",
+   "text": "Tanzi",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_b893e935": {
+   "file": "name_zh_b893e935.mp3",
+   "text": "頭家厝",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_34888a3e": {
+   "file": "name_en_34888a3e.mp3",
+   "text": "Toujiacuo",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_b2ff3948": {
+   "file": "name_zh_b2ff3948.mp3",
+   "text": "松竹",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_aff63f09": {
+   "file": "name_en_aff63f09.mp3",
+   "text": "Songzhu",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_1407f406": {
+   "file": "name_zh_1407f406.mp3",
+   "text": "太原",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_3cda1280": {
+   "file": "name_en_3cda1280.mp3",
+   "text": "Taiyuan",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_e2bd8645": {
+   "file": "name_zh_e2bd8645.mp3",
+   "text": "精武",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_f8e1930b": {
+   "file": "name_en_f8e1930b.mp3",
+   "text": "Jingwu",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_bf19bb00": {
+   "file": "name_zh_bf19bb00.mp3",
+   "text": "臺中",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_37e57c36": {
+   "file": "name_en_37e57c36.mp3",
+   "text": "Taichung",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_6453d0ab": {
+   "file": "name_zh_6453d0ab.mp3",
+   "text": "五權",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_51e44be4": {
+   "file": "name_en_51e44be4.mp3",
+   "text": "Wuquan",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_a9cb9f10": {
+   "file": "name_zh_a9cb9f10.mp3",
+   "text": "大慶",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_3c54a13b": {
+   "file": "name_en_3c54a13b.mp3",
+   "text": "Daqing",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_b1150841": {
+   "file": "name_zh_b1150841.mp3",
+   "text": "烏日",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_9e9a5648": {
+   "file": "name_en_9e9a5648.mp3",
+   "text": "Wuri",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_07d3db9f": {
+   "file": "name_zh_07d3db9f.mp3",
+   "text": "新烏日",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_580ded39": {
+   "file": "name_en_580ded39.mp3",
+   "text": "Xinwuri",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_35af05d2": {
+   "file": "name_zh_35af05d2.mp3",
+   "text": "礁溪",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_a2da0fcb": {
+   "file": "name_en_a2da0fcb.mp3",
+   "text": "Jiaoxi",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_7198351c": {
+   "file": "name_zh_7198351c.mp3",
+   "text": "四城",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_0b9c829a": {
+   "file": "name_en_0b9c829a.mp3",
+   "text": "Sicheng",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_89c5fd02": {
+   "file": "name_zh_89c5fd02.mp3",
+   "text": "宜蘭",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_0a7ce53a": {
+   "file": "name_en_0a7ce53a.mp3",
+   "text": "Yilan",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_fe8b3861": {
+   "file": "name_zh_fe8b3861.mp3",
+   "text": "二結",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_0f978086": {
+   "file": "name_en_0f978086.mp3",
+   "text": "Erjie",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_84bf851c": {
+   "file": "name_zh_84bf851c.mp3",
+   "text": "中里",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_9ebf904a": {
+   "file": "name_en_9ebf904a.mp3",
+   "text": "Zhongli_Yilan",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_ee624da3": {
+   "file": "name_zh_ee624da3.mp3",
+   "text": "羅東",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_cda4f041": {
+   "file": "name_en_cda4f041.mp3",
+   "text": "Luodong",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_b1f9915c": {
+   "file": "name_zh_b1f9915c.mp3",
+   "text": "新左營",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_f895394b": {
+   "file": "name_en_f895394b.mp3",
+   "text": "Xinzuoying",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_06f0a9b2": {
+   "file": "name_zh_06f0a9b2.mp3",
+   "text": "左營",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_d8118e64": {
+   "file": "name_en_d8118e64.mp3",
+   "text": "Zuoying",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_26ccce9b": {
+   "file": "name_zh_26ccce9b.mp3",
+   "text": "內惟",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_a0a29d9a": {
+   "file": "name_en_a0a29d9a.mp3",
+   "text": "Neiwei",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_d647f24a": {
+   "file": "name_zh_d647f24a.mp3",
+   "text": "美術館",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_68df5e3c": {
+   "file": "name_en_68df5e3c.mp3",
+   "text": "Museum of Fine Arts",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_c80b0569": {
+   "file": "name_zh_c80b0569.mp3",
+   "text": "鼓山",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_22ca16c5": {
+   "file": "name_en_22ca16c5.mp3",
+   "text": "Gushan",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_ab72b015": {
+   "file": "name_zh_ab72b015.mp3",
+   "text": "三塊厝",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_76fad3bc": {
+   "file": "name_en_76fad3bc.mp3",
+   "text": "Sankuaicuo",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_68cfc7d9": {
+   "file": "name_zh_68cfc7d9.mp3",
+   "text": "高雄",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_ade92f12": {
+   "file": "name_en_ade92f12.mp3",
+   "text": "Kaohsiung",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_d3000409": {
+   "file": "name_zh_d3000409.mp3",
+   "text": "民族",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_c80f00a6": {
+   "file": "name_en_c80f00a6.mp3",
+   "text": "Minzu",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_e9cc0f89": {
+   "file": "name_zh_e9cc0f89.mp3",
+   "text": "科工館",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_a503ab9e": {
+   "file": "name_en_a503ab9e.mp3",
+   "text": "Science And Technology Museum",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_fca1b321": {
+   "file": "name_zh_fca1b321.mp3",
+   "text": "正義",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_98952bc7": {
+   "file": "name_en_98952bc7.mp3",
+   "text": "Zhengyi",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_c42b1109": {
+   "file": "name_zh_c42b1109.mp3",
+   "text": "鳳山",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_35b77bb5": {
+   "file": "name_en_35b77bb5.mp3",
+   "text": "Fongshan",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_a7aab876": {
+   "file": "name_zh_a7aab876.mp3",
+   "text": "花蓮",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_62fdf0d5": {
+   "file": "name_en_62fdf0d5.mp3",
+   "text": "Hualien",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_1208e557": {
+   "file": "name_zh_1208e557.mp3",
+   "text": "吉安",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_0ed11d2a": {
+   "file": "name_en_0ed11d2a.mp3",
+   "text": "Ji'an",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_b1f4e36a": {
+   "file": "name_zh_b1f4e36a.mp3",
+   "text": "志學",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_93dbab6c": {
+   "file": "name_en_93dbab6c.mp3",
+   "text": "Zhixue",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_c1c18f0a": {
+   "file": "name_zh_c1c18f0a.mp3",
+   "text": "平和",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_75af8b82": {
+   "file": "name_en_75af8b82.mp3",
+   "text": "Pinghe",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_d609dde8": {
+   "file": "name_zh_d609dde8.mp3",
+   "text": "壽豐",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_303810e8": {
+   "file": "name_en_303810e8.mp3",
+   "text": "Shoufeng",
+   "voice": "en-US-GuyNeural"
+  }
+ }
+}

@@ -8,6 +8,7 @@ import { INCIDENTS } from './incidents.js';
 import { MISSIONS } from './missions.js';
 import { outLines } from './kitchen.js';
 import { HELPERS, HELPER_LINES } from './helpers.js';
+import { TICKET_DESTS } from './ticket.js';
 
 // 角色 → Azure Neural 語音與語調(SSML prosody)
 // 聲音分配:廣播一律男聲(雲哲 / 英文男聲);販售員 = 曉臻;乘客 = 雲哲・曉雨・曉臻 三聲混用
@@ -28,9 +29,73 @@ export const VOICES = {
   helperStudent: { voice: 'zh-TW-YunJheNeural', lang: 'zh-TW', pitch: '+7%', rate: '+8%' },
   helperYoung: { voice: 'zh-TW-HsiaoChenNeural', lang: 'zh-TW', pitch: '+3%', rate: '+12%' },
   helperBurly: { voice: 'zh-TW-YunJheNeural', lang: 'zh-TW', pitch: '-15%', rate: '-10%' },
+  // 行控中心:調度員(玩家)、列車司機員無線電回覆、值班主任
+  dispatcher: { voice: 'zh-TW-YunJheNeural', lang: 'zh-TW', pitch: '-3%', rate: '+2%' },
+  driverRadio: { voice: 'zh-TW-YunJheNeural', lang: 'zh-TW', pitch: '-14%', rate: '+6%' },
+  occChief: { voice: 'zh-TW-HsiaoChenNeural', lang: 'zh-TW', pitch: '-5%', rate: '-2%' },
+  // 售票窗口:站務員(玩家)
+  clerk: { voice: 'zh-TW-HsiaoChenNeural', lang: 'zh-TW', rate: '+4%' },
+  // 營運長辦公室:董事長、財務長
+  chairman: { voice: 'zh-TW-YunJheNeural', lang: 'zh-TW', pitch: '-16%', rate: '-8%' },
+  cfo: { voice: 'zh-TW-HsiaoYuNeural', lang: 'zh-TW', pitch: '-6%', rate: '+2%' },
   // 車站追逐:站長(沉穩威嚴)、不良乘客(輕浮挑釁)
   stationmaster: { voice: 'zh-TW-YunJheNeural', lang: 'zh-TW', pitch: '-10%', rate: '-4%' },
   troublemaker: { voice: 'zh-TW-YunJheNeural', lang: 'zh-TW', pitch: '+14%', rate: '+12%' },
+};
+
+// 行控中心無線電(radio_*):調度指令與司機員回覆、事故通報
+export const RADIO_LINES = {
+  hold: ['dispatcher', '行控呼叫,請在本站扣車等候,收到請回答。'],
+  hold_ack: ['driverRadio', '司機員收到,本站扣車等候。'],
+  release: ['dispatcher', '行控通知,號誌開放,可以出發。'],
+  release_ack: ['driverRadio', '收到,列車出發。'],
+  siding: ['dispatcher', '行控指示,請在前方車站進待避線,讓後續列車先行。'],
+  siding_ack: ['driverRadio', '收到,前方車站待避。'],
+  slw: ['dispatcher', '行控通知,前方路段改單線雙向運轉,請依行控指示行車。'],
+  slw_ack: ['driverRadio', '收到,單線雙向運轉,依指示行車。'],
+  slw_off: ['dispatcher', '行控通知,單線雙向運轉解除,恢復雙線運轉。'],
+  breakdown: ['driverRadio', '行控中心,列車發生故障,在區間停車,請求支援!'],
+  signal: ['driverRadio', '行控中心,本站號誌故障,請求人工放行。'],
+  obstacle: ['driverRadio', '行控中心,前方路線有異物,已緊急停車!'],
+  crowd: ['occChief', '月台人潮擁擠,停站時間會拉長,注意後續班距。'],
+  conflict: ['driverRadio', '緊急停車!緊急停車!前方有對向列車!'],
+  resolved: ['driverRadio', '行控中心,狀況排除,恢復正常行車。'],
+  depart_ok: ['dispatcher', '行控通知,出發號誌開放,可以發車。'],
+  start: ['occChief', '各位調度員早安,今天的班表已經上線,請隨時注意列車動態。'],
+  good: ['occChief', '辛苦了,今天的列車大致準點。'],
+  bad: ['occChief', '今天延誤太多了,檢討一下調度順序。'],
+};
+
+// 售票窗口(tk_*):旅客(m / f / f2 三種聲音)與站務員
+export const TICKET_LINES = {
+  greet: '你好,我要買票。',
+  exp: '我要搭自強號。',
+  loc: '區間車就可以了。',
+  window: '我要靠窗的位子。',
+  aisle: '靠走道就好。',
+  together: '我們要坐在一起喔。',
+  pay: '錢給你。',
+  thanks: '謝謝!',
+  wrong_dest: '我要去的不是這裡耶!',
+  wrong: '這跟我說的不一樣啦!',
+  angry_seat: '這個位子不是我要的啦!',
+  angry_change: '你找錯錢了吧!',
+  angry_wait: '排這麼久,不買了啦!',
+};
+export const CLERK_LINES = { done: '這是您的車票和找零,請點收,謝謝。', sold: '不好意思,這個位子剛剛被訂走了。' };
+
+// 營運長辦公室(coo_*):董事長與財務長的回應
+export const COO_LINES = {
+  start: ['chairman', '營運長,歡迎上任。今年的經營目標都在桌上了,請開始規劃。'],
+  build_station: ['cfo', '新車站的預算核准了,下一季就能啟用。'],
+  build_line: ['cfo', '新路線計畫通過,工程馬上動工。'],
+  menu: ['cfo', '新的便當菜單已經上架了。'],
+  q_profit: ['cfo', '本季獲利,財報很漂亮。'],
+  q_loss: ['cfo', '本季虧損,董事會要你提出改善方案。'],
+  q_happy: ['chairman', '旅客滿意度創新高,做得好!'],
+  q_unhappy: ['chairman', '旅客抱怨班次太少、車廂太擠,滿意度下滑了。'],
+  year_good: ['chairman', '今年的成績亮眼,董事會一致肯定你的表現。'],
+  year_bad: ['chairman', '今年的成績不理想,董事會很失望。'],
 };
 
 // 車站追逐:雙方的口頭禪(chase_sm_<i> / chase_tm_<i>)
@@ -80,7 +145,7 @@ const PASSENGER_LINES = {
 
 const ATTENDANT_LINES = {
   callout1: '便當、飲料喔~有需要的旅客請招手。',
-  callout2: '熱騰騰的臺鐵便當喔~',
+  callout2: '熱騰騰的鈦鐵便當喔~',
   excuse: '不好意思,借過一下。',
   serve: '您好,請問需要什麼?',
   total: '好的,幫您結帳。',
@@ -142,6 +207,14 @@ export function buildVoiceLines() {
   AMBIENT_GRANDMA_CHATS.forEach((chat, c) => chat.forEach(([role, t], i) => add(`amb_gma_${c}_${i}`, role, t)));
   for (const [k, t] of Object.entries(CONDUCTOR_LINES)) add(`conductor_${k}`, 'conductor', t);
   for (const [k, t] of Object.entries(KITCHEN_LINES)) add(`kboss_${k}`, 'kitchenBoss', t);
+  for (const [k, [role, t]] of Object.entries(RADIO_LINES)) add(`radio_${k}`, role, t);
+  for (const [k, [role, t]] of Object.entries(COO_LINES)) add(`coo_${k}`, role, t);
+  const TK_ROLE = { m: 'passengerM', f: 'passengerF', f2: 'passengerF2' };
+  for (const [v, role] of Object.entries(TK_ROLE)) {
+    for (const [k, t] of Object.entries(TICKET_LINES)) add(`tk_${k}_${v}`, role, t);
+    TICKET_DESTS.forEach((d, i) => add(`tk_dest_${i}_${v}`, role, `我要到${d}。`));
+  }
+  for (const [k, t] of Object.entries(CLERK_LINES)) add(`tk_${k}_clerk`, 'clerk', t);
   CHASE_LINES.stationmaster.forEach((t, i) => add(`chase_sm_${i}`, 'stationmaster', t));
   CHASE_LINES.troublemaker.forEach((t, i) => add(`chase_tm_${i}`, 'troublemaker', t));
   for (const [h, lines] of Object.entries(HELPER_LINES)) for (const [k, t] of Object.entries(lines)) add(`helper_${h}_${k}`, HELPERS[h].voice, t);
@@ -172,7 +245,7 @@ export function buildVoiceLines() {
   }
   for (const id of termini) {
     const s = STATIONS[id];
-    add(`conductor_welcome_${id}`, 'conductor', `各位旅客您好,歡迎搭乘臺鐵新自強號,本列車開往${s.zh}。車上有便當及飲料販售服務,祝您旅途愉快。`);
+    add(`conductor_welcome_${id}`, 'conductor', `各位旅客您好,歡迎搭乘鈦鐵新自強號,本列車開往${s.zh}。車上有便當及飲料販售服務,祝您旅途愉快。`);
     add(`conductor_welcome_${id}_en`, 'conductorEn', `Welcome aboard. This train is bound for ${s.en}. Bento and beverages are available on board.`);
     add(`station_depart_${id}`, 'station', `開往${s.zh}的自強號列車即將出發,請旅客儘速上車。`);
   }

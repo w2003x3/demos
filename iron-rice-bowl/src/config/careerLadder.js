@@ -56,7 +56,7 @@ export const RANKS = [
     },
   },
   {
-    id: 'driver', title: '司機員', phase: 'driver',
+    id: 'driver', title: '司機員', phase: 'driver', playable: true,
     duties: '駕駛列車:看前方路線與號誌控制速度,準點並準確停靠月台',
     promote: {
       to: 'ticket', verb: '升任',
@@ -75,7 +75,7 @@ export const RANKS = [
     },
   },
   {
-    id: 'ticket', title: '站務員', phase: 'ticketing',
+    id: 'ticket', title: '站務員', phase: 'ticketing', playable: true,
     duties: '售票窗口:應付搶票人潮、安排座位、處理各種結帳難題',
     promote: {
       to: 'stationmaster', verb: '升任',
@@ -115,12 +115,12 @@ export const RANKS = [
     },
   },
   {
-    id: 'dispatcher', title: '行控人員', phase: 'dispatch',
+    id: 'dispatcher', title: '行控人員', phase: 'dispatch', playable: true,
     duties: '排定時刻表、事故與誤點時的列車調度,並與司機員通訊協調',
     promote: {
       to: 'coo', verb: '升任',
       rules: {
-        onTimeShifts: { limit: 10, label: '全線準點率 ≥ 95% 的班次', unit: '次' },
+        onTimeShifts: { limit: 10, label: '達成準點目標的班次', unit: '次' },
         resolvedIncidents: { limit: 20, label: '成功排除的事故 / 誤點', unit: '件' },
       },
     },
@@ -133,7 +133,7 @@ export const RANKS = [
     },
   },
   {
-    id: 'coo', title: '營運長', phase: 'operations',
+    id: 'coo', title: '營運長', phase: 'operations', playable: true,
     duties: '公司整體營運,以及新車站與路線規劃',
     promote: {
       to: 'director', verb: '榮升',

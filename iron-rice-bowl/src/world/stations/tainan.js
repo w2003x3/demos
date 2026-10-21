@@ -5,7 +5,7 @@
 //          東側 2 號出入口(大學路/前鋒路):挑高 14 m 大頂棚,以臺南市樹「鳳凰木」為意象,薄膜天花透光,下方半戶外穿廊。
 //          3 號出入口(前鋒路南側):黃花崗石 + 玻璃帷幕。
 //   中央 — 東西貫穿的下沉廣場,串聯地面與 B1。
-//   B1 — 大廳層:售票、旅客服務、臺鐵便當本舖、便利商店、地下商店街;北側付費區閘門;中英日韓四語指標。
+//   B1 — 大廳層:售票、旅客服務、鈦鐵便當本舖、便利商店、地下商店街;北側付費區閘門;中英日韓四語指標。
 //   B2 — 月台層:2 座島式月台、4 股道(1A、1B、2A、2B)。
 // 座標:x 沿軌道(+x 北)、z 橫向(+z 東);地面 y = 0,B1 y = -7,B2 y = -14。
 import * as THREE from 'three';
@@ -161,7 +161,7 @@ export function buildTainan({ assets, variant = 'normal', quality = {} }) {
   for (let i = 0; i < 4; i++) b.box(M.window, 1.8, 1.6, 0.06, -40 + i * 2.6, B1 + 1.1, HZ0 + 0.3);
   sign(b, textTex('售票 / 旅客服務', { sub: 'Tickets & Information · きっぷ · 매표소', bg: '#1f4e9a', h: 100, w: 600 }), 5, 0.85, -36, B1 + 3.3, HZ0 + 0.5, 0, { double: false });
   b.solid('B1', -41.2, HZ0, -30.8, HZ0 + 2.2);
-  const shops = [['臺鐵便當本舖', 'TRA Bento', '#b23a2a'], ['7-ELEVEN', '便利商店', '#e26a12'], ['府城伴手禮', 'Souvenirs', '#9a6a2a'], ['咖啡', 'Café', '#5a3b2a'], ['書店', 'Books', '#2f5d50']];
+  const shops = [['鈦鐵便當本舖', 'TZR Bento', '#b23a2a'], ['7-ELEVEN', '便利商店', '#e26a12'], ['府城伴手禮', 'Souvenirs', '#9a6a2a'], ['咖啡', 'Café', '#5a3b2a'], ['書店', 'Books', '#2f5d50']];
   [-69, -42, -31.5, -21, 13].forEach((x0, i) => {
     const [n, s, c] = shops[i];
     shopfront(b, M, n, s, c, x0, x0 + 9, HZ1 - 0.1, B1, 4.2, -1, R);
