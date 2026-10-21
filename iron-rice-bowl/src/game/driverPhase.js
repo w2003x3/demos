@@ -63,6 +63,7 @@ export class DriverPhase {
     const el = this.el = document.createElement('div');
     el.className = 'drive-overlay';
     el.style.zIndex = '0';
+    el.style.visibility = 'hidden';   // 整備畫面期間先隱藏,begin() 再顯示
     el.innerHTML = '<div class="dv-canvas" data-canvas></div>';
     document.body.insertBefore(el, g.ui.root);
 
@@ -146,6 +147,7 @@ export class DriverPhase {
   }
 
   begin() {
+    this.el.style.visibility = '';
     this.g.ui.showHud(false);
     this._flash(`${this.stations[0].name}・旅客上車中,停站時間結束後按 D 關門`, 6);
     this.announcer.unlock();

@@ -10,6 +10,7 @@ import { KitchenPhase } from './game/kitchenPhase.js';
 import { DriverPhase } from './game/driverPhase.js';
 import { TicketPhase } from './game/ticketPhase.js';
 import { CooPhase } from './game/cooPhase.js';
+import { buildPrepInfo } from './ui/prepInfo.js';
 import { DispatchPhase } from './game/dispatchPhase.js';
 import { Input } from './core/input.js';
 import { Sfx, Voice } from './core/audio.js';
@@ -271,9 +272,12 @@ class Game {
     // 整備畫面:模型與全部語音音檔都載入完成才開始(期間可瀏覽菜色)
     this.foodThumbs ??= renderFoodThumbs();
     // 整備畫面:便當廚房顯示本關便當款式,其他顯示推車上的商品
+    const thumbs = this.phase.prepThumbs ? await this.phase.prepThumbs() : this.foodThumbs;
+    const info = await buildPrepInfo(this.phase, cfg, this.mission, thumbs);
+    const title = this.phase.prepTitle?.() || { title: `${this.mission.title}・列車整備中`, sub: this.mission.subtitle, go: '開始服勤' };
     this.prep = this.phase.prepItems
-      ? this.ui.prepare(this.phase.prepItems(), await this.phase.prepThumbs(), this.phase.prepTitle?.())
-      : this.ui.prepare(ITEM_LIST, this.foodThumbs);
+      ? this.ui.prepare(this.phase.prepItems(), thumbs, { ...title, info })
+      : this.ui.prepare(ITEM_LIST, this.foodThumbs, { ...title, info });
     const voiceReady = this.voice.mode === 'browser' ? Promise.resolve() : this.voice.preload((p) => this.prep?.progress('voice', p));
     if (this.voice.mode === 'browser') this.prep.progress('voice', 1);
     try {

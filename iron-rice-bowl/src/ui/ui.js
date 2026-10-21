@@ -127,20 +127,47 @@ export class UI {
           ${it.dishes ? `<div class="dishes">${it.dishes.map((d) => `<i>${esc(d)}</i>`).join('')}</div>` : ''}
         </div>
       </div>`).join('');
+    const info = opt.info;
+    const body = info
+      ? `<div class="pv-body"><div class="pv-main">${info.sections.map((x) => `<section class="pv-sec ${x.wide ? 'wide' : ''}"><h4>${esc(x.title)}</h4>${x.html}</section>`).join('')}</div>
+          <aside class="pv-side"><div class="pv-tip"><span>💡 小提示</span><h4 data-tip-h></h4><p data-tip-p></p>
+            <nav><button data-tip="-1">‹</button><em data-tip-n></em><button data-tip="1">›</button></nav></div>${info.career || ''}</aside></div>`
+      : `<div class="tall-body food-grid">${cards}</div>`;
     const s = this.showScreen(`
-      <div class="card tall prep">
-        <h2>${esc(opt.title || '列車整備中')}<small>${esc(opt.sub || '今天推車上的菜色')}</small></h2>
-        <div class="prep-bars">
-          <label>3D 模型 <div class="meter wide"><div data-k="model" style="width:0%"></div></div></label>
-          <label>語音 <div class="meter wide"><div data-k="voice" style="width:0%"></div></div></label>
-        </div>
-        <div class="tall-body food-grid">${cards}</div>
+      <div class="card tall prep ${info ? 'pv' : ''}" style="${info ? `--pv:${info.color}` : ''}">
+        ${info ? `<div class="pv-hero"><span class="pv-badge">${info.icon} ${esc(info.role)}</span><h2>${esc(opt.title || '')}<small>${esc(opt.sub || '')}</small></h2></div>`
+          : `<h2>${esc(opt.title || '列車整備中')}<small>${esc(opt.sub || '今天推車上的菜色')}</small></h2>`}
+        <div class="pv-load"><div class="pv-track"><div class="pv-done" data-done></div><i class="pv-loco" data-loco>🚆</i></div>
+          <span data-stage>準備中…</span><b data-pct>0%</b></div>
+        ${body}
         <div class="actions"><button id="b-go" disabled>載入中…</button></div>
       </div>`, 'dim');
     const btn = $('#b-go', s);
+    const prog = { model: 0, voice: 0 };
+    const paint = () => {
+      const p = (prog.model * 0.7 + prog.voice * 0.3);
+      $('[data-pct]', s).textContent = `${Math.round(p * 100)}%`;
+      $('[data-done]', s).style.width = `${(p * 100).toFixed(1)}%`;
+      $('[data-loco]', s).style.left = `calc(${(p * 100).toFixed(1)}% - ${(p * 28).toFixed(1)}px)`;
+      $('[data-stage]', s).textContent = p >= 1 ? '準備完成!' : prog.model < 1 ? (info?.stage || '載入 3D 場景與模型') : '載入預錄語音';
+    };
+    // 輪播小提示(每 6 秒換一則,可手動切換)
+    let tipI = 0, tipT = null;
+    const showTip = (d = 0) => {
+      if (!info?.tips?.length) return;
+      tipI = (tipI + d + info.tips.length) % info.tips.length;
+      const [h, p] = info.tips[tipI];
+      const box = $('.pv-tip', s);
+      box.classList.remove('in'); void box.offsetWidth; box.classList.add('in');
+      $('[data-tip-h]', s).textContent = h; $('[data-tip-p]', s).textContent = p;
+      $('[data-tip-n]', s).textContent = `${tipI + 1} / ${info.tips.length}`;
+      clearInterval(tipT); tipT = setInterval(() => { if (!s.isConnected) { clearInterval(tipT); return; } showTip(1); }, 6000);
+    };
+    if (info) { s.addEventListener('click', (e) => { const b = e.target.closest('[data-tip]'); if (b) showTip(+b.dataset.tip); }); showTip(0); }
     return {
-      progress: (k, p) => { const el = s.querySelector(`[data-k="${k}"]`); if (el) el.style.width = `${Math.round(p * 100)}%`; },
+      progress: (k, p) => { prog[k] = Math.max(prog[k] || 0, p); paint(); },
       ready: () => new Promise((res) => {
+        prog.model = prog.voice = 1; paint();
         btn.disabled = false;
         btn.textContent = `${opt.go || '開始服勤'}(Enter)`;
         const go = () => { removeEventListener('keydown', key); res(); };
@@ -235,7 +262,7 @@ export class UI {
           <tr><th>便當菜色</th><td>經典款與騰雲座艙各分處便當,最多上架 5 種並訂售價</td></tr>
           <tr><th>結算</th><td>每季按「結算本季」看董事會報告;一年 4 季,達成年度目標才算成功</td></tr>
         </table>
-        <p class="tip">右下角會即時試算本季損益與滿意度,可以邊調整邊看。地圖需要連網載入。</p>
+        <p class="tip">右下角會即時試算本季損益與滿意度,可以邊調整邊看。</p>
         <div class="actions"><button class="ghost" id="b-back">返回</button><button id="b-start">進辦公室(Enter)</button></div></div>`, 'dim');
       $('#b-start', s).addEventListener('click', onStart);
       $('#b-back', s).addEventListener('click', onBack);

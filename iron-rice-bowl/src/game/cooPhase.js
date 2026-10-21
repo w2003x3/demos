@@ -15,9 +15,9 @@ function loadLeaflet() {
   if (window.L) return Promise.resolve(window.L);
   if (!leafletReady) {
     leafletReady = new Promise((res, rej) => {
-      const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.css'; document.head.appendChild(css);
-      const js = document.createElement('script'); js.src = 'https://unpkg.com/leaflet@1.9.4/dist/leaflet.js';
-      js.onload = () => res(window.L); js.onerror = () => rej(new Error('無法載入地圖元件(需連網)'));
+      const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'src/vendor/leaflet/leaflet.css'; document.head.appendChild(css);
+      const js = document.createElement('script'); js.src = 'src/vendor/leaflet/leaflet.js';
+      js.onload = () => res(window.L); js.onerror = () => rej(new Error('無法載入地圖元件'));
       document.head.appendChild(js);
     });
   }
@@ -57,6 +57,7 @@ export class CooPhase {
   }
 
   begin() {
+    this.el.style.visibility = '';
     this.g.ui.showHud(false);
     this.g.voice.talk('coo_start');
     setTimeout(() => this.map.invalidateSize(), 50);
@@ -71,6 +72,7 @@ export class CooPhase {
   _buildUi() {
     const el = this.el = document.createElement('div');
     el.className = 'coo';
+    el.style.visibility = 'hidden';   // 整備畫面期間先隱藏
     el.innerHTML = `
       <div class="coo-office"></div>
       <div class="coo-top"><b>鈦鐵 營運長辦公室</b><span data-c="year"></span><span data-c="budget"></span>
@@ -109,8 +111,12 @@ export class CooPhase {
 
   _initMap() {
     const L = this.L;
-    const map = this.map = L.map(this.$('map'), { zoomControl: true, attributionControl: true, preferCanvas: true }).setView([23.75, 120.95], 8);
-    L.tileLayer('https://wmts.nlsc.gov.tw/wmts/EMAP/default/GoogleMapsCompatible/{z}/{y}/{x}', { maxZoom: 18, attribution: '© 內政部國土測繪中心', opacity: 0.85 }).addTo(map);
+    // 離線底圖:內政部國土測繪中心臺灣通用電子地圖(tools/fetch-tiles.mjs 下載):z6~11 全臺、z12 只有鐵路沿線
+    const TW = L.latLngBounds([21.6, 119.2], [25.5, 122.2]);
+    const map = this.map = L.map(this.$('map'), { zoomControl: true, attributionControl: true, preferCanvas: true, minZoom: 7, maxZoom: 15, maxBounds: TW.pad(0.1) }).setView([23.75, 120.95], 8);
+    const blank = 'data:image/gif;base64,R0lGODlhAQABAIAAAAAAAP///yH5BAEAAAAALAAAAAABAAEAAAIBRAA7';
+    L.tileLayer('assets/tiles/emap/{z}/{x}/{y}.jpg', { minZoom: 6, maxNativeZoom: 11, maxZoom: 15, bounds: TW, attribution: '© 內政部國土測繪中心', opacity: 0.85, errorTileUrl: blank }).addTo(map);
+    L.tileLayer('assets/tiles/emap/{z}/{x}/{y}.jpg', { minZoom: 12, maxNativeZoom: 12, maxZoom: 15, bounds: TW, opacity: 0.85, errorTileUrl: blank }).addTo(map);
     this.layer = L.layerGroup().addTo(map);
     const hs = this.Lv.hotspots || [];
     if (hs.length) map.fitBounds(L.latLngBounds(hs.map((h) => [h.lat, h.lng])).pad(0.35));
