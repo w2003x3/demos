@@ -115,3 +115,16 @@ export const KITCHEN_MISSIONS = KITCHEN_LEVELS.map((L) => ({
   phases: [{ type: 'kitchen', level: L.id, timeLimit: L.timeLimit, quota: L.quota }],
 }));
 export const KITCHEN_MISSION = KITCHEN_MISSIONS[0];
+
+/** 車站場景(站長、不良乘客共用):巡覽模式 */
+export const STATION_MISSIONS = [
+  { id: 's-taipei', station: 'taipei', title: '臺北車站', difficulty: 3, subtitle: '1F 黑白棋盤格大廳 · B1 迷宮般的地下街',
+    brief: '台鐵、高鐵、捷運共構。1F 大廳四面各三個門、黑白棋盤格石材地板與挑高天井;B1 五條南北向通道、南北迴廊連接 K/Y/Z 區地下街與機場捷運,路線錯綜複雜。',
+    features: ['棋盤格大廳', '挑高天井天窗', 'LED 時刻看板', '報時火車', 'B1 五條通道', '付費區閘門', '地下街店面'] },
+  { id: 's-kaohsiung', station: 'kaohsiung', title: '高雄車站', difficulty: 3, subtitle: '綠之丘天棚 · 雲朵天花 · 帝冠式舊站',
+    brief: '鐵路地下化後的新站。地面是 Mecanoo 設計的「綠之丘」天棚:造型各異的花柱撐起起伏的圓頂,下方雲朵鋁板與圓形天窗;中軸線保留 1941 年帝冠式舊站;下沉廣場通往圓拱天花、燈籠照明的地下大廳。',
+    features: ['綠之丘天棚', '花柱', '雲朵鋁板天花', '圓形天窗', '帝冠式舊站', '下沉廣場', '圓拱地下大廳'] },
+  { id: 's-taichung', station: 'taichung', title: '臺中車站', difficulty: 2, subtitle: '2F 大廳與平台 · 蝴蝶展翅屋頂 · 紅磚舊站',
+    brief: '高架化新站:2F 大廳與穿堂,兩側半開放平台頭頂就是 37 m 高的蝴蝶展翅大屋頂與鋼構桁架,視野遼闊;3F 月台、1F 公車轉運。西南側是 1917 年的紅磚舊站。',
+    features: ['2F 遼闊平台', '蝴蝶展翅屋頂', '鋼構樹狀柱', '太陽能板', '3F 月台與列車', '紅磚鐘塔舊站'] },
+].map((s) => ({ ...s, phases: [{ type: 'stationExplore', station: s.station, title: s.title, desc: s.brief, features: s.features }] }));

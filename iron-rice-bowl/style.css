@@ -548,3 +548,9 @@ kbd { display: inline-block; min-width: 20px; text-align: center; background: #e
 .k-tour-btns button { border: 1px solid var(--line); background: transparent; color: #e8edf2; border-radius: 8px; padding: 8px 14px; font: inherit; cursor: pointer; }
 .k-tour-btns button.primary { background: var(--accent); color: #111; border-color: var(--accent); font-weight: 700; }
 .k-tour-btns button:disabled { opacity: .4; }
+/* 車站巡覽 */
+.s-card { position: absolute; top: 12px; left: 12px; background: rgba(18,23,32,.88); border: 1px solid var(--line); border-radius: 10px; padding: 8px 12px; display: flex; flex-direction: column; gap: 2px; }
+.s-card b { font-size: 18px; } .s-card span { color: var(--accent); font-weight: 700; } .s-card em { font-style: normal; font-size: 12px; color: #9fb0c0; }
+.s-hud .k-touch .k-f, .s-hud .k-touch .k-e { font-size: 18px; }
+.s-list .k-st { flex-shrink: 0; }
+.s-list { max-height: calc(100vh - 160px); }

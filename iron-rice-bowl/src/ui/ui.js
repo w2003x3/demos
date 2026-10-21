@@ -211,6 +211,14 @@ export class UI {
   brief(m, onStart, onBack) {
     const ph = m.phases[0];
     if (ph.type === 'kitchen') return this.kitchenBrief(m, onStart, onBack);
+    if (ph.type === 'stationExplore') {
+      const s = this.showScreen(`<div class="card brief tall"><h2>${esc(m.title)} <small>${esc(m.subtitle)}</small></h2><p>${esc(m.brief)}</p>
+        <p class="tip"><kbd>WASD</kbd> 移動・拖曳轉視角・<kbd>V</kbd> 第一/第三人稱・<kbd>M</kbd> 切換關卡變化(一般/迷宮化/障礙物)・右側清單瞬間移動・走進樓梯自動上下樓</p>
+        <div class="actions"><button class="ghost" id="b-back">返回</button><button id="b-start">進入車站(Enter)</button></div></div>`, 'dim');
+      $('#b-start', s).addEventListener('click', onStart);
+      $('#b-back', s).addEventListener('click', onBack);
+      return;
+    }
     const s = this.showScreen(`
       <div class="card brief tall">
         <h2>${esc(m.title)} <small>${esc(m.subtitle)}</small></h2>

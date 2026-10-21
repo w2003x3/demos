@@ -1,7 +1,8 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
-import { MISSIONS, DRIVER_MISSION, KITCHEN_MISSIONS } from './config/missions.js';
+import { MISSIONS, DRIVER_MISSION, KITCHEN_MISSIONS, STATION_MISSIONS } from './config/missions.js';
+import { StationExplorePhase } from './game/stationExplorePhase.js';
 import { RANKS, rankById } from './config/careerLadder.js';
 import { Career } from './game/career.js';
 import { KitchenPhase } from './game/kitchenPhase.js';
@@ -31,7 +32,7 @@ const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } cat
 const PHASES = {
   onboard: OnboardPhase, station: StationPhase, kitchen: KitchenPhase, driver: DriverPhase,
   ticketing: TicketingPhase, stationmaster: StationmasterPhase, dispatch: DispatchPhase, operations: OperationsPhase,
-  troublemaker: TroublemakerPhase,
+  troublemaker: TroublemakerPhase, stationExplore: StationExplorePhase,
 };
 const MODEL_BASE = 'assets/models';
 const VOICE_BASE = 'assets/audio/voice';
@@ -148,6 +149,9 @@ class Game {
       list.push(tryKitchen ? kitchen : mask(kitchen, 'kitchen'));
       if (!tryKitchen && !c.knows('kitchen')) break;   // 還沒到過廚房:只顯示一張未知卡片
     }
+    // 車站場景巡覽:站長或不良乘客職位可進入;網址加 ?stations 可直接看
+    const tryStations = new URLSearchParams(location.search).has('stations');
+    if (tryStations || c.knows('stationmaster') || c.knows('troublemaker')) list.push(...STATION_MISSIONS.map((m) => ({ ...m, locked: false })));
     const name = (id) => (c.knows(id) ? rankById(id).title : '？？？');
     this.ui.menu(list, {
       muted: this.muted,
@@ -281,6 +285,7 @@ class Game {
   _endPhase(result) {
     this.phase.dispose();
     this.phase = null;
+    if (result.kind === 'explore') { this.menu(); return; }   // 巡覽沒有結算
     this.results.push(result);
     if (result.success && this.phaseIndex < this.mission.phases.length - 1) {
       this.phaseIndex++;
