@@ -11,11 +11,10 @@
 //   玩家 → 房主  :in(按鍵 k / 移動 mv / 點地圖 go)
 // ====================================================================
 
-// 伺服器位址:網址加 ?server=local 或在本機開啟時連本機的 wrangler dev
+// 伺服器位址:預設連正式伺服器;網址加 ?server=local 改連本機的 wrangler dev(開發測試用)
 const ONLINE_SERVER = (() => {
   const q = new URLSearchParams(location.search).get('server');
   if (q) return q === 'local' ? 'ws://127.0.0.1:8787' : q;
-  if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) return 'ws://127.0.0.1:8787';
   return 'wss://bang-bang-porkball.bang-bang-porkball-server.workers.dev'; // Cloudflare Workers(server/)
 })();
 
@@ -59,7 +58,7 @@ const NET = {
       this.ws = null;
       this.reset();
       if (wasOnline) backToMenu('與伺服器的連線中斷了');
-      else lobbyUI.status(lobbyUI.lastError || '連不上伺服器,請稍後再試', true);
+      else lobbyUI.status(lobbyUI.lastError || '連不上連線伺服器,請確認網路後再試一次(若剛更新過遊戲,請重新整理頁面)', true);
     };
   },
   leave(silent) {
@@ -103,7 +102,7 @@ const NET = {
       case 'host-left':
         this.ws = null;
         this.reset();
-        backToMenu('房主離開了,房間已解散');
+        backToMenu('攤主收攤了,攤位已關閉');
         return;
     }
     if (this.role === 'host') this.hostMessage(msg);
@@ -471,9 +470,9 @@ const lobbyUI = {
         '<div class="logo">🌐 多人連線</div>' +
         '<p class="sub">和朋友一起玩,最多 6 人;不足的位置由電腦補上</p>' +
         `<label class="ol-field">暱稱 <input id="ol-name" maxlength="12" placeholder="你的名字" value="${esc(this.savedName())}"></label>` +
-        '<button type="button" class="big primary" data-ol="create">🏠 建立房間</button>' +
+        '<button type="button" class="big primary" data-ol="create">🏮 開攤(建立攤位)</button>' +
         '<div class="ol-join">' +
-        `<input id="ol-code" maxlength="6" placeholder="房間代碼" value="${esc(code)}" autocomplete="off">` +
+        `<input id="ol-code" maxlength="6" placeholder="攤位代碼" value="${esc(code)}" autocomplete="off">` +
         '<button type="button" class="big" data-ol="join">加入</button></div>' +
         `<p class="ol-status${this.msgErr ? ' err' : ''}">${esc(this.msg)}</p>` +
         '<button type="button" class="icon-btn" data-ol="back">← 返回</button>';
@@ -484,11 +483,11 @@ const lobbyUI = {
     NET.roster().slice(0, 6).forEach((p, i) => plan.push({ ...p, team: NET.teamOf(i) }));
     const rows = plan.map((p) =>
       `<li class="team-${p.team}"><span>${p.team === 'blue' ? '🔵' : '🔴'}</span>` +
-      `<b>${esc(p.name)}</b>${p.host ? '<em>房主</em>' : ''}${p.id === NET.id ? '<em>你</em>' : ''}</li>`).join('');
+      `<b>${esc(p.name)}</b>${p.host ? '<em>攤主</em>' : ''}${p.id === NET.id ? '<em>你</em>' : ''}</li>`).join('');
     const ai = Math.max(0, 6 - plan.length);
     const link = location.origin + location.pathname + '?room=' + NET.code;
     panel.innerHTML =
-      '<div class="logo">🌐 房間 <span class="ol-code">' + esc(NET.code) + '</span></div>' +
+      '<div class="logo">🏮 攤位 <span class="ol-code">' + esc(NET.code) + '</span></div>' +
       '<p class="sub">把代碼或邀請連結傳給朋友</p>' +
       `<button type="button" class="icon-btn" data-ol="copy" data-link="${esc(link)}">🔗 複製邀請連結</button>` +
       `<ul class="ol-players">${rows}</ul>` +
@@ -503,9 +502,9 @@ const lobbyUI = {
       '</select></label></div>' +
       (host
         ? '<button type="button" class="big primary" data-ol="start">🎮 開始對戰</button>'
-        : '<p class="mini">等待房主開始…</p>') +
+        : '<p class="mini">等待攤主開始…</p>') +
       `<p class="ol-status${this.msgErr ? ' err' : ''}">${esc(this.msg)}</p>` +
-      '<button type="button" class="icon-btn" data-ol="leave">✕ 離開房間</button>';
+      '<button type="button" class="icon-btn" data-ol="leave">✕ 離開攤位</button>';
   },
   readName() {
     const inp = this.el.querySelector('#ol-name');
@@ -518,7 +517,7 @@ const lobbyUI = {
     const name = this.readName();
     if (!name) return;
     const code = (this.el.querySelector('#ol-code').value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
-    if (code.length < 4) { this.status('請輸入 4 碼房間代碼', true); return; }
+    if (code.length < 4) { this.status('請輸入 4 碼攤位代碼', true); return; }
     NET.connect('join', code, name);
   },
   onClick(e) {
@@ -568,8 +567,8 @@ const lobbyUI = {
     if (menu) menu.style.display = 'none';
     box.innerHTML = NET.role === 'host'
       ? '<button type="button" class="big primary" data-ol="again">🔄 再來一場</button>' +
-        '<button type="button" class="big" data-ol="lobby">🏠 回房間</button>'
-      : '<p class="mini">等待房主開始下一場…</p><button type="button" class="icon-btn" data-ol="quit">✕ 離開房間</button>';
+        '<button type="button" class="big" data-ol="lobby">🏮 回攤位</button>'
+      : '<p class="mini">等待攤主開始下一場…</p><button type="button" class="icon-btn" data-ol="quit">✕ 離開攤位</button>';
   },
 };
 
