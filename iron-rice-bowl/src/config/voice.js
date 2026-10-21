@@ -28,6 +28,15 @@ export const VOICES = {
   helperStudent: { voice: 'zh-TW-YunJheNeural', lang: 'zh-TW', pitch: '+7%', rate: '+8%' },
   helperYoung: { voice: 'zh-TW-HsiaoChenNeural', lang: 'zh-TW', pitch: '+3%', rate: '+12%' },
   helperBurly: { voice: 'zh-TW-YunJheNeural', lang: 'zh-TW', pitch: '-15%', rate: '-10%' },
+  // 車站追逐:站長(沉穩威嚴)、不良乘客(輕浮挑釁)
+  stationmaster: { voice: 'zh-TW-YunJheNeural', lang: 'zh-TW', pitch: '-10%', rate: '-4%' },
+  troublemaker: { voice: 'zh-TW-YunJheNeural', lang: 'zh-TW', pitch: '+14%', rate: '+12%' },
+};
+
+// 車站追逐:雙方的口頭禪(chase_sm_<i> / chase_tm_<i>)
+export const CHASE_LINES = {
+  stationmaster: ['我對你解除契約!', '我現在解除契約!', '不載你了,請你出站!', '解除運送契約!'],
+  troublemaker: ['嗨~肉腳,你們好啊!', '嗚~~~耶!', '肉~腳~', '連我阿嬤都比你行!'],
 };
 
 // 便當廚房:廚房主任
@@ -133,6 +142,8 @@ export function buildVoiceLines() {
   AMBIENT_GRANDMA_CHATS.forEach((chat, c) => chat.forEach(([role, t], i) => add(`amb_gma_${c}_${i}`, role, t)));
   for (const [k, t] of Object.entries(CONDUCTOR_LINES)) add(`conductor_${k}`, 'conductor', t);
   for (const [k, t] of Object.entries(KITCHEN_LINES)) add(`kboss_${k}`, 'kitchenBoss', t);
+  CHASE_LINES.stationmaster.forEach((t, i) => add(`chase_sm_${i}`, 'stationmaster', t));
+  CHASE_LINES.troublemaker.forEach((t, i) => add(`chase_tm_${i}`, 'troublemaker', t));
   for (const [h, lines] of Object.entries(HELPER_LINES)) for (const [k, t] of Object.entries(lines)) add(`helper_${h}_${k}`, HELPERS[h].voice, t);
   for (const [k, t] of Object.entries(PASSENGER_LINES)) {
     add(`pax_${k}_m`, 'passengerM', t);

@@ -129,7 +129,7 @@ export function buildKaohsiung({ assets, variant = 'normal', quality = {} }) {
   b.extra.push(lm);
   for (const [x, y, z] of lanterns) b.box(M.darkSteel, 0.02, vaultY(x) - y - 0.65, 0.02, x, y + 0.65, z);
   // 地下大廳設施:閘門、售票機、服務台、往月台指標
-  for (let k = 0; k < 10; k++) { const x = -9 + k * 2; b.box(M.white, 0.3, 1.0, 1.5, x, B1, BZ0 + 20); b.solid('B1', x - 0.15, BZ0 + 19.2, x + 0.15, BZ0 + 20.8); }
+  for (let k = 0; k < 10; k++) { const x = -9 + k * 2; b.box(M.white, 0.3, 1.0, 1.5, x, B1, BZ0 + 20); b.solid('B1', x - 0.15, BZ0 + 19.2, x + 0.15, BZ0 + 20.8, 1.0); }
   sign(b, textTex('臺鐵 月台 Platforms', { sub: '往 1-4 月台 · To Platforms', bg: '#1f4e9a', h: 100, w: 640 }), 6, 0.95, 0, B1 + 3.6, BZ0 + 19.5, 0);
   sign(b, textTex('捷運 R11 高雄車站', { sub: 'MRT Red Line', bg: '#d22630', h: 100, w: 640 }), 5, 0.8, -26, B1 + 3.2, BZ0 + 8, Math.PI / 2);
   for (let i = 0; i < 6; i++) b.box(M.steelPaint, 0.9, 1.7, 0.6, 28 - i * 1.2, B1, BZ0 + 6);

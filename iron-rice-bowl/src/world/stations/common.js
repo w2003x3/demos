@@ -63,7 +63,8 @@ export class Builder {
     return m;
   }
 
-  solid(floor, x0, z0, x1, z1) { (this.solids[floor] ??= []).push([Math.min(x0, x1), Math.min(z0, z1), Math.max(x0, x1), Math.max(z0, z1)]); }
+  /** 碰撞方塊;h = 高度(低矮障礙,跳得過去;省略 = 牆,不能跳過) */
+  solid(floor, x0, z0, x1, z1, h) { const s = [Math.min(x0, x1), Math.min(z0, z1), Math.max(x0, x1), Math.max(z0, z1)]; if (h != null) s.push(h); (this.solids[floor] ??= []).push(s); }
   area(floor, y, x0, z0, x1, z1) { const f = (this.floors[floor] ??= { y, bounds: [] }); f.bounds.push([x0, z0, x1, z1]); }
 
   finish() {
@@ -364,4 +365,92 @@ export function connectivity(mask, nx, nz) {
     }
   }
   return { reach, total };
+}
+
+// ---------------------------------------------------------------- 新增積木(臺南/基隆/宜蘭)
+
+/** 實心牆(方塊 + 碰撞) */
+export function wallBox(b, mat, floor, x0, z0, x1, z1, y, h, uv = 1) {
+  const w = Math.abs(x1 - x0), d = Math.abs(z1 - z0);
+  b.box(mat, Math.max(w, 0.05), h, Math.max(d, 0.05), (x0 + x1) / 2, y, (z0 + z1) / 2, 0, uv);
+  if (floor) b.solid(floor, x0, z0, x1, z1);
+}
+
+/**
+ * 有開口的立面板(沿 x,寬 w、高 h、厚 depth),開口 holes:[{x, y, w, h, arch}](x 為中心,相對面板左下);
+ * arch=true 開口上緣為半圓拱。回傳 ExtrudeGeometry(原點在面板底部中心,正面朝 +z)。
+ */
+export function facadeGeo(w, h, holes = [], depth = 0.4) {
+  const s = new THREE.Shape();
+  s.moveTo(-w / 2, 0); s.lineTo(w / 2, 0); s.lineTo(w / 2, h); s.lineTo(-w / 2, h); s.lineTo(-w / 2, 0);
+  for (const o of holes) {
+    const p = new THREE.Path(), x0 = o.x - o.w / 2, x1 = o.x + o.w / 2, r = o.w / 2;
+    const top = o.y + o.h - (o.arch ? r : 0);
+    p.moveTo(x0, o.y); p.lineTo(x1, o.y); p.lineTo(x1, top);
+    if (o.arch) p.absarc(o.x, top, r, 0, Math.PI, false); else p.lineTo(x0, top);
+    p.lineTo(x0, o.y);
+    s.holes.push(p);
+  }
+  const g = new THREE.ExtrudeGeometry(s, { depth, bevelEnabled: false, curveSegments: 14 });
+  g.translate(0, 0, -depth / 2);
+  // 依公尺計的 UV(ExtrudeGeometry 的正面 UV 即形狀座標)
+  return g;
+}
+
+/** 依遮罩(1 m 格)鋪地板:mask(i, j) 回傳 true 的格子 */
+export function maskFloor(b, mat, x0, z0, x1, z1, y, test, uvScale = 1.2) {
+  const nx = Math.round(x1 - x0), nz = Math.round(z1 - z0), mask = new Uint8Array(nx * nz);
+  for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) mask[j * nx + i] = test(x0 + i + 0.5, z0 + j + 0.5) ? 1 : 0;
+  for (const [a, c, d, e] of maskToBoxes(mask, nx, nz, 1, x0, z0)) b.floor(mat, a, c, d, e, y, uvScale);
+}
+
+/** 臺鐵列車(EMU 白色車體 + 黑窗帶 + 色帶、車門、車頂設備;端車有斜面車頭)沿 x 停放 */
+export function trainSet(b, M, x0, cars, y, z, { stripe = '#e8730c', len = 20, dir = 1 } = {}) {
+  const body = M._trainWhite ??= new THREE.MeshStandardMaterial({ color: '#eef0f0', roughness: 0.32, metalness: 0.45 });
+  const band = M._trainBand ??= new THREE.MeshStandardMaterial({ color: '#16181c', roughness: 0.15, metalness: 0.3 });
+  const st = M[`_stripe${stripe}`] ??= new THREE.MeshStandardMaterial({ color: stripe, roughness: 0.4 });
+  const door = M._trainDoor ??= new THREE.MeshStandardMaterial({ color: '#c9ccd0', roughness: 0.3, metalness: 0.6 });
+  const under = M._trainUnder ??= new THREE.MeshStandardMaterial({ color: '#2a2c2f', roughness: 0.8 });
+  for (let k = 0; k < cars; k++) {
+    const cx = x0 + dir * (k * (len + 0.6) + len / 2), end = k === 0 ? -dir : k === cars - 1 ? dir : 0;
+    const L = end ? len - 2.4 : len, ox = end ? -end * 1.2 : 0;
+    b.box(under, len - 1, 0.7, 2.6, cx, y + 0.35, z);
+    b.box(body, L, 3.0, 2.95, cx + ox, y + 1.05, z);
+    b.box(band, L + 0.02, 0.95, 2.97, cx + ox, y + 2.25, z);
+    b.box(st, L + 0.02, 0.18, 2.97, cx + ox, y + 1.75, z);
+    b.box(body, L - 0.4, 0.35, 2.4, cx + ox, y + 4.05, z);   // 車頂冷氣
+    for (const s of [-1, 1]) for (const dx of [-L / 2 + 3, -L / 6, L / 6, L / 2 - 3]) b.box(door, 1.3, 1.95, 0.04, cx + ox + dx, y + 1.1, z + s * 1.49);
+    if (end) {
+      // 斜面車頭:下段方塊 + 上段向前收的斜面 + 黑色擋風玻璃
+      const nx = cx + end * (len / 2 - 1.2);
+      b.box(body, 2.4, 1.6, 2.95, nx, y + 1.05, z);
+      b.add(band, new THREE.BoxGeometry(2.6, 1.7, 2.9), nx - end * 0.1, y + 3.0, z, 0, 0, end * 0.55);
+      b.box(st, 2.42, 0.18, 2.97, nx, y + 1.75, z);
+      const lamp = M._lamp ??= new THREE.MeshStandardMaterial({ color: '#fff', emissive: '#fff4d8', emissiveIntensity: 1.5 });
+      for (const s of [-0.9, 0.9]) b.box(lamp, 0.06, 0.18, 0.4, nx + end * 1.2, y + 1.4, z + s);
+    }
+  }
+}
+
+/** 月台邊緣:黃色警戒線 + 導盲磚 */
+export function platformEdge(b, M, x0, x1, z, y, side) {
+  const yel = M._yel ??= new THREE.MeshStandardMaterial({ color: '#f0c419', roughness: 0.6 });
+  b.floor(yel, x0, z - side * 0.75 - 0.08, x1, z - side * 0.75 + 0.08, y + 0.004);
+  b.floor(M._tac ??= M.tex(T.tactile(), 0.6), x0, Math.min(z - side * 1.0, z - side * 1.3), x1, Math.max(z - side * 1.0, z - side * 1.3), y + 0.004, 0.3);
+}
+
+/** 遠山(低多邊形起伏山體,背景用) */
+export function hills(b, mat, x0, x1, z, depth, hmax, seed = 1, rot = 0) {
+  const R = rng(seed), nx = 40, nz = 8;
+  const g = new THREE.PlaneGeometry(x1 - x0, depth, nx, nz);
+  g.rotateX(-Math.PI / 2);
+  const p = g.attributes.position;
+  const ph = [R() * 6, R() * 6, R() * 6];
+  for (let i = 0; i < p.count; i++) {
+    const u = (p.getX(i) + (x1 - x0) / 2) / (x1 - x0), v = 1 - (p.getZ(i) + depth / 2) / depth;   // v = 0 在 +z 側(面向觀者)
+    const ridge = 0.55 + 0.25 * Math.sin(u * 7 + ph[0]) + 0.15 * Math.sin(u * 17 + ph[1]) + 0.05 * Math.sin(u * 41 + ph[2]);
+    p.setY(i, Math.max(0, hmax * ridge * Math.sin(Math.min(1, v * 1.2) * Math.PI * 0.5) * (v > 0.85 ? 1 - (v - 0.85) * 3 : 1)) + (R() - 0.5) * 1.2 * v);
+  }
+  g.computeVertexNormals();
+  b.add(mat, g, (x0 + x1) / 2, 0, z, rot);
 }

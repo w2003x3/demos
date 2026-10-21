@@ -1,6 +1,7 @@
 // DOM 介面:HUD、LED 跑馬燈(廣播)、漫畫對話框(人物台詞)、操作面板、各種畫面。
 // 對話框是螢幕空間元素:每幀把說話者頭部的 3D 座標投影到螢幕,因此永遠正對畫面,不受視角旋轉影響。
 import * as THREE from 'three';
+import { CHASE_WEAPONS } from '../config/chase.js';
 
 const $ = (sel, root = document) => root.querySelector(sel);
 const h = (tag, cls, html) => {
@@ -211,6 +212,17 @@ export class UI {
   brief(m, onStart, onBack) {
     const ph = m.phases[0];
     if (ph.type === 'kitchen') return this.kitchenBrief(m, onStart, onBack);
+    if (ph.role) {
+      const ws = CHASE_WEAPONS[ph.role];
+      const s = this.showScreen(`<div class="card brief tall"><h2>${esc(m.title)} <small>${esc(m.subtitle)}</small></h2><p>${esc(m.brief)}</p>
+        <table class="kv">${ws.map((w, i) => `<tr><th>${i + 1} ${w.icon} ${esc(w.name)}</th><td>${esc(w.desc)}</td></tr>`).join('')}</table>
+        <p class="tip"><kbd>WASD</kbd> 移動・<kbd>Shift</kbd> 奔跑(耗體力)・<kbd>Space</kbd> 跳(閘門、長椅、行李都跳得過)・<kbd>1</kbd>~<kbd>4</kbd> 使用道具(朝鏡頭方向)・<kbd>T</kbd> 嗆聲・拖曳轉視角・<kbd>V</kbd> 視角<br>
+        右上角箭頭指向${ph.role === 'stationmaster' ? '不良乘客' : '站長'},並顯示距離與樓層。</p>
+        <div class="actions"><button class="ghost" id="b-back">返回</button><button id="b-start">開始(Enter)</button></div></div>`, 'dim');
+      $('#b-start', s).addEventListener('click', onStart);
+      $('#b-back', s).addEventListener('click', onBack);
+      return;
+    }
     if (ph.type === 'stationExplore') {
       const s = this.showScreen(`<div class="card brief tall"><h2>${esc(m.title)} <small>${esc(m.subtitle)}</small></h2><p>${esc(m.brief)}</p>
         <p class="tip"><kbd>WASD</kbd> 移動・拖曳轉視角・<kbd>V</kbd> 第一/第三人稱・<kbd>M</kbd> 切換關卡變化(一般/迷宮化/障礙物)・右側清單瞬間移動・走進樓梯自動上下樓</p>
@@ -364,13 +376,14 @@ export class UI {
 
   result(m, r, career, onRetry, onMenu) {
     if (r.kind === 'kitchen') return this.kitchenResult(m, r, career, onRetry, onMenu);
+    if (r.kind === 'chase') return this.chaseResult(m, r, career, onRetry, onMenu);
     const stars = r.success ? 1 + (r.sat >= 70 && !r.complaints.length ? 1 : 0) + (r.sat >= 90 && r.missed <= 2 && !r.underCount ? 1 : 0) : 0;
     // career = 本次人事異動紀錄(null = 沒有異動)
     const notice = !career ? ''
       : career.clear ? `<div class="c-status good big">👑 榮升局長 — 通關!</div>`
         : `<div class="c-status ${career.kind === 'promote' ? 'good' : 'bad'} big">
             ${career.kind === 'promote' ? '🎉' : '📋'} 人事命令:${esc(career.from)} ${esc(career.verb)}「${esc(career.to)}」<br>
-            <small>${esc(career.reason)}${career.to === '列車餐服員' ? '' : ' · 新職位玩法開發中'}</small></div>`;
+            <small>${esc(career.reason)}${['列車餐服員', '便當廚房', '站長', '不良乘客'].includes(career.to) ? '' : ' · 新職位玩法開發中'}</small></div>`;
     const s = this.showScreen(`
       <div class="card result ${r.success ? 'ok' : 'fail'}">
         <h2>${r.success ? '任務完成!' : '任務失敗'}</h2>
@@ -389,6 +402,30 @@ export class UI {
         <div class="actions"><button class="ghost" id="b-menu">回任務選單</button>${career && career.to !== '列車餐服員' ? '' : '<button id="b-retry">再挑戰一次(Enter)</button>'}</div>
       </div>`, 'dim');
     $('#b-retry', s)?.addEventListener('click', onRetry);
+    $('#b-menu', s).addEventListener('click', onMenu);
+  }
+
+  /** 車站追逐結算 */
+  chaseResult(m, r, career, onRetry, onMenu) {
+    const sm = r.role === 'stationmaster';
+    const stars = !r.success ? 0 : sm ? 1 + (r.time <= r.timeLimit * 0.6 ? 1 : 0) + (r.time <= r.timeLimit * 0.35 ? 1 : 0) : 1 + (r.tags >= r.tagGoal + 2 ? 1 : 0) + (r.tags >= r.tagGoal + 4 ? 1 : 0);
+    const notice = !career ? ''
+      : `<div class="c-status ${career.kind === 'promote' ? 'good' : 'bad'} big">${career.kind === 'promote' ? '🎉' : '📋'} 人事命令:${esc(career.from)} ${esc(career.verb)}「${esc(career.to)}」<br><small>${esc(career.reason)}</small></div>`;
+    const fmt = (s) => `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+    const s = this.showScreen(`
+      <div class="card result ${r.success ? 'ok' : 'fail'}">
+        <h2>${sm ? (r.success ? '逮捕成功!解除運送契約' : '讓他跑了…') : (r.success ? '嗚~~~耶!全身而退' : (r.captured ? '被站長逮捕了' : '任務失敗'))}</h2>
+        ${r.reason ? `<p class="reason">${esc(r.reason)}</p>` : ''}
+        ${notice}
+        <div class="big-stars">${'★'.repeat(stars)}${'☆'.repeat(3 - stars)}</div>
+        <table class="kv">
+          <tr><th>車站</th><td>${esc(r.station)}</td><th>角色</th><td>${sm ? '站長' : '不良乘客'}</td></tr>
+          <tr><th>${sm ? '逮捕用時' : '撐了'}</th><td>${fmt(r.time)} / ${fmt(r.timeLimit)}</td><th>使用道具</th><td>${r.uses} 次</td></tr>
+          <tr><th>塗鴉</th><td>${r.tags} / ${r.tagGoal} 處</td><th>結果</th><td>${r.captured ? '不良乘客被逮捕' : '沒有被逮捕'}</td></tr>
+        </table>
+        <div class="actions"><button class="ghost" id="b-menu">回任務選單</button><button id="b-retry">再挑戰一次(Enter)</button></div>
+      </div>`, 'dim');
+    $('#b-retry', s).addEventListener('click', onRetry);
     $('#b-menu', s).addEventListener('click', onMenu);
   }
 

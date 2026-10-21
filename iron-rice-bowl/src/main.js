@@ -1,13 +1,14 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
-import { MISSIONS, DRIVER_MISSION, KITCHEN_MISSIONS, STATION_MISSIONS } from './config/missions.js';
+import { MISSIONS, DRIVER_MISSION, KITCHEN_MISSIONS, STATION_MISSIONS, CHASE_MISSIONS } from './config/missions.js';
 import { StationExplorePhase } from './game/stationExplorePhase.js';
+import { StationChasePhase } from './game/stationChasePhase.js';
 import { RANKS, rankById } from './config/careerLadder.js';
 import { Career } from './game/career.js';
 import { KitchenPhase } from './game/kitchenPhase.js';
 import { DriverPhase } from './game/driverPhase.js';
-import { TroublemakerPhase, TicketingPhase, StationmasterPhase, DispatchPhase, OperationsPhase } from './game/reservedPhases.js';
+import { TicketingPhase, DispatchPhase, OperationsPhase } from './game/reservedPhases.js';
 import { Input } from './core/input.js';
 import { Sfx, Voice } from './core/audio.js';
 import { loadAssets } from './core/assets.js';
@@ -31,8 +32,8 @@ const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } cat
 
 const PHASES = {
   onboard: OnboardPhase, station: StationPhase, kitchen: KitchenPhase, driver: DriverPhase,
-  ticketing: TicketingPhase, stationmaster: StationmasterPhase, dispatch: DispatchPhase, operations: OperationsPhase,
-  troublemaker: TroublemakerPhase, stationExplore: StationExplorePhase,
+  ticketing: TicketingPhase, stationmaster: StationChasePhase, dispatch: DispatchPhase, operations: OperationsPhase,
+  troublemaker: StationChasePhase, stationExplore: StationExplorePhase,
 };
 const MODEL_BASE = 'assets/models';
 const VOICE_BASE = 'assets/audio/voice';
@@ -152,6 +153,12 @@ class Game {
     // 車站場景巡覽:站長或不良乘客職位可進入;網址加 ?stations 可直接看
     const tryStations = new URLSearchParams(location.search).has('stations');
     if (tryStations || c.knows('stationmaster') || c.knows('troublemaker')) list.push(...STATION_MISSIONS.map((m) => ({ ...m, locked: false })));
+    // 車站追逐:目前職位是站長 / 不良乘客時可玩;網址加 ?chase 可直接試玩兩方
+    const tryChase = new URLSearchParams(location.search).has('chase');
+    for (const role of ['stationmaster', 'troublemaker']) {
+      if (!(tryChase || c.knows(role))) continue;
+      list.push(...CHASE_MISSIONS.filter((m) => m.role === role).map((m) => ({ ...m, locked: !(tryChase || rank.phase === role) })));
+    }
     const name = (id) => (c.knows(id) ? rankById(id).title : '？？？');
     this.ui.menu(list, {
       muted: this.muted,

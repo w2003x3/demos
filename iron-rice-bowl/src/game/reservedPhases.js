@@ -27,8 +27,6 @@ function reserved(title) {
   };
 }
 
-export const TroublemakerPhase = reserved('不良乘客');
 export const TicketingPhase = reserved('站務員');
-export const StationmasterPhase = reserved('站長');
 export const DispatchPhase = reserved('行控人員');
 export const OperationsPhase = reserved('營運長');

@@ -200,7 +200,7 @@ export function buildTaipei({ assets, variant = 'normal', quality = {} }) {
     for (let i = 0; i < 10; i++) {
       const x = -24 + R() * 48, z = -14 + R() * 26;
       obstacleCart(b, M, x, 0, z, R() * 6);
-      b.solid('1F', x - 0.8, z - 0.8, x + 0.8, z + 0.8);
+      b.solid('1F', x - 0.8, z - 0.8, x + 0.8, z + 0.8, 1.1);
     }
     for (const [x0, z0, x1, z1] of [[-14, -4, -2, -3.4], [4, 3, 16, 3.6]]) barrier(b, M, x0, z0, x1, z1, 0, '施工中');
     b.solid('1F', -14, -4, -2, -3.4); b.solid('1F', 4, 3, 16, 3.6);
@@ -319,7 +319,7 @@ export function buildTaipei({ assets, variant = 'normal', quality = {} }) {
     b.box(M.steelPaint, 0.28, 1.0, 1.4, x, B1, 0);
     b.box(M.darkSteel, 0.3, 0.05, 1.4, x, B1 + 1.0, 0);
     if (k < 6) { const f = new THREE.Mesh(new THREE.PlaneGeometry(0.55, 0.6), M.glass); f.position.set(x + 0.85, B1 + 0.6, 0); f.rotation.y = Math.PI / 2; b.extra.push(f); }
-    b.solid('B1', x - 0.14, -0.7, x + 0.14, 0.7);
+    b.solid('B1', x - 0.14, -0.7, x + 0.14, 0.7, 1.0);
   }
   sign(b, textTex('臺鐵 · 高鐵 付費區', { sub: 'TRA · THSR Paid Area', bg: '#1f4e9a', h: 100, w: 640 }), 6, 0.95, 0, B1 + 2.7, -0.2, 0);
   // 通道名稱與方向指標(多色系:台鐵藍、高鐵橘、捷運、機捷紫、地下街綠)

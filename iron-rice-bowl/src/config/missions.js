@@ -127,4 +127,27 @@ export const STATION_MISSIONS = [
   { id: 's-taichung', station: 'taichung', title: '臺中車站', difficulty: 2, subtitle: '2F 大廳與平台 · 蝴蝶展翅屋頂 · 紅磚舊站',
     brief: '高架化新站:2F 大廳與穿堂,兩側半開放平台頭頂就是 37 m 高的蝴蝶展翅大屋頂與鋼構桁架,視野遼闊;3F 月台、1F 公車轉運。西南側是 1917 年的紅磚舊站。',
     features: ['2F 遼闊平台', '蝴蝶展翅屋頂', '鋼構樹狀柱', '太陽能板', '3F 月台與列車', '紅磚鐘塔舊站'] },
+  { id: 's-tainan', station: 'tainan', title: '臺南車站', difficulty: 3, subtitle: '鐵路地下化新站 · 1936 古蹟站房 · 鳳凰木大頂棚',
+    brief: '2026 年 10 月啟用的地下新站:地面保留 1936 年古蹟站房(修復中)與舊月台棚架、轉車台遺構;東西貫穿的下沉廣場通往 B1 大廳,2 號出入口是以鳳凰木為意象、挑高 14 m 的大頂棚;B2 為 2 島式 4 股道月台,指標中英日韓四語。',
+    features: ['1936 古蹟站房', '下沉廣場', '鳳凰木大頂棚', 'B1 大廳與商店街', 'B2 島式月台', '轉車台遺構', '黃花崗石 3 號出口'] },
+  { id: 's-keelung', station: 'keelung', title: '基隆車站', difficulty: 2, subtitle: '縱貫線起點 · 半地下頭端站 · 面向基隆港',
+    brief: '2015 年啟用的第五代車站,背山面海:北站玻璃帷幕以「雞籠」斜交格子為意象,面向港西街與基隆港;月台在半地下,上方是城際轉運站;南站跨在軌道上。第一月台末端保留鐵鑄雕花棚架與縱貫線起點,山上有 KEELUNG 地標字。',
+    features: ['北站雞籠格子帷幕', '天井公共藝術燦流', '頭端式月台', '縱貫線起點', '鐵鑄雕花棚架', '基隆港與郵輪', 'KEELUNG 地標'] },
+  { id: 's-yilan', station: 'yilan', title: '宜蘭車站', difficulty: 1, subtitle: '幾米主題 · 屋頂上的長頸鹿 · 丟丟噹森林星空列車',
+    brief: '站房外牆彩繪幾米繪本的森林星空,屋頂站著一隻閉眼微笑、伸長脖子的巨大長頸鹿;站前對面是 9 株鋼構巨樹的丟丟噹森林,樹間懸吊星空列車;站南的幾米廣場有《向左走向右走》與散落的行李箱。月台以地下道連通後站。',
+    features: ['長頸鹿車站', '幾米彩繪外牆', '丟丟噹森林', '星空列車', '向左走向右走', '地下道', '舊宿舍群'] },
 ].map((s) => ({ ...s, phases: [{ type: 'stationExplore', station: s.station, title: s.title, desc: s.brief, features: s.features }] }));
+
+// 車站追逐:站長(抓)/ 不良乘客(躲 + 塗鴉),每座車站各一關;另一方由 AI 扮演
+export const CHASE_MISSIONS = STATION_MISSIONS.flatMap((s) => ['stationmaster', 'troublemaker'].map((role) => {
+  const sm = role === 'stationmaster', time = sm ? 180 : 150, tags = 4 + s.difficulty;
+  return {
+    id: `c-${role}-${s.station}`, station: s.station, role, difficulty: s.difficulty,
+    title: `${sm ? '站長' : '不良乘客'}・${s.title}`,
+    subtitle: sm ? `${time / 60} 分鐘內逮捕不良乘客` : `塗鴉 ${tags} 處 + 撐過 ${Math.floor(time / 60)} 分半`,
+    brief: sm
+      ? `有不良乘客在${s.title}搗亂!他會丟香蕉皮、煙霧彈、用橡皮筋射人,還會跳過閘門逃跑。用電擊棒、BB 槍、閃光彈讓他停下來,再用刺股把他叉住逮捕。`
+      : `在${s.title}到處塗鴉 ${tags} 處,而且不能被站長抓到!站長有刺股、電擊棒、BB 槍和閃光彈。跳過閘門與障礙物,用香蕉皮、煙霧彈甩掉他。`,
+    phases: [{ type: role, role, station: s.station, title: s.title, time, tags }],
+  };
+}));

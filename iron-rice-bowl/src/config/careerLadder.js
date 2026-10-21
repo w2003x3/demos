@@ -8,7 +8,7 @@
 
 export const RANKS = [
   {
-    id: 'troublemaker', title: '不良乘客', phase: 'troublemaker',
+    id: 'troublemaker', title: '不良乘客', phase: 'troublemaker', playable: true,
     duties: '最底層:在車站搞破壞(逃票、霸佔座位、亂丟垃圾…),不能被站長抓到',
     promote: null, // 沒有「升遷」:被抓太多次就會被強迫入職廚房
     demote: {
@@ -17,7 +17,7 @@ export const RANKS = [
     },
   },
   {
-    id: 'kitchen', title: '便當廚房', phase: 'kitchen',
+    id: 'kitchen', title: '便當廚房', phase: 'kitchen', playable: true,
     duties: '在出車前的時限內製作指定數量的便當(盛飯、擺菜、封盒)',
     promote: {
       to: 'attendant', verb: '升回',
@@ -95,7 +95,7 @@ export const RANKS = [
     },
   },
   {
-    id: 'stationmaster', title: '站長', phase: 'stationmaster',
+    id: 'stationmaster', title: '站長', phase: 'stationmaster', playable: true,
     duties: '查緝逃票、追捕逃票乘客,處置行為異常的乘客並解除運送契約',
     promote: {
       to: 'dispatcher', verb: '升任',

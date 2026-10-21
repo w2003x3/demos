@@ -138,7 +138,7 @@ export function buildTaichung({ assets, variant = 'normal', quality = {} }) {
     const z = -8.8 + k * 1.6;
     b.box(M.steelPaint, 0.28, 1.0, 1.4, 0, F2, z);
     b.box(M.darkSteel, 0.3, 0.05, 1.4, 0, F2 + 1.0, z);
-    b.solid('2F', -0.7, z - 0.14, 0.7, z + 0.14);
+    b.solid('2F', -0.7, z - 0.14, 0.7, z + 0.14, 1.0);
   }
   b.solid('2F', -0.7, -DZ, 0.7, -9.6); b.solid('2F', -0.7, 9.6, 0.7, DZ);
   sign(b, textTex('剪票口 進站', { sub: 'Ticket Gates · 往月台 To Platforms', bg: '#1f4e9a', h: 100, w: 640 }), 6, 0.95, -0.4, F2 + 3.4, 0, Math.PI / 2);
@@ -192,7 +192,7 @@ export function buildTaichung({ assets, variant = 'normal', quality = {} }) {
     for (let i = 0; i < 14; i++) {
       const x = -50 + R() * 100, z = (R() < 0.5 ? -1 : 1) * (16 + R() * 14);
       b.box(new THREE.MeshStandardMaterial({ color: ['#c0392b', '#2471a3', '#d4ac0d', '#7f8c8d'][i % 4], roughness: 0.4 }), 0.45, 0.68, 0.28, x, F2, z, R() * 6);
-      b.solid('2F', x - 0.4, z - 0.4, x + 0.4, z + 0.4);
+      b.solid('2F', x - 0.4, z - 0.4, x + 0.4, z + 0.4, 0.7);
     }
     for (let i = 0; i < 24; i++) spots.push({ x: -LX + 11 + (i % 12) * 0.9, z: -6 + Math.floor(i / 12) * 1.2, y: F2, ry: Math.PI / 2 });
   }

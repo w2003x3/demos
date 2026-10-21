@@ -6,11 +6,14 @@ import { TRAIN_TYPES } from '../config/trains.js';
 import { buildTaipei } from '../world/stations/taipei.js';
 import { buildKaohsiung } from '../world/stations/kaohsiung.js';
 import { buildTaichung } from '../world/stations/taichung.js';
+import { buildTainan } from '../world/stations/tainan.js';
+import { buildKeelung } from '../world/stations/keelung.js';
+import { buildYilan } from '../world/stations/yilan.js';
 import { pickPerson } from '../core/assets.js';
 
-export const STATION_BUILDERS = { taipei: buildTaipei, kaohsiung: buildKaohsiung, taichung: buildTaichung };
+export const STATION_BUILDERS = { taipei: buildTaipei, kaohsiung: buildKaohsiung, taichung: buildTaichung, tainan: buildTainan, keelung: buildKeelung, yilan: buildYilan };
 const VARIANTS = { normal: '一般', maze: '迷宮化', obstacle: '障礙物' };
-const R_P = 0.3, SPEED = 3.2;
+export const R_P = 0.3, SPEED = 3.2;
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
 export class StationExplorePhase {
@@ -39,7 +42,7 @@ export class StationExplorePhase {
     this.me = new THREE.Group();
     this.me.add(body);
     this.root.add(this.me);
-    this.cam = { yaw: 0, pitch: 0.32, mode: 'third', dist: 6 };
+    this.cam = { yaw: this.st.spawn.yaw ?? 0, pitch: 0.32, mode: 'third', dist: 6 };
     this._buildHud();
     this._bindLook();
     this.time = 0;
@@ -61,7 +64,7 @@ export class StationExplorePhase {
     g.scene.fog = null;
     const s = this.st.spawn;
     this.p = { floor: s.floor, x: s.x, z: s.z, y: this.st.floors[s.floor].y, angle: s.ry ?? 0, stair: null, vel: 0 };
-    this.cam && (this.cam.yaw = 0);
+    this.cam && (this.cam.yaw = s.yaw ?? 0);
   }
 
   begin() {
@@ -84,8 +87,12 @@ export class StationExplorePhase {
   _free(floor, x, z) {
     const f = this.st.floors[floor];
     if (!f) return false;
-    if (!f.bounds.some(([x0, z0, x1, z1]) => x > x0 + R_P && x < x1 - R_P && z > z0 + R_P && z < z1 - R_P)) return false;
-    return !(this.st.solids[floor] || []).some(([x0, z0, x1, z1]) => x > x0 - R_P && x < x1 + R_P && z > z0 - R_P && z < z1 + R_P);
+    // 身體四周的點各自落在任一可走範圍內即可(相鄰的範圍可以跨越)
+    const inAny = (px, pz) => f.bounds.some(([x0, z0, x1, z1]) => px > x0 && px < x1 && pz > z0 && pz < z1);
+    if (!inAny(x - R_P, z) || !inAny(x + R_P, z) || !inAny(x, z - R_P) || !inAny(x, z + R_P)) return false;
+    // 低矮障礙(有高度 h)跳到 h 以上就不擋
+    const lift = (this.p?.jy || 0) + 0.05;
+    return !(this.st.solids[floor] || []).some((s) => (s[4] == null || s[4] > lift) && x > s[0] - R_P && x < s[2] + R_P && z > s[1] - R_P && z < s[3] + R_P);
   }
   _inBox(b, x, z, pad = 0) { return x > b[0] - pad && x < b[2] + pad && z > b[1] - pad && z < b[3] + pad; }
 
@@ -94,22 +101,36 @@ export class StationExplorePhase {
     const P = this.p;
     if (P.stair) {
       const s = P.stair;
-      if (x < s.box[0] + R_P || x > s.box[2] - R_P) x = P.x;   // 樓梯兩側有扶手
+      if (s.axis === 'z' && (x < s.box[0] + R_P || x > s.box[2] - R_P)) x = P.x;   // 樓梯兩側有扶手
+      if (s.axis === 'x' && (z < s.box[1] + R_P || z > s.box[3] - R_P)) z = P.z;
       const c = s.axis === 'z' ? z : x;
       const t = (c - s.a) / (s.b - s.a);
-      if (t < 0) { if (this._free(s.fromFloor, x, z)) { P.stair = null; P.floor = s.fromFloor; P.y = s.yA; P.x = x; P.z = z; } return; }
-      if (t > 1) { if (this._free(s.toFloor, x, z)) { P.stair = null; P.floor = s.toFloor; P.y = s.yB; P.x = x; P.z = z; this._floorToast(); } return; }
+      // 走出樓梯:落點沿樓梯方向再往外推一個身體半徑(避免卡在樓梯口的牆角)
+      const out = (end, floor, y, sgn) => {
+        const d = Math.sign(s.b - s.a) * sgn * (R_P + 0.05);
+        const nx = s.axis === 'x' ? end + d : x, nz = s.axis === 'z' ? end + d : z;
+        if (this._free(floor, nx, nz)) { P.stair = null; P.floor = floor; P.y = y; P.x = nx; P.z = nz; return true; }
+        return false;
+      };
+      if (t < 0) { out(s.a, s.fromFloor, s.yA, -1); return; }
+      if (t > 1) { if (out(s.b, s.toFloor, s.yB, 1)) this._floorToast(); return; }
       P.x = x; P.z = z; P.y = s.yA + (s.yB - s.yA) * t;
       return;
     }
-    // 進入樓梯:在起點或終點那一端
+    // 進入樓梯:在起點或終點那一端(位置夾進樓梯範圍內,避免一進來就判定走出去)
     for (const s of this.st.stairs) {
-      if (!this._inBox(s.box, x, z)) continue;
+      if (!this._inBox(s.box, x, z, R_P + 0.05)) continue;
       const c = s.axis === 'z' ? z : x;
       const t = (c - s.a) / (s.b - s.a);
       if ((P.floor === s.fromFloor && t < 0.12) || (P.floor === s.toFloor && t > 0.88)) {
-        P.stair = s; P.x = x; P.z = z; P.y = s.yA + (s.yB - s.yA) * Math.min(1, Math.max(0, t));
-        if (P.floor === s.fromFloor) this.g.ui.toast(`往 ${s.label}`, 'info');
+        const tt = Math.min(0.995, Math.max(0.005, t)), along = s.a + (s.b - s.a) * tt;
+        const clampX = (v) => Math.min(s.box[2] - R_P - 0.01, Math.max(s.box[0] + R_P + 0.01, v));
+        const clampZ = (v) => Math.min(s.box[3] - R_P - 0.01, Math.max(s.box[1] + R_P + 0.01, v));
+        P.stair = s;
+        P.x = s.axis === 'x' ? along : clampX(x);
+        P.z = s.axis === 'z' ? along : clampZ(z);
+        P.y = s.yA + (s.yB - s.yA) * tt;
+        if (P.floor === s.fromFloor && !this._quiet) this.g.ui.toast(`往 ${s.label}`, 'info');
         return;
       }
     }
@@ -117,7 +138,7 @@ export class StationExplorePhase {
     if (this._free(P.floor, P.x, z)) P.z = z;
   }
 
-  _floorToast() { this.g.ui.toast(`${this.st.name} · ${this.p.floor}`, 'info'); }
+  _floorToast() { if (!this._quiet) this.g.ui.toast(`${this.st.name} · ${this.p.floor}`, 'info'); }
 
   // ---------------------------------------------------------------- 主更新
   update(dt) {
@@ -164,7 +185,7 @@ export class StationExplorePhase {
     } else {
       // 室內低天花(如 B1 淨高 3.4 m)時鏡頭拉近、壓低
       const ceil = (this.st.ceil?.[P.stair ? P.stair.toFloor : P.floor] ?? 99) - P.y;
-      const dist = ceil < 6 ? 3.6 : c.dist, up = Math.min(ceil - 0.5, 1.2 + Math.sin(c.pitch) * dist);
+      const dist = ceil < 6 ? 3.6 : c.dist, up = Math.min(ceil - 1.3, 1.2 + Math.sin(c.pitch) * dist);
       pos = head.clone().addScaledVector(fwd, -Math.cos(c.pitch) * dist).add(new THREE.Vector3(0, up - 1.2 + 0.6, 0));
       look = head.clone().add(new THREE.Vector3(0, -0.2, 0));
       cam.fov = 60;

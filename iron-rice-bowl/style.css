@@ -554,3 +554,35 @@ kbd { display: inline-block; min-width: 20px; text-align: center; background: #e
 .s-hud .k-touch .k-f, .s-hud .k-touch .k-e { font-size: 18px; }
 .s-list .k-st { flex-shrink: 0; }
 .s-list { max-height: calc(100vh - 160px); }
+
+/* 車站追逐(站長 vs 不良乘客) */
+.ch-top { position: absolute; top: 10px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 4px; pointer-events: none; }
+.ch-time { font: 900 30px/1 ui-monospace, monospace; background: rgba(18,23,32,.85); border: 1px solid var(--line); border-radius: 10px; padding: 6px 14px; color: #fff; }
+.ch-time.warn { color: #ff5a4a; animation: chBlink 1s steps(2) infinite; }
+@keyframes chBlink { 50% { opacity: .55; } }
+.ch-goal { background: rgba(18,23,32,.8); border-radius: 8px; padding: 4px 10px; font-size: 13px; color: #ffd36a; max-width: 80vw; text-align: center; }
+.ch-radar { position: absolute; top: 12px; right: 12px; background: rgba(18,23,32,.85); border: 1px solid var(--line); border-radius: 10px; padding: 6px 10px; display: flex; align-items: center; gap: 8px; font-size: 13px; color: #dfe7ee; pointer-events: none; }
+.ch-radar i { display: inline-block; font-style: normal; font-size: 22px; color: #ff6a4a; transition: transform .1s linear; }
+.ch-bar { position: absolute; left: 50%; bottom: 84px; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 6px; }
+.ch-stam { width: 260px; height: 6px; border-radius: 3px; background: rgba(255,255,255,.15); overflow: hidden; }
+.ch-stam i { display: block; height: 100%; background: linear-gradient(90deg, #4ade80, #facc15); }
+.ch-ws { display: flex; gap: 8px; }
+.ch-w { position: relative; width: 72px; height: 64px; border-radius: 10px; border: 2px solid var(--line); background: rgba(18,23,32,.85); color: #fff; display: flex; flex-direction: column; align-items: center; justify-content: center; overflow: hidden; padding: 0; cursor: pointer; touch-action: manipulation; }
+.ch-w b { font-size: 24px; line-height: 1; } .ch-w span { font-size: 11px; margin-top: 3px; }
+.ch-w kbd { position: absolute; top: 2px; left: 4px; font-size: 10px; opacity: .7; }
+.ch-w.sel { border-color: var(--accent); box-shadow: 0 0 0 2px rgba(255,180,40,.35); }
+.ch-w .cd { position: absolute; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,.6); pointer-events: none; }
+.k-f.on { background: #ffb428; }
+.ch-ov { position: absolute; inset: 0; pointer-events: none; opacity: 0; }
+.ch-ov.smoke { background: radial-gradient(ellipse at center, rgba(170,175,180,.92), rgba(120,125,130,.98)); }
+.ch-ov.paint { background: radial-gradient(circle at 30% 40%, rgba(255,45,122,.95) 0 18%, transparent 19%), radial-gradient(circle at 62% 55%, rgba(45,224,255,.9) 0 22%, transparent 23%), radial-gradient(circle at 48% 30%, rgba(255,224,45,.9) 0 15%, transparent 16%), radial-gradient(circle at 70% 25%, rgba(125,255,58,.85) 0 12%, transparent 13%), rgba(255,45,122,.25); }
+.ch-ov.flash { background: #fff; }
+.ch-ov.hurt { box-shadow: inset 0 0 120px 30px rgba(255,30,30,.85); }
+@media (max-width: 760px), (pointer: coarse) {
+  .ch-bar { bottom: auto; top: 96px; }
+  .ch-w { width: 56px; height: 52px; } .ch-w b { font-size: 20px; } .ch-w span { font-size: 10px; }
+  .ch-stam { width: 200px; }
+  .ch-radar { top: auto; bottom: 150px; right: 8px; font-size: 12px; }
+  .ch-time { font-size: 22px; }
+  .ch-goal { font-size: 11px; }
+}
