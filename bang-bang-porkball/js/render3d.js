@@ -911,8 +911,8 @@
   const charCache = new Map();
   const charLib = loadMapLib('chars');
   const animLib = loadMapLib('anims');
-  const CHAR_H = 1.22;            // 遊戲中的身高(格)
-  const CHAR_SRC_H = 1.81;        // 原始模型身高(公尺)
+  const CHAR_H = 1.12;            // 遊戲中的身高(格;Q 版 2 頭身)
+  const CHAR_SRC_H = 1.52;        // 原始模型身高(公尺;tools/assets/15_build_chibi.py)
   const CHAR_VARIANTS = ['char_female_a', 'char_male_b', 'char_female_b', 'char_male_a'];
   const charVariant = new WeakMap();
   let charSeq = 0;
