@@ -843,8 +843,8 @@ function kickMeatball(p) {
     (mb) => mb.col === tc && mb.row === tr && !mb.moving && !mb.exploded
   );
   if (!m) return;
-  if (p.mp < RIDE_MP_PER_TILE && !weatherDef().freeKick) {
-    spawnText(p.x, p.y - TS * 0.4, 'MP 不足', '#42a5f5');
+  if (!weatherDef().freeKick) {            // 只有豪雨時地面濕滑,才踢得動貢丸
+    if (p === player) spawnText(p.x, p.y - TS * 0.4, '豪雨時才能踢', '#90caf9');
     return;
   }
   m.vx = p.dir.x; m.vy = p.dir.y;
@@ -866,14 +866,6 @@ function updateMovingMeatball(m, dt) {
   if (!reached) return;
 
   m.x = cx; m.y = cy;
-  // 扣騎乘者 MP
-  if (m.rider && m.rider.alive && !weatherDef().freeKick) { // 豪雨:踢貢丸不耗 MP
-    if (m.rider.mp >= RIDE_MP_PER_TILE) {
-      m.rider.mp -= RIDE_MP_PER_TILE;
-    } else {
-      m.moving = false; m.vx = m.vy = 0; return; // MP 用盡停下
-    }
-  }
   const nc = m.col + m.vx;
   const nr = m.row + m.vy;
   // 牆、其他貢丸、人(滑行中的貢丸不能穿過人體;放在腳下不受影響)都會擋住
@@ -1663,6 +1655,8 @@ function draw() {
     }
   }
 
+  if (env.weather === 'rain') drawRainSplashes();
+
   // 場上的東西依所在列分組,和地圖物件一起由上往下畫(前排會擋住後排)
   const rows = Array.from({ length: ROWS }, () => []);
   const add = (y, fn) => rows[clamp(toRow(y), 0, ROWS - 1)].push([y, fn]);
@@ -1693,6 +1687,7 @@ function draw() {
 
   // 爆炸(在最上層)
   explosions.forEach(drawExplosion);
+  if (env.weather === 'rain') drawRainStreaks();
 
   // 飄字
   particles.forEach((p) => {
@@ -1719,6 +1714,46 @@ function draw() {
   // 被墨魚貢丸炸到 → 黑畫面
   if (player.blindT > 0 && player.alive) drawBlind();
   // 選單/結算改用 HTML 疊層(見 index.html)
+}
+
+// ---------- 豪雨:地面水花 + 雨絲 ----------
+const splashes = [];
+let rainLast = 0;
+function drawRainSplashes() {
+  const now = performance.now() / 1000;
+  const dt = Math.min(0.05, now - (rainLast || now)); rainLast = now;
+  for (let i = 0; i < 4; i++) {           // 每幀冒幾個水花(只在可走的地面)
+    const c = 1 + rand(COLS - 2), r = 1 + rand(ROWS - 2);
+    if (isFloor(c, r)) splashes.push({ x: c * TS + Math.random() * TS, y: r * TS + Math.random() * TS, t: 0, life: 0.45 + Math.random() * 0.25 });
+  }
+  ctx.save();
+  ctx.fillStyle = 'rgba(70, 110, 150, 0.12)'; // 濕地面
+  ctx.fillRect(0, 0, W, H);
+  for (let i = splashes.length - 1; i >= 0; i--) {
+    const s = splashes[i];
+    s.t += dt;
+    if (s.t >= s.life) { splashes.splice(i, 1); continue; }
+    const k = s.t / s.life;
+    ctx.globalAlpha = (1 - k) * 0.85;
+    ctx.strokeStyle = '#e6f3ff'; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.ellipse(s.x, s.y, 3 + k * 11, 1.5 + k * 5, 0, 0, Math.PI * 2); ctx.stroke();
+    if (k < 0.35) {                        // 剛落地的小水珠
+      ctx.fillStyle = '#ffffff';
+      for (const a of [-1, 1]) { ctx.beginPath(); ctx.arc(s.x + a * (2 + k * 14), s.y - 4 - k * 10, 1.4, 0, Math.PI * 2); ctx.fill(); }
+    }
+  }
+  ctx.restore();
+}
+function drawRainStreaks() {
+  ctx.save();
+  ctx.strokeStyle = 'rgba(220, 235, 255, 0.45)'; ctx.lineWidth = 1.2;
+  ctx.beginPath();
+  for (let i = 0; i < 90; i++) {
+    const x = Math.random() * (W + 60) - 30, y = Math.random() * H;
+    ctx.moveTo(x, y); ctx.lineTo(x - 5, y + 16);
+  }
+  ctx.stroke();
+  ctx.restore();
 }
 
 function drawBlind() {
@@ -1961,12 +1996,14 @@ function updateHud() {
   setHtml('stat-hp', meter('HP', `${player.hp} / ${player.maxHp}`, player.hp / player.maxHp, '#d9483b'));
   setHtml('stat-mp', meter('MP', `${Math.floor(player.mp)} / ${player.maxMp}`, player.mp / player.maxMp, '#3a8ee6'));
   setHtml('stat-power', meter('威力', `${player.power} / ${CAPS.power}`, player.power / CAPS.power, '#f08a24'));
-  setHtml('stat-speed', meter('速度', `${Math.round(player.speed)} / ${CAPS.speed}`, player.speed / CAPS.speed, '#2fa36b'));
+  const rainBonus = weatherDef().speedBonus || 0;  // 豪雨的加成只在豪雨期間
+  setHtml('stat-speed', meter('速度', rainBonus ? `${Math.round(player.speed)} <span class="rain-plus">+${rainBonus}</span>` : `${Math.round(player.speed)} / ${CAPS.speed}`,
+    (player.speed + rainBonus) / CAPS.speed, '#2fa36b'));
   // 天氣:溫度 8~40°C、濕度 25~98%,並直接寫出影響(貢丸引信、道具發霉)
   setHtml('stat-weather',
     `<div class="wx-map">${theme().icon} ${theme().name}</div>` +
-    `<div class="wx-now"><span class="wx-icon">${weatherDef().icon}</span><b>${weatherDef().name}</b></div>` +
-    `<p class="wx-desc">${weatherDef().desc}・引信約 <b>${computeFuse().toFixed(1)} 秒</b></p>` +
+    `<div class="wx-now"><span class="wx-icon">${weatherDef().icon}</span><b>${weatherDef().name}</b><span class="wx-fuse">引信 <b>${computeFuse().toFixed(1)}</b> 秒</span></div>` +
+    `<p class="wx-desc">${weatherDef().desc}</p>` +
     meter('下次變天', `${Math.max(0, Math.ceil(env.left))} 秒`, env.left / WEATHER_MAX, '#8a8f95'));
   const left = Math.max(0, player.maxBombs - player.bombsPlaced());
   setHtml('stat-bombs', meter('貢丸數', `${left} / ${player.maxBombs}`, left / player.maxBombs, '#b07a45'));
@@ -2014,7 +2051,7 @@ function refreshActionButtons() {
   const avail = {
     ' ': playing && player.bombsPlaced() < player.maxBombs &&       // 放貢丸:有額度且腳下沒丸
          !meatballs.some((m) => !m.exploded && m.col === player.col && m.row === player.row),
-    'e': kickMb && (player.mp >= RIDE_MP_PER_TILE || !!weatherDef().freeKick),                   // 踢/騎:前方相鄰有丸且 MP 夠
+    'e': kickMb && !!weatherDef().freeKick,                         // 踢:只有豪雨時、前方相鄰有丸                   // 踢/騎:前方相鄰有丸且 MP 夠
     'g': playing && player.mp >= SHIELD_MP_COST && !(player.shieldT > 0), // 防護盾:MP 夠且沒在作用中
     'z': playing && (player.held ? true : (t.tongs > 0 && frontMb)),// 食物夾:夾著可放下;否則需有夾子+目標
     'x': playing && t.glove > 0 && (!!player.held || frontMb),      // 手套:有手套+有丸可丟

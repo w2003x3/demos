@@ -296,17 +296,17 @@ const INVULN_TIME = 1.0;
 //   fuse:貢丸引信秒數  decay:未啟動小貢丸幾秒後分解  weight:被抽中的權重(災害較少見)
 const WEATHERS = {
   rain:    { name: '豪雨', icon: '⛈️', fuse: 3.0, decay: 8,  weight: 3, speedBonus: 10, freeKick: true,
-             desc: '所有人速度 +10,踢貢丸不耗 MP' },
+             desc: '速度 +10、可以踢貢丸' },
   cold:    { name: '寒流', icon: '❄️', fuse: 4.6, decay: 16, weight: 3, desc: '貢丸很慢才爆' },
   cool:    { name: '涼爽', icon: '🍃', fuse: 3.6, decay: 14, weight: 3, desc: '貢丸較慢爆' },
   muggy:   { name: '悶熱', icon: '♨️', fuse: 2.3, decay: 10, weight: 3, desc: '貢丸較快爆' },
   hot:     { name: '炎熱', icon: '☀️', fuse: 1.5, decay: 9,  weight: 3, desc: '貢丸很快就爆' },
   typhoon: { name: '颱風', icon: '🌀', fuse: 3.0, decay: 12, weight: 1, gust: 4,
-             desc: '強風每 4 秒把場上貢丸全部吹走' },
+             desc: '每 4 秒吹走所有貢丸' },
   quake:   { name: '地震', icon: '🏚️', fuse: 3.0, decay: 12, weight: 1, shake: 1.3,
-             desc: '貢丸會隨機往旁邊移位' },
+             desc: '貢丸隨機移位' },
 };
-const WEATHER_MIN = 30, WEATHER_MAX = 45;   // 每種天氣維持的秒數範圍
+const WEATHER_MIN = 5, WEATHER_MAX = 20;    // 每種天氣維持的秒數範圍(隨機)
 const env = {
   weather: 'cool',   // 目前天氣
   left: 40,          // 距離下次變天(秒)

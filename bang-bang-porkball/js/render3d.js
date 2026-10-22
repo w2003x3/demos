@@ -1733,6 +1733,54 @@
   renderer.shadowMap.autoUpdate = Q.charShadow;
   updateQualityUi();
 
+  // ---------- 豪雨:雨絲(線段)+ 地面水花圈 ----------
+  const RAIN_N = 420, SPLASH_N = 48;
+  const rainPos = new Float32Array(RAIN_N * 6);
+  const rainGeo = new THREE.BufferGeometry();
+  rainGeo.setAttribute('position', new THREE.BufferAttribute(rainPos, 3));
+  const rain = new THREE.LineSegments(rainGeo, new THREE.LineBasicMaterial({ color: 0xcfe3ff, transparent: true, opacity: 0.55 }));
+  rain.frustumCulled = false; rain.visible = false;
+  scene.add(rain);
+  const drops = [];
+  for (let i = 0; i < RAIN_N; i++) drops.push({ x: Math.random() * (COLS + 4) - 2, y: Math.random() * 7, z: Math.random() * (ROWS + 4) - 2, v: 14 + Math.random() * 6 });
+  const splashGeo = new THREE.RingGeometry(0.06, 0.1, 18);
+  const splashPool = [];
+  for (let i = 0; i < SPLASH_N; i++) {
+    const m = new THREE.Mesh(splashGeo, new THREE.MeshBasicMaterial({ color: 0xeef6ff, transparent: true, opacity: 0, depthWrite: false, side: THREE.DoubleSide }));
+    m.rotation.x = -Math.PI / 2; m.visible = false; m.userData.t = 1; m.userData.life = 0.5;
+    scene.add(m); splashPool.push(m);
+  }
+  const rainClock = new THREE.Clock();
+  function updateRain() {
+    const dt = Math.min(0.05, rainClock.getDelta());
+    const on = typeof env !== 'undefined' && env.weather === 'rain';
+    rain.visible = on;
+    if (!on) { for (const m of splashPool) m.visible = false; return; }
+    for (let i = 0; i < RAIN_N; i++) {
+      const d = drops[i];
+      d.y -= d.v * dt; d.x -= 1.2 * dt;
+      if (d.y < 0) { d.y = 6 + Math.random() * 1.5; d.x = Math.random() * (COLS + 4) - 2; d.z = Math.random() * (ROWS + 4) - 2; }
+      rainPos.set([d.x, d.y, d.z, d.x + 0.04, d.y + 0.35, d.z], i * 6);
+    }
+    rainGeo.attributes.position.needsUpdate = true;
+    let spawn = 3;                      // 每幀冒幾個水花(只在可走的地面)
+    for (const m of splashPool) {
+      const u = m.userData;
+      if (u.t >= u.life) {
+        if (spawn-- > 0) {
+          const c = 1 + Math.floor(Math.random() * (COLS - 2)), r = 1 + Math.floor(Math.random() * (ROWS - 2));
+          if (isFloor(c, r)) { m.position.set(c + Math.random(), 0.03, r + Math.random()); u.t = 0; u.life = 0.4 + Math.random() * 0.3; m.visible = true; }
+          else m.visible = false;
+        } else m.visible = false;
+        continue;
+      }
+      u.t += dt;
+      const k = u.t / u.life;
+      m.scale.setScalar(1 + k * 3.2);
+      m.material.opacity = (1 - k) * 0.8;
+    }
+  }
+
   // ---------- 渲染迴圈 ----------
   function frame() {
     requestAnimationFrame(frame);
@@ -1760,6 +1808,7 @@
     syncItems();
     syncFx();
     syncDuck();
+    updateRain();
     if (inkEl) {
       const base = Math.max(0.25, 0.92 - player.inkEaten * 0.15);
       const fade = Math.max(0, Math.min(1, player.blindT / 0.6));

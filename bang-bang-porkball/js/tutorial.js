@@ -85,9 +85,9 @@
       done() { return player.selected === 2; },
     },
     {
-      title: '踢貢丸(用 MP)',
-      text: '放下一顆貢丸,退開一格後<b>轉身面向它</b>,按 <kbd>E</kbd> 把它踢出去。<br>踢貢丸會消耗 💧 MP(每滑一格 ' + RIDE_MP_PER_TILE + '),MP 每秒會自己回 ' + MP_REGEN + '。貢丸碰到人會停下(撒尿牛丸會彈回)。',
-      setup() { player.mp = player.maxMp; },
+      title: '⛈️ 豪雨時踢貢丸',
+      text: '下豪雨了!地面濕滑時才<b>踢得動貢丸</b>(平常踢不了)。放下一顆貢丸,退開一格後<b>轉身面向它</b>,按 <kbd>E</kbd> 把它踢出去。<br>豪雨時所有人速度也 +10。貢丸碰到人會停下(撒尿牛丸會彈回)。',
+      setup() { T.wx = 'rain'; env.weather = 'rain'; announceWeather(); },
       done() { return meatballs.some((m) => m.owner === player && m.moving); },
     },
     {
@@ -284,6 +284,7 @@
 
   function enterStep(i, flash) {
     T.step = i;
+    T.wx = 'cool'; // 教學預設涼爽;個別步驟可改(例如踢貢丸要下豪雨)
     T.s = {};
     T.wait = 0;
     if (i < STEPS.length && STEPS[i].setup) STEPS[i].setup(T.s);
@@ -350,7 +351,7 @@
       if (T.step < STEPS.length) enterStep(T.step);
     },
     update(dt) {
-      env.weather = 'cool'; env.left = 1e9;
+      env.weather = T.wx || 'cool'; env.left = 1e9;
       if (!player.alive) {       // 被炸到 → 原地重來這一步
         meatballs = meatballs.filter((m) => m.fuse >= LONG / 2);
         respawn();
