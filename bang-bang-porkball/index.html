@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261022b" />
+  <link rel="stylesheet" href="css/style.css?v=20261022e" />
 </head>
 <body>
 <div id="app">
@@ -46,7 +46,6 @@
         </select>
         <span id="fps-meter" class="fps-meter"></span>
       </label>
-      <div id="stat-weather" class="weather"></div>
       <button id="btn-sound" class="dark-btn square" type="button" title="音效/音樂">🔊</button>
       <button id="btn-help" class="dark-btn square" type="button" title="說明" aria-label="說明">?</button>
     </div>
@@ -60,16 +59,18 @@
       <div class="card">
         <div id="stat-hp" class="stat"></div>
         <div id="stat-mp" class="stat"></div>
+        <div id="stat-power" class="stat"></div>
+        <div id="stat-speed" class="stat"></div>
       </div>
       <div class="pill-grid">
-        <div id="stat-power" class="pill"></div>
-        <div id="stat-speed" class="pill"></div>
         <div id="stat-bombs" class="pill"></div>
         <div id="stat-guard" class="pill"></div>
         <div id="stat-pet" class="pill wide"></div>
         <div id="stat-tools" class="pill wide"></div>
         <div id="stat-poison" class="pill wide"></div>
       </div>
+      <h3 class="ribbon">天氣</h3>
+      <div id="stat-weather" class="card weather-card"></div>
       <h3 class="ribbon">戰隊</h3>
       <div id="roster" class="roster"></div>
       <p class="ctl-hint only-2d">點地圖一下:走過去・點兩下:放貢丸<br>WASD / ↑↓←→ 移動</p>
@@ -218,7 +219,7 @@
 <script src="js/config.js?v=20261022b"></script>
 <script src="js/audio.js?v=20261022b"></script>
 <script src="js/net.js?v=20261022b"></script>
-<script src="js/game.js?v=20261022b"></script>
+<script src="js/game.js?v=20261022d"></script>
 <script src="js/controls.js?v=20261022b"></script>
 <script src="js/guide.js?v=20261022b"></script>
 <script src="js/tutorial.js?v=20261022b"></script>

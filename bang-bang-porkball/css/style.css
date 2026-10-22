@@ -237,7 +237,7 @@ body.mode-3d #ink-overlay {
 .cloud.c3 { left: 3%; bottom: 14%; width: 130px; height: 38px; }
 
 /* 主選單:左欄標題與選單、右欄主視覺、底部細條 */
-.menu-screen { display: flex; align-items: center; padding: 0 5vw 72px; gap: 3vw; }
+.menu-screen { display: flex; align-items: center; justify-content: center; padding: 0 5vw 72px; gap: 4vw; }
 .menu-screen.hidden { display: none; }
 .menu-left { position: relative; z-index: 2; flex: 0 1 500px; display: flex; flex-direction: column; gap: 16px; }
 .menu-kicker { display: flex; align-items: center; gap: 12px; font-family: var(--font-num); font-weight: 700; font-size: 18px; letter-spacing: .3em; }
@@ -463,8 +463,16 @@ button.big:disabled { opacity: .45; cursor: not-allowed; }
   .start-btn { font-size: 28px; height: 64px; }
 }
 
-/* 3D 模式頂部按鈕較多:天氣先收起來,讓工具列排成一行 */
-@media (min-width: 921px) {
-  body.mode-3d .weather { display: none; }
-  .top-tools { flex-wrap: nowrap; }
-}
+@media (min-width: 921px) { .top-tools { flex-wrap: nowrap; } }
+
+/* ===== 數值條(HP / MP / 威力 / 速度 / 天氣) ===== */
+.stat-row { display: flex; justify-content: space-between; align-items: baseline; font-size: 14px; font-weight: 700; }
+.stat-row b { font-family: var(--font-num); font-weight: 700; font-size: 15px; }
+.card .stat + .stat { margin-top: 2px; }
+.weather-card { gap: 6px; }
+.wx-map { font-weight: 900; font-size: 15px; }
+.wx-note { font-size: 12px; font-weight: 500; color: var(--muted); line-height: 1.5; }
+.wx-note b { color: var(--ink); font-weight: 900; }
+
+/* 寬螢幕:遊戲三欄整體置中,兩側面板不要貼在螢幕最邊緣 */
+.cockpit { width: 100%; max-width: 1600px; margin: 0 auto; }

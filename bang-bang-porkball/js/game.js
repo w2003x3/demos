@@ -1983,18 +1983,22 @@ function setHtml(id, html) {
   if (el) el.innerHTML = html;
 }
 function updateHud() {
-  const bar = (cur, max, color) =>
-    `<div class="bar"><div class="fill" style="width:${(cur / max) * 100}%;background:${color}"></div></div>`;
-  document.getElementById('stat-hp').innerHTML =
-    `❤️ HP ${player.hp}/${player.maxHp}` + bar(player.hp, player.maxHp, '#ff5252');
-  document.getElementById('stat-mp').innerHTML =
-    `💧 MP ${Math.floor(player.mp)}/${player.maxMp}` + bar(player.mp, player.maxMp, '#42a5f5');
-  document.getElementById('stat-power').textContent = '💥 威力 ' + player.power;
-  document.getElementById('stat-speed').textContent = '👟 速度 ' + Math.round(player.speed);
+  // 數值條:標籤 + 數字 + 條(HP / MP / 威力 / 速度 / 溫度 / 濕度 共用)
+  const meter = (label, text, ratio, color) =>
+    `<div class="stat-row"><span>${label}</span><b>${text}</b></div>` +
+    `<div class="bar"><div class="fill" style="width:${Math.round(clamp(ratio, 0, 1) * 100)}%;background:${color}"></div></div>`;
+  setHtml('stat-hp', meter('HP', `${player.hp} / ${player.maxHp}`, player.hp / player.maxHp, '#d9483b'));
+  setHtml('stat-mp', meter('MP', `${Math.floor(player.mp)} / ${player.maxMp}`, player.mp / player.maxMp, '#3a8ee6'));
+  setHtml('stat-power', meter('威力', `${player.power} / ${CAPS.power}`, player.power / CAPS.power, '#f08a24'));
+  setHtml('stat-speed', meter('速度', `${Math.round(player.speed)} / ${CAPS.speed}`, player.speed / CAPS.speed, '#2fa36b'));
+  // 天氣:溫度 8~40°C、濕度 25~98%,並直接寫出影響(貢丸引信、道具發霉)
+  setHtml('stat-weather',
+    `<div class="wx-map">${theme().icon} ${theme().name}</div>` +
+    meter('溫度', `${Math.round(env.temp)}°C`, tempNorm(), '#e8742a') +
+    meter('濕度', `${Math.round(env.humidity)}%`, humNorm(), '#2f8fbf') +
+    `<p class="wx-note">貢丸約 <b>${computeFuse().toFixed(1)} 秒</b>爆・地上食物約 <b>${Math.round(itemFreshTime('mushroom'))} 秒</b>發霉</p>`);
   document.getElementById('stat-bombs').textContent =
     `🍢 竹籤 ${player.bombsPlaced()}/${player.maxBombs}`;
-  document.getElementById('stat-weather').textContent =
-    `${theme().icon}${theme().name} 🌡️${Math.round(env.temp)}°C 💧${Math.round(env.humidity)}%`;
   const mark = { out: '放出', stored: '收起', dead: '昏倒' };
   setHtml('stat-pet', '寵物 ' + Object.values(player.petState)
     .map((s) => `${hudIcon('pets/' + s.def.id)}${mark[s.status]}`).join(' '));
