@@ -137,6 +137,7 @@ const NET = {
     this.resultShown = false;
     restart();
     sfx('start');
+    announceWeather();
     showOverlay('menu-overlay', false);
     showOverlay('result-overlay', false);
     lobbyUI.hide();
@@ -190,6 +191,7 @@ const NET = {
       this.resultShown = false;
       guest.clear();
       AUDIO.play('start');
+      setTimeout(announceWeather, 300);
       gameState = 'playing';
       showOverlay('menu-overlay', false);
       showOverlay('result-overlay', false);
@@ -228,7 +230,7 @@ function buildSnapshot() {
     t: 'snap',
     gs: gameState,
     tm: r1(matchTime),
-    env: [r1(env.temp), r1(env.humidity)],
+    env: [env.weather, r1(env.left)],
     g: grid.map((row) => row.join('')).join(''),
     f: all.map((f) => ({
       i: nid(f), n: f.netId || (f === player ? NET.id : null),
@@ -249,6 +251,7 @@ function buildSnapshot() {
     ex: explosions.map((ex) => ({ i: nid(ex), c: ex.cells.map((cl) => cl.c * 100 + cl.r), t: r1(ex.t), co: ex.color, p: ex.poison ? 1 : 0, k: ex.ink ? 1 : 0 })),
     pe: allPets().map((p) => ({ i: nid(p), o: nid(p.owner), d: p.def.id, x: Math.round(p.x), y: Math.round(p.y), hp: r1(p.hp), iv: r1(p.invuln), pt: r1(p.poisonT), tg: p.target ? 1 : 0 })),
     w: wildCritters.map((w) => ({ i: nid(w), d: w.def.id, x: Math.round(w.x), y: Math.round(w.y), l: r1(w.life) })),
+    wq: weatherDef().shake && env.fx > weatherDef().shake - 0.1 ? 1 : 0, // 剛地震:讓其他玩家畫面也晃
     tx: NET.fx.splice(0),
     sq: NET.sq.splice(0),
   };
@@ -296,7 +299,10 @@ const guest = {
         if (grid[r][c] !== v) grid[r][c] = v;
       }
     }
-    env.temp = s.env[0]; env.humidity = s.env[1];
+    const prevWx = env.weather;
+    env.weather = s.env[0]; env.left = s.env[1];
+    if (this.ready && prevWx !== env.weather) announceWeather();
+    if (s.wq) shakeStage();
     matchTime = s.tm;
 
     // 角色

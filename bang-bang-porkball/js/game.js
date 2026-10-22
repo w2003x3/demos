@@ -167,12 +167,52 @@ function isBlocked(c, r) {
   return !isFloor(c, r);
 }
 
-// 天氣在遊戲中緩慢飄移,讓貢丸時效持續變化
-let weatherT = 0;
-function driftWeather(dt) {
-  weatherT += dt;
-  env.temp = clamp(env.temp + Math.sin(weatherT * 0.13) * dt * 1.6, 8, 40);
-  env.humidity = clamp(env.humidity + Math.cos(weatherT * 0.09) * dt * 2.2, 28, 96);
+// 天氣:時間到就隨機變天(地圖中央大字提示);颱風定時吹走貢丸、地震讓貢丸移位
+function updateWeather(dt) {
+  env.t += dt;
+  env.left -= dt;
+  if (env.left <= 0) {
+    setWeather(pickWeather(env.weather));
+    announceWeather();
+  }
+  const w = weatherDef();
+  if (!w.gust && !w.shake) return;
+  env.fx -= dt;
+  if (env.fx > 0) return;
+  env.fx = w.gust || w.shake;
+  const live = meatballs.filter((m) => !m.exploded && !m.eaten && !m.held);
+  if (w.gust) {                        // 颱風:場上貢丸全部吹走(不會爆)
+    for (const m of live) { m.eaten = true; spawnText(m.x, m.y - 10, '吹走了!', '#90caf9'); }
+    if (live.length) sfx('whoosh');
+  } else {                             // 地震:每顆貢丸隨機往旁邊空格移一格
+    for (const m of live) {
+      if (m.moving) continue;
+      const opts = [[1, 0], [-1, 0], [0, 1], [0, -1]].filter(([dc, dr]) =>
+        canEnterTile(m, m.col + dc, m.row + dr) &&
+        !fighters().some((f) => f.alive && f.col === m.col + dc && f.row === m.row + dr));
+      if (!opts.length) continue;
+      const [dc, dr] = opts[rand(opts.length)];
+      m.x = tileCenter(m.col + dc); m.y = tileCenter(m.row + dr);
+    }
+    shakeStage();
+    sfx('boom');
+  }
+}
+// 變天提示:地圖中央大字(2D/3D 都看得到)
+function announceWeather() {
+  const stage = document.querySelector('.stage');
+  if (!stage) return;
+  let el = document.getElementById('wx-banner');
+  if (!el) { el = document.createElement('div'); el.id = 'wx-banner'; stage.appendChild(el); }
+  const w = weatherDef();
+  el.innerHTML = `<span class="wxb-icon">${w.icon}</span><span class="wxb-name">${w.name}</span><span class="wxb-desc">${w.desc}</span>`;
+  el.classList.remove('show'); void el.offsetWidth; el.classList.add('show');
+}
+// 地震:畫面晃一下
+function shakeStage() {
+  const stage = document.querySelector('.stage');
+  if (!stage) return;
+  stage.classList.remove('quake'); void stage.offsetWidth; stage.classList.add('quake');
 }
 
 // ---------- 遊戲狀態 ----------
@@ -803,7 +843,7 @@ function kickMeatball(p) {
     (mb) => mb.col === tc && mb.row === tr && !mb.moving && !mb.exploded
   );
   if (!m) return;
-  if (p.mp < RIDE_MP_PER_TILE) {
+  if (p.mp < RIDE_MP_PER_TILE && !weatherDef().freeKick) {
     spawnText(p.x, p.y - TS * 0.4, 'MP 不足', '#42a5f5');
     return;
   }
@@ -827,7 +867,7 @@ function updateMovingMeatball(m, dt) {
 
   m.x = cx; m.y = cy;
   // 扣騎乘者 MP
-  if (m.rider && m.rider.alive) {
+  if (m.rider && m.rider.alive && !weatherDef().freeKick) { // 豪雨:踢貢丸不耗 MP
     if (m.rider.mp >= RIDE_MP_PER_TILE) {
       m.rider.mp -= RIDE_MP_PER_TILE;
     } else {
@@ -1155,7 +1195,7 @@ function advanceStep(e, dt) {
   if (!e.mvTarget) return;
   const ddx = e.mvTarget.x - e.x, ddy = e.mvTarget.y - e.y;
   const d = Math.hypot(ddx, ddy);
-  const mv = e.speed * dt;
+  const mv = (e.speed + (weatherDef().speedBonus || 0)) * dt; // 豪雨:所有人速度 +10
   if (d <= mv) {
     e.x = e.mvTarget.x; e.y = e.mvTarget.y;
     e.mvTarget = null; // 抵達格中心,可再轉向
@@ -1474,7 +1514,7 @@ function update(dt) {
   if (window.VIEW && VIEW.busy && !NET.online) return;        // 單機:載入 3D 素材時暫停
   elapsed += dt;
 
-  driftWeather(dt);
+  updateWeather(dt);
   danger = computeDanger(); // 供 AI 決策與畫面預警
 
   readPlayerInput(dt);
@@ -1868,6 +1908,7 @@ function goHome() {
 function startMatch() {
   restart();
   sfx('start');
+  announceWeather();
   showOverlay('menu-overlay', false);
   showOverlay('result-overlay', false);
 }
@@ -1924,9 +1965,9 @@ function updateHud() {
   // 天氣:溫度 8~40°C、濕度 25~98%,並直接寫出影響(貢丸引信、道具發霉)
   setHtml('stat-weather',
     `<div class="wx-map">${theme().icon} ${theme().name}</div>` +
-    meter('溫度', `${Math.round(env.temp)}°C`, tempNorm(), '#e8742a') +
-    meter('濕度', `${Math.round(env.humidity)}%`, humNorm(), '#2f8fbf') +
-    `<p class="wx-note">越熱越潮濕,貢丸爆得越快:現在約 <b>${computeFuse().toFixed(1)} 秒</b></p>`);
+    `<div class="wx-now"><span class="wx-icon">${weatherDef().icon}</span><b>${weatherDef().name}</b></div>` +
+    `<p class="wx-desc">${weatherDef().desc}・引信約 <b>${computeFuse().toFixed(1)} 秒</b></p>` +
+    meter('下次變天', `${Math.max(0, Math.ceil(env.left))} 秒`, env.left / WEATHER_MAX, '#8a8f95'));
   const left = Math.max(0, player.maxBombs - player.bombsPlaced());
   setHtml('stat-bombs', meter('貢丸數', `${left} / ${player.maxBombs}`, left / player.maxBombs, '#b07a45'));
   const mark = { out: '放出', stored: '收起', dead: '昏倒' };
@@ -1973,7 +2014,7 @@ function refreshActionButtons() {
   const avail = {
     ' ': playing && player.bombsPlaced() < player.maxBombs &&       // 放貢丸:有額度且腳下沒丸
          !meatballs.some((m) => !m.exploded && m.col === player.col && m.row === player.row),
-    'e': kickMb && player.mp >= RIDE_MP_PER_TILE,                   // 踢/騎:前方相鄰有丸且 MP 夠
+    'e': kickMb && (player.mp >= RIDE_MP_PER_TILE || !!weatherDef().freeKick),                   // 踢/騎:前方相鄰有丸且 MP 夠
     'g': playing && player.mp >= SHIELD_MP_COST && !(player.shieldT > 0), // 防護盾:MP 夠且沒在作用中
     'z': playing && (player.held ? true : (t.tongs > 0 && frontMb)),// 食物夾:夾著可放下;否則需有夾子+目標
     'x': playing && t.glove > 0 && (!!player.held || frontMb),      // 手套:有手套+有丸可丟
@@ -2049,7 +2090,6 @@ function restart() {
   if (window.tutorial) tutorial.stop(); // 任何重新開局都會結束教學
   generateMap();
   randomizeWeather();
-  weatherT = 0;
   meatballs = []; explosions = []; items = []; particles = [];
   matchTime = MATCH_TIME;
   usedBush = new Set(); wildCritters = [];

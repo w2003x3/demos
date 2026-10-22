@@ -278,7 +278,7 @@ const MAPS = {
 
 // ===== 隊伍對戰 =====
 // 兩隊:blue(玩家隊)vs red(敵隊)。限時內炸光敵隊全員獲勝。
-const MATCH_TIME = 120;        // 每場時間(秒)
+const MATCH_TIME = 180;        // 每場時間(秒)
 const TEAM_COLOR = { blue: '#3aa6ff', red: '#e74c3c' };
 const TEAM_NAME = { blue: '🔵 藍隊', red: '🔴 紅隊' };
 
@@ -291,40 +291,59 @@ const EXPLOSION_TIME = 0.5;
 // 受傷後無敵時間(秒)
 const INVULN_TIME = 1.0;
 
-// ===== 環境(溫度 / 濕度)=====
-// 貢丸是食物:等待爆炸的時間 = 可食用時效。
-// 溫度越高、濕度越高 → 食物壞得越快 → 引信越短、也越容易發霉。
-const env = {
-  temp: 25,      // 溫度 °C(每場隨機,會緩慢飄移)
-  humidity: 60,  // 濕度 %
+// ===== 天氣型態 =====
+// 一場會隨機變天(每 30~45 秒);天氣決定貢丸引信長短,部分天氣有特殊效果
+//   fuse:貢丸引信秒數  decay:未啟動小貢丸幾秒後分解  weight:被抽中的權重(災害較少見)
+const WEATHERS = {
+  rain:    { name: '豪雨', icon: '⛈️', fuse: 3.0, decay: 8,  weight: 3, speedBonus: 10, freeKick: true,
+             desc: '所有人速度 +10,踢貢丸不耗 MP' },
+  cold:    { name: '寒流', icon: '❄️', fuse: 4.6, decay: 16, weight: 3, desc: '貢丸很慢才爆' },
+  cool:    { name: '涼爽', icon: '🍃', fuse: 3.6, decay: 14, weight: 3, desc: '貢丸較慢爆' },
+  muggy:   { name: '悶熱', icon: '♨️', fuse: 2.3, decay: 10, weight: 3, desc: '貢丸較快爆' },
+  hot:     { name: '炎熱', icon: '☀️', fuse: 1.5, decay: 9,  weight: 3, desc: '貢丸很快就爆' },
+  typhoon: { name: '颱風', icon: '🌀', fuse: 3.0, decay: 12, weight: 1, gust: 4,
+             desc: '強風每 4 秒把場上貢丸全部吹走' },
+  quake:   { name: '地震', icon: '🏚️', fuse: 3.0, decay: 12, weight: 1, shake: 1.3,
+             desc: '貢丸會隨機往旁邊移位' },
 };
-
-// 將溫度/濕度正規化為 0~1
-function tempNorm() { return clamp((env.temp - 8) / (40 - 8), 0, 1); }
-function humNorm() { return clamp((env.humidity - 25) / (98 - 25), 0, 1); }
+const WEATHER_MIN = 30, WEATHER_MAX = 45;   // 每種天氣維持的秒數範圍
+const env = {
+  weather: 'cool',   // 目前天氣
+  left: 40,          // 距離下次變天(秒)
+  t: 0,              // 這個天氣已經持續幾秒
+  fx: 0,             // 颱風/地震的下一次發作倒數
+};
+const weatherDef = () => WEATHERS[env.weather] || WEATHERS.cool;
 
 // 線性插值
 function lerp(a, b, t) { return a + (b - a) * clamp(t, 0, 1); }
 
-// 引信時間(= 可食用時效):溫度為主、濕度為輔,越熱越濕越短
-function computeFuse() {
-  return lerp(3.6, 1.0, tempNorm() * 0.7 + humNorm() * 0.3);
-}
+// 引信時間:依天氣
+function computeFuse() { return weatherDef().fuse; }
 
 // 小貢丸發霉的閃爍時間(秒)
 const MOLD_STAGE = 6;
 
+// 小貢丸(未滿三顆、還沒啟動時)放太久會發霉分解:依天氣 8~16 秒
+function computeMiniDecay() { return weatherDef().decay; }
 
-// 小貢丸(未滿三顆、還沒啟動時)放太久會發霉分解:越潮濕越快,8~16 秒
-function computeMiniDecay() {
-  return lerp(16, 8, humNorm());
+// 抽一個天氣(依權重;可指定排除目前的、開場不出災害)
+function pickWeather(exclude, noDisaster) {
+  const pool = [];
+  for (const [k, w] of Object.entries(WEATHERS)) {
+    if (k === exclude || (noDisaster && !w.fuse) || (noDisaster && (w.gust || w.shake))) continue;
+    for (let i = 0; i < w.weight; i++) pool.push(k);
+  }
+  return pool[Math.floor(Math.random() * pool.length)];
 }
-
-// 隨機產生一場的天氣
-function randomizeWeather() {
-  env.temp = 8 + rand(33);        // 8~40 °C
-  env.humidity = 28 + rand(68);   // 28~95 %
+function setWeather(id) {
+  env.weather = id;
+  env.t = 0;
+  env.left = WEATHER_MIN + Math.random() * (WEATHER_MAX - WEATHER_MIN);
+  env.fx = 1;
 }
+// 開場天氣(一般天氣之一)
+function randomizeWeather() { setWeather(pickWeather(null, true)); }
 
 // ===== 黴毒(中毒)=====
 // 被「發霉貢丸」炸到 → 中黴毒,持續數秒、每秒扣 HP

@@ -476,3 +476,33 @@ button.big:disabled { opacity: .45; cursor: not-allowed; }
 
 /* 寬螢幕:遊戲三欄整體置中,兩側面板不要貼在螢幕最邊緣 */
 .cockpit { width: 100%; max-width: 1600px; margin: 0 auto; }
+
+/* ===== 天氣卡、變天提示 ===== */
+.wx-now { display: flex; align-items: center; gap: 8px; font-size: 22px; font-weight: 900; }
+.wx-icon { font-size: 28px; line-height: 1; }
+.wx-desc { font-size: 13px; font-weight: 500; color: var(--muted); line-height: 1.5; }
+.wx-desc b { color: var(--ink); font-weight: 900; }
+#wx-banner {
+  position: absolute; left: 50%; top: 50%; z-index: 8;
+  transform: translate(-50%, -50%);
+  display: none; flex-direction: column; align-items: center; gap: 2px;
+  padding: 14px 34px 12px; background: var(--ink); color: var(--on-dark);
+  border: 5px solid var(--accent); pointer-events: none; text-align: center;
+}
+#wx-banner.show { display: flex; animation: wxb 0.8s ease-out forwards; }
+.wxb-icon { font-size: 48px; line-height: 1; }
+.wxb-name { font-size: 54px; font-weight: 900; letter-spacing: .2em; color: var(--accent); line-height: 1.1; }
+.wxb-desc { font-size: 15px; font-weight: 700; }
+@keyframes wxb {
+  0% { opacity: 0; transform: translate(-50%, -50%) scale(.7); }
+  12% { opacity: 1; transform: translate(-50%, -50%) scale(1.05); }
+  20%, 70% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+  100% { opacity: 0; transform: translate(-50%, -50%) scale(1); visibility: hidden; }
+}
+.stage.quake { animation: quake .45s linear; }
+@keyframes quake {
+  0%, 100% { transform: translate(0, 0); }
+  15% { transform: translate(-6px, 3px); } 30% { transform: translate(5px, -4px); }
+  45% { transform: translate(-4px, -3px); } 60% { transform: translate(4px, 4px); }
+  75% { transform: translate(-3px, 2px); } 90% { transform: translate(2px, -2px); }
+}

@@ -322,7 +322,8 @@
       buildArena();
       bots = [];
       meatballs = []; items = []; explosions = [];
-      env.temp = 18; env.humidity = 45; // 溫和天氣:貢丸約 3 秒才爆
+      setWeather('cool'); env.left = 1e9; // 教學固定涼爽:貢丸約 3.6 秒才爆、不變天
+      announceWeather();
       respawn();
       buildRoster();
       updateHud();
@@ -349,7 +350,7 @@
       if (T.step < STEPS.length) enterStep(T.step);
     },
     update(dt) {
-      env.temp = 18; env.humidity = 45;
+      env.weather = 'cool'; env.left = 1e9;
       if (!player.alive) {       // 被炸到 → 原地重來這一步
         meatballs = meatballs.filter((m) => m.fuse >= LONG / 2);
         respawn();
