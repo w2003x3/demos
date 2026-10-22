@@ -6,7 +6,7 @@
 // 關卡變化:'maze' 廣場以圍欄與展覽牆隔成迂迴動線;'obstacle' 遊客排隊拍長頸鹿、行李箱、攤車。
 // 座標:x 沿軌道(+x 北)、z 橫向(+z 東);地面與月台面 y = 0(道床低 1.1 m),地下道 y = -4.5。
 import * as THREE from 'three';
-import { Builder, T, baseMats, textTex, sign, crowd, wallBox, trainSet, platformEdge, hills, FONT } from './common.js';
+import { Builder, T, baseMats, textTex, sign, crowd, wallBox, trainSet, railTrain, platformEdge, hills, FONT } from './common.js';
 import { canvasTexture, rng } from '../../core/textures.js';
 import { barrier } from './taipei.js';
 
@@ -97,8 +97,8 @@ export function buildYilan({ assets, variant = 'normal', quality = {} }) {
     for (let x = -50; x <= 50; x += 20) if (Math.abs(x - 18) > 6) { b.box(M.steelPaint, 3, 0.45, 0.5, x, 0, zc); b.solid('G', x - 1.5, zc - 0.3, x + 1.5, zc + 0.3, 0.45); }
   }
   // 列車:1 股區間車、3 股自強號
-  trainSet(b, M, -70, 4, -1.0, TRK[0], { stripe: '#2a6bd1' });
-  trainSet(b, M, 80, 6, -1.0, TRK[3], { stripe: '#e8730c', dir: -1 });
+  if (!railTrain(b, assets.rail, 'emu800', -70, 4, -0.94, TRK[0], 1)) trainSet(b, M, -70, 4, -1.0, TRK[0], { stripe: '#2a6bd1' });
+  if (!railTrain(b, assets.rail, 'puyuma', 80, 6, -0.94, TRK[3], -1)) trainSet(b, M, 80, 6, -1.0, TRK[3], { stripe: '#e8730c', dir: -1 });
 
   // ---- 地下道(站房/第 1 月台 ↔ 第 2 月台 ↔ 後站)
   const UX0 = 14, UX1 = 22;

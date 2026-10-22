@@ -34,7 +34,7 @@ const ASSET_LIST = {
           'slippers', 'tongs', 'glove', 'slingshot',
           'luckybag', 'chicken', 'bloodcake', 'milktea', 'boba', 'tofu', 'blackpork'],
   pets: ['rat', 'roach'],
-  characters: ['player', 'ally', 'enemy'],
+  characters: CHAR_IDS.flatMap((c) => [c + '_blue', c + '_red']),
 };
 
 // 目前地圖主題
@@ -74,7 +74,7 @@ function spriteRect(key, x, y, w, h) {
 }
 const pickVar = (list, c, r) => list[(c * 7 + r * 13) % list.length];
 const meatballSprite = (def) => 'meatballs/' + MB_SPRITE[def.id - 1];
-const charSprite = (e) => 'characters/' + (e === player ? 'player' : e.team === 'red' ? 'enemy' : 'ally');
+const charSprite = (e) => 'characters/' + (e.char || 'aman') + (e.team === 'red' ? '_red' : '_blue');
 
 // ---------- 工具函式 ----------
 const rand = (n) => Math.floor(Math.random() * n);
@@ -281,6 +281,10 @@ class Player {
     this.inkEaten = 0;          // 吃過的墨魚數(減輕黑畫面)
     this.blindT = 0;            // 黑畫面剩餘秒數(被墨魚貢丸炸到)
     this.held = null;           // 用食物夾夾著的貢丸
+    this.char = 'aman';         // 角色(CHARACTERS 的 id)
+    this.skillCd = 0;           // 技能冷卻剩餘秒數
+    this.dashT = 0;             // 衝刺剩餘秒數
+    this.boostNext = false;     // 加料:下一顆貢丸威力 +2
     this.alive = true;
     this.aiTimer = 0;
     this.aiBombCd = 0;
@@ -590,6 +594,7 @@ function placeMeatball(p) {
   if (def.night && !nightFoodAllowed()) def = meatballById(1); // 夜市限定只能在夜市用
   const m = new Meatball(c, r, def, p);
   if (pork) { p.porkNext = false; m.fuse += PORK_FUSE_BONUS; spawnText(p.x, p.y - TS * 0.6, '🥩黑豬肉貢丸出動!', '#ff8a80'); }
+  if (p.boostNext) { p.boostNext = false; m.power += 2; spawnText(p.x, p.y - TS * 0.6, '🌶️加料貢丸!', '#ff7043'); }
   meatballs.push(m);
   sfx('place', p.x, p.y);
   if (def.night) checkWrap(m);
@@ -1069,6 +1074,94 @@ function activateShield(p) {
   updateHud();
 }
 
+// ---------- 角色 ----------
+// 套用角色的初始能力值;電腦玩家打折(血 −1、速度 ×0.65、貢丸數 −1),難度和以前差不多
+function applyCharacter(p, id, bot) {
+  const c = charDef(id);
+  p.char = CHARACTERS[id] ? id : 'aman';
+  p.maxHp = p.hp = bot ? Math.max(1, c.hp - 1) : c.hp;
+  p.maxMp = p.mp = c.mp;
+  p.speed = bot ? Math.round(c.speed * 0.65) : c.speed;
+  p.power = c.power;
+  p.maxBombs = bot ? Math.max(1, c.bombs - 1) : c.bombs;
+  p.skillCd = 0; p.dashT = 0; p.boostNext = false;
+}
+const randomChar = () => CHAR_IDS[rand(CHAR_IDS.length)];
+
+// 瞬步落點:前方第 2 格,不行就第 1 格(要能站的地面、沒有貢丸)
+function blinkTarget(p) {
+  for (const d of [2, 1]) {
+    const c = p.col + p.dir.x * d, r = p.row + p.dir.y * d;
+    if (c > 0 && r > 0 && c < COLS - 1 && r < ROWS - 1 && canEnterTile(p, c, r)) return [c, r];
+  }
+  return null;
+}
+
+// T 鍵:使用角色技能(條件不符時不進入冷卻)
+function useSkill(p) {
+  if (!p.alive) return;
+  const sk = skillOf(p), id = charDef(p.char).skill;
+  const say = (t, color) => spawnText(p.x, p.y - TS * 0.6, t, color);
+  if (p.skillCd > 0) { if (p === player) say(`技能冷卻 ${Math.ceil(p.skillCd)} 秒`, '#bdbdbd'); return; }
+  if (id === 'boost') {
+    if (p.boostNext) { if (p === player) say('已經加料了', '#bdbdbd'); return; }
+    p.boostNext = true;
+    say('🌶️加料!下一顆威力 +2', '#ff7043');
+  } else if (id === 'dash') {
+    p.dashT = sk.time;
+    say('💨衝刺!', '#4fc3f7');
+  } else if (id === 'heal') {
+    if (p.hp >= p.maxHp) { if (p === player) say('HP 已滿', '#bdbdbd'); return; }
+    p.hp += 1;
+    p.invuln = Math.max(p.invuln, 1);
+    say('💪鐵肚皮 HP +1', '#81c784');
+  } else if (id === 'detonate') {
+    const mine = meatballs.filter((m) => m.owner === p && !m.exploded && !m.eaten && !m.held && !isDormant(m));
+    if (!mine.length) { if (p === player) say('場上沒有你的貢丸', '#bdbdbd'); return; }
+    mine.forEach((m, i) => { m.fuse = Math.min(m.fuse, 0.05 + i * 0.08); });
+    say('💥麻辣引爆!', '#ff5252');
+  } else if (id === 'blink') {
+    const t = blinkTarget(p);
+    if (!t) { if (p === player) say('前方無法閃現', '#bdbdbd'); return; }
+    p.x = tileCenter(t[0]); p.y = tileCenter(t[1]);
+    p.mvTarget = null; p.autoPath = null; p.path = null;
+    say('🥷瞬步', '#b39ddb');
+  } else if (id === 'freeze') {
+    let n = 0;
+    for (const m of meatballs) {
+      if (m.exploded || m.eaten) continue;
+      if (Math.abs(m.col - p.col) + Math.abs(m.row - p.row) <= 3) { m.fuse += 3; n++; }
+    }
+    if (!n) { if (p === player) say('附近沒有貢丸', '#bdbdbd'); return; }
+    say(`🧊剉冰!${n} 顆貢丸延後爆`, '#80deea');
+  }
+  p.skillCd = sk.cd;
+  sfx('gear', p.x, p.y);
+  if (p === player) updateHud();
+}
+
+// AI 用技能:危險時逃命類技能、受傷補血、敵人在自己貢丸火線上就引爆
+function aiSkill(e) {
+  if (e.skillCd > 0) return;
+  const id = charDef(e.char).skill;
+  const dHere = danger[e.row][e.col];
+  if (id === 'heal') { if (e.hp < e.maxHp) useSkill(e); }
+  else if (id === 'dash') { if (dHere < 2.5) useSkill(e); }        // 正在逃命就加速
+  else if (id === 'freeze') { if (dHere < 1.6) useSkill(e); }
+  else if (id === 'blink') {
+    if (dHere < 1.6) {
+      const t = blinkTarget(e);
+      if (t && danger[t[1]][t[0]] === Infinity) useSkill(e);
+    }
+  } else if (id === 'detonate') {
+    const mine = meatballs.filter((m) => m.owner === e && !m.exploded && !m.eaten && !m.held && !isDormant(m));
+    if (!mine.length) return;
+    const cells = mine.flatMap(meatballCells);
+    const hit = (f) => cells.some((cl) => cl.c === f.col && cl.r === f.row);
+    if (!hit(e) && fighters().some((f) => f.alive && f.team !== e.team && hit(f))) useSkill(e);
+  }
+}
+
 // 放出寵物(若已放出則改為收起);可分別放出老鼠/蟑螂,順序不拘
 function deployPet(p, id) {
   const s = p.petState[id];
@@ -1187,7 +1280,7 @@ function advanceStep(e, dt) {
   if (!e.mvTarget) return;
   const ddx = e.mvTarget.x - e.x, ddy = e.mvTarget.y - e.y;
   const d = Math.hypot(ddx, ddy);
-  const mv = (e.speed + (weatherDef().speedBonus || 0)) * dt; // 豪雨:所有人速度 +10
+  const mv = (e.speed + (weatherDef().speedBonus || 0) + (e.dashT > 0 ? SKILLS.dash.bonus : 0)) * dt; // 豪雨 +10、衝刺 +80
   if (d <= mv) {
     e.x = e.mvTarget.x; e.y = e.mvTarget.y;
     e.mvTarget = null; // 抵達格中心,可再轉向
@@ -1255,6 +1348,7 @@ function playerAction(p, k) {
   if (k === 'q') useTool(p, 'vacuum');         // 吸塵器
   if (k === 'f') useTool(p, 'garbage');        // 垃圾車
   if (k === 'g') activateShield(p);            // 防護盾(花 MP)
+  if (k === 't') useSkill(p);                  // 角色技能
   if (k === 'v') useSlippers(p);               // 藍白拖(踩寵物)
   if (k === 'z') useTongs(p);                  // 食物夾(夾起/放下)
   if (k === 'x') useGlove(p);                  // 隔熱手套(丟擲)
@@ -1426,6 +1520,7 @@ function aiHasEscape(e) {
 }
 
 function aiPlaceBomb(e) {
+  if (charDef(e.char).skill === 'boost' && e.skillCd <= 0) useSkill(e); // 加料後再放
   e.selected = AI_BOMB_TYPES[rand(AI_BOMB_TYPES.length)];
   placeMeatball(e);
   e.aiBombCd = 1.2 + Math.random() * 1.6;
@@ -1472,6 +1567,7 @@ function aiDecide(e) {
 function updateEnemy(e, dt) {
   if (e.remote) { humanMove(e, e.netWant, e.netKeep, dt); updateHeldMeatball(e); return; } // 連線玩家
   if (!e.alive) return;
+  aiSkill(e);
   e.aiTimer -= dt;
   e.aiBombCd -= dt;
   if (!e.mvTarget) { // 在格中心時思考
@@ -1518,6 +1614,8 @@ function update(dt) {
   // MP 自然回復、防護盾倒數(所有角色)
   for (const f of fighters()) {
     if (f.shieldT > 0) f.shieldT = Math.max(0, f.shieldT - dt);
+    if (f.skillCd > 0) f.skillCd = Math.max(0, f.skillCd - dt);
+    if (f.dashT > 0) f.dashT = Math.max(0, f.dashT - dt);
     if (f.alive) f.mp = Math.min(f.mp + MP_REGEN * dt, f.maxMp);
   }
 
@@ -1958,12 +2056,11 @@ function buildRoster() {
   el.innerHTML = '';
   rosterEls = [];
   for (const f of fighters()) {
-    const portrait = f === player ? 'player' : (f.team === 'red' ? 'enemy' : 'ally');
     const row = document.createElement('div');
     row.className = 'roster-row team-' + f.team + (f === player ? ' me' : '');
     row.innerHTML =
-      `<img class="roster-face" src="assets/characters/${portrait}.webp" alt="">` +
-      `<span class="roster-name">${f.label || ''}</span>` +
+      `<img class="roster-face" src="assets/${charSprite(f)}.webp" alt="">` +
+      `<span class="roster-name">${f.label || ''}<small>${charDef(f.char).name}</small></span>` +
       `<span class="roster-hp"></span>`;
     el.appendChild(row);
     rosterEls.push({ f, row, hp: row.querySelector('.roster-hp') });
@@ -1993,6 +2090,12 @@ function updateHud() {
   const meter = (label, text, ratio, color) =>
     `<div class="stat-row"><span>${label}</span><b>${text}</b></div>` +
     `<div class="bar"><div class="fill" style="width:${Math.round(clamp(ratio, 0, 1) * 100)}%;background:${color}"></div></div>`;
+  const cd = charDef(player.char), sk = skillOf(player);
+  setHtml('stat-char', `<span class="ch-face"><img src="assets/portraits/${player.char || 'aman'}.webp" alt=""></span><b>${cd.name}</b><span>${cd.role}型</span>`);
+  setHtml('skill-btn', `<span class="sk-name">${sk.name}</span>` +
+    `<span class="sk-cd">${player.skillCd > 0 ? '冷卻 ' + Math.ceil(player.skillCd) + ' 秒' : (player.boostNext ? '已加料' : '可使用')}</span>`);
+  const skb = $el('skill-btn');
+  if (skb && skb.parentNode) skb.parentNode.title = `${sk.name}:${sk.desc}(冷卻 ${sk.cd} 秒)`;
   setHtml('stat-hp', meter('HP', `${player.hp} / ${player.maxHp}`, player.hp / player.maxHp, '#d9483b'));
   setHtml('stat-mp', meter('MP', `${Math.floor(player.mp)} / ${player.maxMp}`, player.mp / player.maxMp, '#3a8ee6'));
   setHtml('stat-power', meter('威力', `${player.power} / ${CAPS.power}`, player.power / CAPS.power, '#f08a24'));
@@ -2053,6 +2156,7 @@ function refreshActionButtons() {
          !meatballs.some((m) => !m.exploded && m.col === player.col && m.row === player.row),
     'e': kickMb && !!weatherDef().freeKick,                         // 踢:只有豪雨時、前方相鄰有丸                   // 踢/騎:前方相鄰有丸且 MP 夠
     'g': playing && player.mp >= SHIELD_MP_COST && !(player.shieldT > 0), // 防護盾:MP 夠且沒在作用中
+    't': playing && !(player.skillCd > 0),                          // 角色技能:冷卻完畢
     'z': playing && (player.held ? true : (t.tongs > 0 && frontMb)),// 食物夾:夾著可放下;否則需有夾子+目標
     'x': playing && t.glove > 0 && (!!player.held || frontMb),      // 手套:有手套+有丸可丟
     'c': playing && t.slingshot > 0,                                // 彈弓:有彈弓
@@ -2121,6 +2225,46 @@ function refreshSelector() {
 }
 
 // ====================================================================
+//  主選單:選角色
+// ====================================================================
+const CHAR_MAX = { hp: 5, mp: 150, speed: 185, power: 3, bombs: 3 };
+function buildCharPick() {
+  const box = $el('char-pick');
+  if (!box) return;
+  box.innerHTML = CHAR_IDS.map((id) =>
+    `<button type="button" class="charbtn" data-char="${id}" aria-label="${CHARACTERS[id].name}">` +
+    `<img src="assets/portraits/${id}.webp" alt=""><span>${CHARACTERS[id].name}</span></button>`).join('');
+  box.addEventListener('click', (ev) => {
+    const b = ev.target.closest && ev.target.closest('.charbtn');
+    if (!b) return;
+    pickChar(b.dataset.char);
+  });
+  pickChar(myChar);
+}
+function pickChar(id) {
+  if (!CHARACTERS[id]) return;
+  myChar = id;
+  try { localStorage.setItem('bbw_char', id); } catch (e) { /* 無痕模式 */ }
+  document.querySelectorAll('.charbtn').forEach((b) => b.classList.toggle('active', b.dataset.char === id));
+  const c = CHARACTERS[id], sk = SKILLS[c.skill];
+  const info = $el('char-info');
+  if (info) info.innerHTML = `<b>${c.name}</b>・${c.role}・技能 <b>${sk.icon}${sk.name}</b> ${sk.desc}`;
+  const img = $el('hero-char');
+  if (img) img.src = `assets/portraits/${id}.webp`;
+  const bar = (label, v, max, color) =>
+    `<div class="hc-row"><span>${label}</span><div class="bar"><div class="fill" style="width:${Math.round(v / max * 100)}%;background:${color}"></div></div><b>${v}</b></div>`;
+  const card = $el('hero-card');
+  if (card) card.innerHTML =
+    `<div class="hc-name"><b>${c.name}</b><span>${c.title}・${c.role}</span></div>` +
+    bar('HP', c.hp, CHAR_MAX.hp, '#d9483b') + bar('MP', c.mp, CHAR_MAX.mp, '#3a8ee6') +
+    bar('速度', c.speed, CHAR_MAX.speed, '#2fa36b') + bar('威力', c.power, CHAR_MAX.power, '#f08a24') +
+    bar('貢丸數', c.bombs, CHAR_MAX.bombs, '#b07a45') +
+    `<div class="hc-skill"><kbd>T</kbd><b>${sk.icon}${sk.name}</b><span>${sk.desc}</span></div>` +
+    `<div class="hc-cd">冷卻 ${sk.cd} 秒</div>`;
+  if (typeof NET !== 'undefined' && NET.role === 'guest') NET.raw({ t: 'pick', c: id });
+}
+
+// ====================================================================
 //  初始化 / 重新開始
 // ====================================================================
 function restart() {
@@ -2138,6 +2282,7 @@ function restart() {
   player = new Player(spawns[0].col, spawns[0].row, true, '#3aa6ff');
   player.team = spawns[0].team;
   player.label = '你';
+  applyCharacter(player, myChar, false);
   if (humans[0]) player.netName = humans[0].name;
   // 其餘為 AI(藍隊隊友 / 紅隊敵人)或連線玩家
   bots = [];
@@ -2148,9 +2293,10 @@ function restart() {
     const b = new Player(s.col, s.row, !!h, TEAM_COLOR[s.team]);
     b.team = s.team;
     if (h) {
-      b.remote = true; b.netId = h.id; b.label = h.name; // 連線玩家:數值同真人
+      b.remote = true; b.netId = h.id; b.label = h.name; // 連線玩家:用自己選的角色
+      applyCharacter(b, NET.picks[h.id] || randomChar(), false);
     } else {
-      b.maxHp = 2; b.hp = 2; b.power = 2; b.speed = 95; b.maxBombs = 2;
+      applyCharacter(b, randomChar(), true);          // 電腦:隨機角色
       b.label = s.team === 'blue' ? `隊友${++blueN}` : `敵人${++redN}`;
     }
     bots.push(b);
@@ -2192,6 +2338,7 @@ loadAssets().then(() => {
   if (ba) ba.addEventListener('click', startMatch);
   const bm = $el('btn-menu');
   if (bm) bm.addEventListener('click', backToMainMenu);
+  buildCharPick();
   const bh = $el('btn-home');
   if (bh) bh.addEventListener('click', () => { bh.blur(); goHome(); });
   // 地圖選擇:點選即切換主題並即時預覽(選單背後的場景跟著換)

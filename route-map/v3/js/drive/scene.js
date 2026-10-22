@@ -22,6 +22,8 @@ const GAUGE = 1.435;
 const OTHER_TRACK = 4.0;                       // 對向軌道中心距
 const EDGE = 1.6, PW = 6.0, PH = 1.1, SEG = 10; // 與月台模組一致
 const CAR_L = 23.5, CAR_GAP = 0.6, CARS = 6;
+/** 未指定列車時的預設編組(台北捷運高運量) */
+const DEFAULT_TRAIN = { cars: 6, gap: 0.6, tailCab: true, lead: { slot: 'train/taipei-hc/lead', length: 23.5 }, middle: { slot: 'train/taipei-hc/middle', length: 23.5 } };
 const RAIL_BASE = 'assets/rail';
 const LEGACY_BASE = 'assets/drive/';
 
@@ -58,6 +60,11 @@ function rng(seed) {
 
 const SLOTS = [
     'train/taipei-hc/lead', 'train/taipei-hc/middle', 'train/taipei-hc/cab',
+    'train/emu3000/lead', 'train/emu3000/middle', 'train/pp/lead', 'train/pp/middle', 'train/emu800/lead', 'train/emu800/middle',
+    'train/puyuma/lead', 'train/puyuma/middle', 'train/chukuang/lead', 'train/chukuang/middle', 'train/thsr-700t/lead', 'train/thsr-700t/middle',
+    'train/taichung-mrt/lead', 'train/taichung-mrt/middle', 'train/kaohsiung-mrt/lead', 'train/kaohsiung-mrt/middle',
+    'train/circular-line/lead', 'train/circular-line/middle', 'train/kaohsiung-lrt/lead', 'train/kaohsiung-lrt/middle',
+    'train/danhai-lrt/lead', 'train/danhai-lrt/middle',
     'platform/underground', 'platform/open', 'platform/psd-full', 'platform/psd-half', 'platform/pillar',
     'platform/bench', 'platform/trash-can', 'platform/payphone',
     'trackside/signal-post', 'trackside/stop-marker', 'trackside/speed-limit', 'trackside/mast', 'trackside/pier',
@@ -524,24 +531,30 @@ export class DriveWorld {
         this.ground = g;
     }
 
-    /** 6 節編組:前導車 + 4 中間車 + 尾端前導車(反向) */
+    /** 編組:依所選列車(cfg.train,見 rail-assets catalog/trains.json)—— 前導車 + 中間車(客車)+ 尾端前導車(反向,tailCab) */
     _makeConsist(own) {
+        const T = this.cfg.train || DEFAULT_TRAIN;
+        const n = Math.max(1, T.cars || 6);
         const g = new THREE.Group();
         const cars = [];
-        for (let i = 0; i < CARS; i++) {
-            const slot = i === 0 || i === CARS - 1 ? 'train/taipei-hc/lead' : 'train/taipei-hc/middle';
-            const car = this.assets.slot(slot) || new THREE.Group();
+        let off = 0;
+        for (let i = 0; i < n; i++) {
+            const isHead = i === 0, isTail = i === n - 1 && n > 1;
+            const lead = isHead || (isTail && T.tailCab !== false);
+            const part = lead ? T.lead : T.middle;
+            const car = this.cfg.carFactory?.(isHead || isTail) || this.assets.slot(part.slot) || new THREE.Group();
             ownMaterials(car, ['HeadLight', 'TailLight', 'DestLED']);
-            const isHead = i === 0, isTail = i === CARS - 1;
             findMat(car, 'HeadLight').forEach(m => { m.emissiveIntensity = isHead ? 6 : 0; m.color.setScalar(isHead ? 1 : 0.4); });
             findMat(car, 'TailLight').forEach(m => { m.emissiveIntensity = isTail ? 4 : 0; });
             if (isHead && this.cfg.destText) this._setDest(car, this.cfg.destText);
             car.traverse(o => { if (o.isMesh) { o.castShadow = !!this.Q.shadow; o.receiveShadow = true; } });
             g.add(car);
-            cars.push({ car, reversed: isTail && i > 0 });
+            cars.push({ car, reversed: isTail && lead, off, len: part.length });
+            off += part.length + (T.gap ?? CAR_GAP);
         }
         g.userData.cars = cars;
         g.userData.own = own;
+        g.userData.length = off - (T.gap ?? CAR_GAP);
         return g;
     }
 
@@ -565,15 +578,16 @@ export class DriveWorld {
     /** 把編組擺在路線上:frontS=列車前端里程,lateral=軌道橫移,dir=+1 往里程增加方向行駛 */
     _poseConsist(g, frontS, lateral, dir) {
         const cf = g === this.consist && this.crashFx ? crashPose(this.crashFx) : null;
-        g.userData.cars.forEach(({ car, reversed }, i) => {
-            const front = frontS - dir * i * (CAR_L + CAR_GAP);
-            const tail = front - dir * CAR_L;
+        g.userData.cars.forEach(({ car, reversed, off, len }, i) => {
+            const L = len || CAR_L;
+            const front = frontS - dir * (off ?? i * (CAR_L + CAR_GAP));
+            const tail = front - dir * L;
             const pa = poseAt(this.route, front), pb = poseAt(this.route, tail);
             const fx = pa.x - pa.tz * lateral, fz = pa.z + pa.tx * lateral;
             const bx = pb.x - pb.tz * lateral, bz = pb.z + pb.tx * lateral;
             // 車體方向取前後轉向架連線(彎道上較自然)
             const yaw = Math.atan2(-(fx - bx), -(fz - bz));
-            const pitch = Math.atan2(pa.y - pb.y, CAR_L);
+            const pitch = Math.atan2(pa.y - pb.y, L);
             if (!reversed) { car.position.set(fx, pa.y, fz); car.rotation.set(pitch, yaw, 0, 'YXZ'); }
             else { car.position.set(bx, pb.y, bz); car.rotation.set(-pitch, yaw + Math.PI, 0, 'YXZ'); }
             if (cf) {
@@ -988,7 +1002,7 @@ export class DriveWorld {
                 const s = st.p0 + SEG * (i + 0.5);
                 const mod = add(mirror(place(A.slot(under ? 'platform/underground' : 'platform/open'), route, s, base, B)));
                 if (mod && under) mod.traverse(o => { if (o.isMesh && UNDER_HIDE.test(o.material?.name || '')) o.visible = false; });
-                add(mirror(place(A.slot(under ? 'platform/psd-full' : 'platform/psd-half'), route, s, base, B)));
+                if (!this.cfg.noPsd) add(mirror(place(A.slot(under ? 'platform/psd-full' : 'platform/psd-half'), route, s, base, B)));   // 台鐵、高鐵月台沒有月台門
                 if (st.level === 'elevated') {
                     const deck = new THREE.Mesh(new THREE.BoxGeometry(PW + 0.4, 1.2, SEG), this.M.deck);
                     place(deck, route, s, lat(EDGE + PW / 2), B - 1.6);

@@ -306,7 +306,31 @@ const WEATHERS = {
   quake:   { name: '地震', icon: '🏚️', fuse: 3.0, decay: 12, weight: 1, shake: 1.3,
              desc: '貢丸隨機移位' },
 };
-const WEATHER_MIN = 5, WEATHER_MAX = 20;    // 每種天氣維持的秒數範圍(隨機)
+const WEATHER_MIN = 5, WEATHER_MAX = 20;
+
+// ---------- 可選角色:初始能力值 + 專屬技能(T 鍵,用完要冷卻) ----------
+const CHARACTERS = {
+  aman:     { name: '阿丸', title: '貢丸小子',   role: '均衡', hp: 3, mp: 100, speed: 150, power: 2, bombs: 3, skill: 'boost' },
+  xiaoyu:   { name: '小芋', title: '芋圓妹',     role: '速度', hp: 2, mp: 100, speed: 185, power: 2, bombs: 2, skill: 'dash' },
+  pangshu:  { name: '胖叔', title: '豬肉攤老闆', role: '坦克', hp: 5, mp: 80,  speed: 125, power: 2, bombs: 2, skill: 'heal' },
+  xiaola:   { name: '小辣', title: '麻辣鍋千金', role: '火力', hp: 2, mp: 100, speed: 145, power: 3, bombs: 3, skill: 'detonate' },
+  aren:     { name: '阿忍', title: '夜市忍者',   role: '機動', hp: 3, mp: 100, speed: 160, power: 1, bombs: 3, skill: 'blink' },
+  bingbing: { name: '冰冰', title: '剉冰店妹',   role: '控制', hp: 3, mp: 150, speed: 140, power: 2, bombs: 3, skill: 'freeze' },
+};
+const CHAR_IDS = Object.keys(CHARACTERS);
+const SKILLS = {
+  boost:    { name: '加料',     icon: '🌶️', cd: 12, desc: '下一顆貢丸威力 +2' },
+  dash:     { name: '衝刺',     icon: '💨', cd: 14, desc: '4 秒內速度 +80', time: 4, bonus: 80 },
+  heal:     { name: '鐵肚皮',   icon: '💪', cd: 25, desc: '回復 1 HP、無敵 1 秒' },
+  detonate: { name: '麻辣引爆', icon: '💥', cd: 10, desc: '自己的貢丸立刻全部引爆' },
+  blink:    { name: '瞬步',     icon: '🥷', cd: 9,  desc: '往前閃現 2 格,可穿越障礙' },
+  freeze:   { name: '剉冰',     icon: '🧊', cd: 15, desc: '周圍 3 格的貢丸延後 3 秒爆' },
+};
+const charDef = (id) => CHARACTERS[id] || CHARACTERS.aman;
+const skillOf = (p) => SKILLS[charDef(p.char).skill];
+// 主選單選的角色(記在瀏覽器)
+let myChar = 'aman';
+try { const c = localStorage.getItem('bbw_char'); if (CHARACTERS[c]) myChar = c; } catch (e) { /* 無痕模式 */ }    // 每種天氣維持的秒數範圍(隨機)
 const env = {
   weather: 'cool',   // 目前天氣
   left: 40,          // 距離下次變天(秒)

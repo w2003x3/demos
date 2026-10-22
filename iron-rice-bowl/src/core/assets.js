@@ -9,6 +9,8 @@ const RAIL_SLOTS = [
   'people/standing', 'building/street', 'building/tower', 'vegetation/tree', 'vegetation/shrub',
   'trackside/mast', 'trackside/electric-pole', 'trackside/barrier', 'trackside/utility-box',
   'street/lamp', 'street/aircon', 'platform/open', 'platform/bench', 'platform/trash-can',
+  // 列車(車站場景停靠的列車;司機員關卡另外載入完整駕駛場景)
+  ...['emu3000', 'pp', 'emu800', 'puyuma', 'chukuang', 'thsr-700t'].flatMap((t) => [`train/${t}/lead`, `train/${t}/middle`]),
 ];
 const RAIL_TEXTURES = { grass: 1, ballast: 1, concrete: 1, metal: 1, asphalt: 1 };
 // rail-assets 人物中的東亞面孔(Rocketbox Male_Adult_09/10、Business_Male_02、Female_Adult_03、Business_Female_04)

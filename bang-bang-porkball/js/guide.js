@@ -89,6 +89,16 @@
       row('🥡', '臭豆腐', '火焰長度拉滿') +
       '</ul><p class="guide-note">各地圖名產比較常掉:公園=奶茶、菜市場=雞排/豬血糕、夜市=珍奶/臭豆腐。</p>'),
 
+    sec('🧑‍🍳 角色與技能(T 鍵)',
+      '<ul class="guide-list">' +
+      CHAR_IDS.map((id) => {
+        const c = CHARACTERS[id], sk = SKILLS[c.skill];
+        return `<li class="char-li"><img class="guide-ico" src="assets/portraits/${id}.webp" alt=""><b>${c.name}</b>` +
+          `<span>${c.role}・HP ${c.hp}・速度 ${c.speed}・威力 ${c.power}・貢丸 ${c.bombs}<br>` +
+          `${sk.icon}<b>${sk.name}</b>:${sk.desc}(冷卻 ${sk.cd} 秒)</span></li>`;
+      }).join('') +
+      '</ul><p class="guide-note">開始對戰前在主選單選角色;電腦玩家會隨機選角,也會用技能。</p>'),
+
     sec('🛡️ 防護盾',
       '<ul class="help">' +
       `<li>按 <kbd>G</kbd> 花 ${SHIELD_MP_COST} MP 啟動,維持 ${SHIELD_TIME} 秒;期間被炸到會擋下這一次,盾立刻消失。</li>` +

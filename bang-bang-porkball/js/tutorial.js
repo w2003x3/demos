@@ -98,6 +98,12 @@
       update() { if (player.mp < SHIELD_MP_COST) player.mp = SHIELD_MP_COST; },
       done() { return player.shieldT > 0; },
     },
+    {
+      title: '角色技能',
+      text: '每位角色都有<b>專屬技能</b>,按 <kbd>T</kbd> 使用,用完要等冷卻(右側動作欄看秒數)。<br>阿丸的技能是 🌶️<b>加料</b>:下一顆貢丸威力 +2。按 <kbd>T</kbd> 試試看!',
+      setup() { player.skillCd = 0; player.boostNext = false; },
+      done() { if (player.boostNext) { player.boostNext = false; return true; } return false; },
+    },
 
     // ---------- 9 種貢丸 ----------
     {
@@ -320,6 +326,7 @@
     wait: 0,
     start() {
       startMatch();              // 借用一般開局流程(隱藏選單、建立玩家)
+      applyCharacter(player, 'aman', false); // 教學固定用阿丸(數值和說明一致)
       buildArena();
       bots = [];
       meatballs = []; items = []; explosions = [];

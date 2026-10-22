@@ -19,7 +19,7 @@ const ONLINE_SERVER = (() => {
 })();
 
 const SNAP_INTERVAL = 1 / 15;   // 房主送快照的間隔(秒)
-const ACTION_KEYS = new Set([' ', 'e', 'j', 'q', 'f', 'g', 'v', 'z', 'x', 'c', 'k', 'l', 'o', 'p',
+const ACTION_KEYS = new Set([' ', 'e', 'j', 'q', 'f', 'g', 't', 'v', 'z', 'x', 'c', 'k', 'l', 'o', 'p',
   '1', '2', '3', '4', '5', '6', '7', '8', '9']);
 
 const NET = {
@@ -29,6 +29,7 @@ const NET = {
   name: '',
   code: '',
   players: [],       // 房間名單 [{id, name, host}]
+  picks: {},         // 房主:連線玩家選的角色 {id: 角色}
   cfg: { map: 'park', teams: 'split' },
   fx: [],            // 房主:待送出的飄字
   sq: [],            // 房主:待送出的音效
@@ -70,7 +71,7 @@ const NET = {
   },
   reset() {
     this.online = false; this.role = null; this.id = null; this.players = [];
-    this.fx = []; this.sq = []; this.lastMove = ''; this.resultShown = false;
+    this.fx = []; this.sq = []; this.lastMove = ''; this.resultShown = false; this.picks = {};
     guest.clear();
     restoreResultButtons();
   },
@@ -91,6 +92,7 @@ const NET = {
         this.players = msg.players;
         lobbyUI.lastError = '';
         lobbyUI.msg = ''; lobbyUI.msgErr = false;
+        if (this.role === 'guest') this.raw({ t: 'pick', c: myChar }); // 告訴攤主我選的角色
         history.replaceState(null, '', '?room=' + this.code + (new URLSearchParams(location.search).get('server') ? '&server=' + new URLSearchParams(location.search).get('server') : ''));
         lobbyUI.render();
         return;
@@ -160,6 +162,7 @@ const NET = {
       if (f) { f.remote = false; f.netWant = null; f.label += '(電腦)'; buildRoster(); }
       return;
     }
+    if (msg.t === 'pick') { if (CHARACTERS[msg.c]) this.picks[msg.from] = msg.c; return; }
     if (msg.t !== 'in' || gameState !== 'playing') return;
     const f = bots.find((b) => b.remote && b.netId === msg.from);
     if (!f) return;
@@ -239,6 +242,7 @@ function buildSnapshot() {
       hp: f.hp, mh: f.maxHp, mp: Math.round(f.mp), mm: f.maxMp, pw: f.power, sp: f.speed, mb: f.maxBombs,
       al: f.alive ? 1 : 0, iv: r1(f.invuln), bt: r1(f.blindT), pt: r1(f.poisonT),
       sh: r1(f.shieldT || 0), im: r1(f.immunity), se: f.selected, ie: f.inkEaten, pk: f.porkNext ? 1 : 0,
+      ch: f.char, sc: r1(f.skillCd || 0), da: r1(f.dashT || 0), bo: f.boostNext ? 1 : 0,
       to: f.isHuman ? f.tools : undefined,
       ps: f.isHuman ? { rat: f.petState.rat.status, roach: f.petState.roach.status } : undefined,
       hd: f.held ? nid(f.held) : 0, dt: f.deathT !== undefined ? r1(f.deathT) : undefined,
@@ -317,6 +321,7 @@ const guest = {
       f.hp = d.hp; f.maxHp = d.mh; f.mp = d.mp; f.maxMp = d.mm; f.power = d.pw; f.speed = d.sp; f.maxBombs = d.mb;
       f.alive = !!d.al; f.invuln = d.iv; f.blindT = d.bt; f.poisonT = d.pt;
       f.shieldT = d.sh || 0; f.immunity = d.im; f.selected = d.se; f.inkEaten = d.ie; f.porkNext = !!d.pk;
+      f.char = d.ch || 'aman'; f.skillCd = d.sc || 0; f.dashT = d.da || 0; f.boostNext = !!d.bo;
       if (d.to) f.tools = d.to;
       if (d.ps && f.petState.rat) { f.petState.rat.status = d.ps.rat; f.petState.roach.status = d.ps.roach; }
       f.heldId = d.hd;
@@ -475,6 +480,7 @@ const lobbyUI = {
         '<div class="logo">🌐 多人連線</div>' +
         '<p class="sub">和朋友一起玩,最多 6 人;不足的位置由電腦補上</p>' +
         `<label class="ol-field">暱稱 <input id="ol-name" maxlength="12" placeholder="你的名字" value="${esc(this.savedName())}"></label>` +
+        `<p class="mini">你的角色:<b>${charDef(myChar).name}</b>(在主選單更換)</p>` +
         '<button type="button" class="big primary" data-ol="create">🏮 開攤(建立攤位)</button>' +
         '<div class="ol-join">' +
         `<input id="ol-code" maxlength="6" placeholder="攤位代碼" value="${esc(code)}" autocomplete="off">` +
@@ -496,6 +502,7 @@ const lobbyUI = {
       '<p class="sub">把代碼或邀請連結傳給朋友</p>' +
       `<button type="button" class="icon-btn" data-ol="copy" data-link="${esc(link)}">🔗 複製邀請連結</button>` +
       `<ul class="ol-players">${rows}</ul>` +
+      `<p class="mini">你的角色:<b>${charDef(myChar).name}</b>(電腦玩家隨機選角)</p>` +
       (ai ? `<p class="mini">其餘 ${ai} 個位置由電腦補上</p>` : '') +
       '<div class="ol-cfg">' +
       `<label>地圖 <select id="ol-map" ${host ? '' : 'disabled'}>` +

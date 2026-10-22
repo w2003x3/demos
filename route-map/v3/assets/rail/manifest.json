@@ -1,6 +1,6 @@
 {
   "name": "rail-assets",
-  "version": "2026-10-15",
+  "version": "2026-10-22",
   "conventions": {
     "units": "meter",
     "up": "+Y",
@@ -17,43 +17,48 @@
       {
         "id": "taipei-hc-lead",
         "file": "models/train/taipei-hc/lead/taipei-hc-lead.glb",
-        "bytes": 42812,
-        "tris": 2630,
+        "bytes": 71588,
+        "tris": 6616,
         "bounds": {
           "min": [
-            -1.64,
-            0,
-            -0.22
+            -1.632,
+            0.007,
+            -0.06
           ],
           "max": [
-            1.64,
-            3.88,
-            24
+            1.632,
+            3.92,
+            23.95
           ]
         },
         "materials": [
           "Bogie",
+          "BogieSpring",
+          "Coupler",
           "DestLED",
           "Glass",
           "HeadLight",
           "Rubber",
-          "Steel",
           "SteelDark",
           "TailLight",
+          "TaipeiHC_body",
+          "TaipeiHC_door",
+          "TaipeiHC_frame",
+          "TaipeiHC_front",
+          "TaipeiHC_front_dark",
+          "TaipeiHC_grip",
+          "TaipeiHC_in_ceil",
+          "TaipeiHC_in_floor",
+          "TaipeiHC_in_wall",
+          "TaipeiHC_roof",
+          "TaipeiHC_roof_eq",
+          "TaipeiHC_seat",
+          "TaipeiHC_stripe",
+          "TaipeiHC_stripe_w",
+          "TaipeiHC_under_front",
           "TrainCeilingLight",
-          "TrainDoor",
-          "TrainFrontDark",
-          "TrainFrontMask",
-          "TrainInteriorFloor",
-          "TrainInteriorWall",
           "TrainPole",
-          "TrainRoof",
-          "TrainSeat",
-          "TrainStainless",
-          "TrainStripeBlue",
-          "TrainStripeWhite",
           "TrainUnderframe",
-          "TrainWindowFrame",
           "Wheel",
           "Windshield"
         ],
@@ -68,37 +73,43 @@
       {
         "id": "taipei-hc-middle",
         "file": "models/train/taipei-hc/middle/taipei-hc-middle.glb",
-        "bytes": 31792,
-        "tris": 2322,
+        "bytes": 68448,
+        "tris": 7230,
         "bounds": {
           "min": [
-            -1.612,
-            0,
-            -0.5
+            -1.632,
+            0.007,
+            -0.25
           ],
           "max": [
-            1.612,
-            3.88,
-            24
+            1.632,
+            3.92,
+            23.95
           ]
         },
         "materials": [
           "Bogie",
+          "BogieSpring",
+          "Coupler",
           "Glass",
           "Rubber",
           "SteelDark",
+          "TailLight",
+          "TaipeiHC_body",
+          "TaipeiHC_door",
+          "TaipeiHC_frame",
+          "TaipeiHC_grip",
+          "TaipeiHC_in_ceil",
+          "TaipeiHC_in_floor",
+          "TaipeiHC_in_wall",
+          "TaipeiHC_roof",
+          "TaipeiHC_roof_eq",
+          "TaipeiHC_seat",
+          "TaipeiHC_stripe",
+          "TaipeiHC_stripe_w",
           "TrainCeilingLight",
-          "TrainDoor",
-          "TrainInteriorFloor",
-          "TrainInteriorWall",
           "TrainPole",
-          "TrainRoof",
-          "TrainSeat",
-          "TrainStainless",
-          "TrainStripeBlue",
-          "TrainStripeWhite",
           "TrainUnderframe",
-          "TrainWindowFrame",
           "Wheel"
         ],
         "license": "CC0-1.0",
@@ -1153,6 +1164,34 @@
         "provider": "rocketbox"
       },
       {
+        "id": "female-adult-03",
+        "file": "models/people/standing/female-adult-03.glb",
+        "bytes": 609480,
+        "tris": 9208,
+        "bounds": {
+          "min": [
+            -0.243,
+            0,
+            -0.159
+          ],
+          "max": [
+            0.243,
+            1.7,
+            0.159
+          ]
+        },
+        "materials": [
+          "f003_body",
+          "f003_head",
+          "f003_opacity"
+        ],
+        "license": "MIT",
+        "author": "Microsoft Rocketbox",
+        "title": "Female Adult 03",
+        "source": "https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Female_Adult_03",
+        "provider": "rocketbox"
+      },
+      {
         "id": "female-adult-04",
         "file": "models/people/standing/female-adult-04.glb",
         "bytes": 695932,
@@ -1234,6 +1273,34 @@
         "author": "Microsoft Rocketbox",
         "title": "Female Adult 09",
         "source": "https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Female_Adult_09",
+        "provider": "rocketbox"
+      },
+      {
+        "id": "female-business-04",
+        "file": "models/people/standing/female-business-04.glb",
+        "bytes": 452144,
+        "tris": 8270,
+        "bounds": {
+          "min": [
+            -0.24,
+            0,
+            -0.167
+          ],
+          "max": [
+            0.24,
+            1.7,
+            0.167
+          ]
+        },
+        "materials": [
+          "f020_body",
+          "f020_head",
+          "f020_opacity"
+        ],
+        "license": "MIT",
+        "author": "Microsoft Rocketbox",
+        "title": "Business Female 04",
+        "source": "https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Professions/Business_Female_04",
         "provider": "rocketbox"
       },
       {
@@ -1347,6 +1414,90 @@
         "title": "Male Adult 08",
         "source": "https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Male_Adult_08",
         "provider": "rocketbox"
+      },
+      {
+        "id": "male-adult-09",
+        "file": "models/people/standing/male-adult-09.glb",
+        "bytes": 505440,
+        "tris": 7426,
+        "bounds": {
+          "min": [
+            -0.262,
+            0,
+            -0.169
+          ],
+          "max": [
+            0.262,
+            1.7,
+            0.169
+          ]
+        },
+        "materials": [
+          "m017_body",
+          "m017_head",
+          "m017_opacity"
+        ],
+        "license": "MIT",
+        "author": "Microsoft Rocketbox",
+        "title": "Male Adult 09",
+        "source": "https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Male_Adult_09",
+        "provider": "rocketbox"
+      },
+      {
+        "id": "male-adult-10",
+        "file": "models/people/standing/male-adult-10.glb",
+        "bytes": 528352,
+        "tris": 6732,
+        "bounds": {
+          "min": [
+            -0.272,
+            0,
+            -0.159
+          ],
+          "max": [
+            0.272,
+            1.7,
+            0.159
+          ]
+        },
+        "materials": [
+          "m024_body",
+          "m024_head",
+          "m024_opacity"
+        ],
+        "license": "MIT",
+        "author": "Microsoft Rocketbox",
+        "title": "Male Adult 10",
+        "source": "https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Male_Adult_10",
+        "provider": "rocketbox"
+      },
+      {
+        "id": "male-business-02",
+        "file": "models/people/standing/male-business-02.glb",
+        "bytes": 520140,
+        "tris": 7448,
+        "bounds": {
+          "min": [
+            -0.275,
+            0,
+            -0.164
+          ],
+          "max": [
+            0.275,
+            1.7,
+            0.164
+          ]
+        },
+        "materials": [
+          "m008_body",
+          "m008_head",
+          "m008_opacity"
+        ],
+        "license": "MIT",
+        "author": "Microsoft Rocketbox",
+        "title": "Business Male 02",
+        "source": "https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Professions/Business_Male_02",
+        "provider": "rocketbox"
       }
     ],
     "platform/payphone": [
@@ -1375,6 +1526,1178 @@
         "title": "Korean Public Payphone 01",
         "source": "https://polyhaven.com/a/korean_public_payphone_01",
         "provider": "polyhaven"
+      }
+    ],
+    "train/emu3000/lead": [
+      {
+        "id": "emu3000-lead",
+        "file": "models/train/emu3000/lead/emu3000-lead.glb",
+        "bytes": 73328,
+        "tris": 7932,
+        "bounds": {
+          "min": [
+            -1.542,
+            0.007,
+            -0.05
+          ],
+          "max": [
+            1.542,
+            4.18,
+            21.75
+          ]
+        },
+        "materials": [
+          "Bogie",
+          "BogieSpring",
+          "Coupler",
+          "DestLED",
+          "EMU3000_body",
+          "EMU3000_cover",
+          "EMU3000_door",
+          "EMU3000_frame",
+          "EMU3000_front",
+          "EMU3000_in_ceil",
+          "EMU3000_in_floor",
+          "EMU3000_in_wall",
+          "EMU3000_part",
+          "EMU3000_rack",
+          "EMU3000_roof",
+          "EMU3000_roof_eq",
+          "EMU3000_seat",
+          "EMU3000_seat_frame",
+          "EMU3000_stripe",
+          "EMU3000_under_front",
+          "Glass",
+          "HeadLight",
+          "Rubber",
+          "Steel",
+          "SteelDark",
+          "TailLight",
+          "TrainCeilingLight",
+          "TrainUnderframe",
+          "Wheel",
+          "Windshield"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "EMU3000_Lead",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "train/emu3000/middle": [
+      {
+        "id": "emu3000-middle",
+        "file": "models/train/emu3000/middle/emu3000-middle.glb",
+        "bytes": 80924,
+        "tris": 10146,
+        "bounds": {
+          "min": [
+            -1.542,
+            0.007,
+            -0.25
+          ],
+          "max": [
+            1.542,
+            5.49,
+            20.45
+          ]
+        },
+        "materials": [
+          "Bogie",
+          "BogieSpring",
+          "Coupler",
+          "EMU3000_body",
+          "EMU3000_cover",
+          "EMU3000_door",
+          "EMU3000_frame",
+          "EMU3000_in_ceil",
+          "EMU3000_in_floor",
+          "EMU3000_in_wall",
+          "EMU3000_part",
+          "EMU3000_rack",
+          "EMU3000_roof",
+          "EMU3000_roof_eq",
+          "EMU3000_seat",
+          "EMU3000_seat_frame",
+          "EMU3000_stripe",
+          "Glass",
+          "Insulator",
+          "Pantograph",
+          "Rubber",
+          "Steel",
+          "SteelDark",
+          "TailLight",
+          "TrainCeilingLight",
+          "TrainUnderframe",
+          "Wheel"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "EMU3000_Middle",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "train/pp/lead": [
+      {
+        "id": "pp-lead",
+        "file": "models/train/pp/lead/pp-lead.glb",
+        "bytes": 39788,
+        "tris": 2306,
+        "bounds": {
+          "min": [
+            -1.542,
+            0.007,
+            -0.05
+          ],
+          "max": [
+            1.542,
+            5.49,
+            18.93
+          ]
+        },
+        "materials": [
+          "Bogie",
+          "BogieSpring",
+          "Coupler",
+          "Glass",
+          "HeadLight",
+          "Insulator",
+          "PP_body",
+          "PP_door",
+          "PP_front",
+          "PP_louver",
+          "PP_roof",
+          "PP_roof_eq",
+          "PP_stripe",
+          "PP_stripe2",
+          "PP_under_front",
+          "Pantograph",
+          "Rubber",
+          "Steel",
+          "SteelDark",
+          "TailLight",
+          "TrainUnderframe",
+          "Wheel",
+          "Windshield"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "PP_Lead",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "train/pp/middle": [
+      {
+        "id": "pp-middle",
+        "file": "models/train/pp/middle/pp-middle.glb",
+        "bytes": 84968,
+        "tris": 10810,
+        "bounds": {
+          "min": [
+            -1.542,
+            0.007,
+            -0.25
+          ],
+          "max": [
+            1.542,
+            4.18,
+            20.85
+          ]
+        },
+        "materials": [
+          "Bogie",
+          "BogieSpring",
+          "Coupler",
+          "Glass",
+          "PP_arch",
+          "PP_body",
+          "PP_cover",
+          "PP_curtain",
+          "PP_door",
+          "PP_frame",
+          "PP_in_ceil",
+          "PP_in_floor",
+          "PP_in_wall",
+          "PP_part",
+          "PP_rack",
+          "PP_roof",
+          "PP_roof_eq",
+          "PP_seat",
+          "PP_seat_frame",
+          "PP_stripe",
+          "PP_stripe2",
+          "Rubber",
+          "Steel",
+          "SteelDark",
+          "TailLight",
+          "TrainCeilingLight",
+          "TrainUnderframe",
+          "Wheel"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "PP_Middle",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "train/emu800/lead": [
+      {
+        "id": "emu800-lead",
+        "file": "models/train/emu800/lead/emu800-lead.glb",
+        "bytes": 65696,
+        "tris": 5632,
+        "bounds": {
+          "min": [
+            -1.542,
+            0.007,
+            -0.06
+          ],
+          "max": [
+            1.542,
+            4.18,
+            21.25
+          ]
+        },
+        "materials": [
+          "Bogie",
+          "BogieSpring",
+          "Coupler",
+          "DestLED",
+          "EMU800_body",
+          "EMU800_door",
+          "EMU800_frame",
+          "EMU800_front",
+          "EMU800_grip",
+          "EMU800_in_ceil",
+          "EMU800_in_floor",
+          "EMU800_in_wall",
+          "EMU800_roof",
+          "EMU800_roof_eq",
+          "EMU800_seat",
+          "EMU800_stripe",
+          "EMU800_stripe2",
+          "EMU800_under_front",
+          "Glass",
+          "HeadLight",
+          "Rubber",
+          "SteelDark",
+          "TailLight",
+          "TrainCeilingLight",
+          "TrainPole",
+          "TrainUnderframe",
+          "Wheel",
+          "Windshield"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "EMU800_Lead",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "train/emu800/middle": [
+      {
+        "id": "emu800-middle",
+        "file": "models/train/emu800/middle/emu800-middle.glb",
+        "bytes": 67984,
+        "tris": 6470,
+        "bounds": {
+          "min": [
+            -1.542,
+            0.007,
+            -0.25
+          ],
+          "max": [
+            1.542,
+            5.49,
+            20.45
+          ]
+        },
+        "materials": [
+          "Bogie",
+          "BogieSpring",
+          "Coupler",
+          "EMU800_body",
+          "EMU800_door",
+          "EMU800_frame",
+          "EMU800_grip",
+          "EMU800_in_ceil",
+          "EMU800_in_floor",
+          "EMU800_in_wall",
+          "EMU800_roof",
+          "EMU800_roof_eq",
+          "EMU800_seat",
+          "EMU800_stripe",
+          "EMU800_stripe2",
+          "Glass",
+          "Insulator",
+          "Pantograph",
+          "Rubber",
+          "Steel",
+          "SteelDark",
+          "TailLight",
+          "TrainCeilingLight",
+          "TrainPole",
+          "TrainUnderframe",
+          "Wheel"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "EMU800_Middle",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "train/puyuma/lead": [
+      {
+        "id": "puyuma-lead",
+        "file": "models/train/puyuma/lead/puyuma-lead.glb",
+        "bytes": 72168,
+        "tris": 7634,
+        "bounds": {
+          "min": [
+            -1.492,
+            0.007,
+            -0.05
+          ],
+          "max": [
+            1.492,
+            4.18,
+            22.85
+          ]
+        },
+        "materials": [
+          "Bogie",
+          "BogieSpring",
+          "Coupler",
+          "Glass",
+          "HeadLight",
+          "Puyuma_body",
+          "Puyuma_cover",
+          "Puyuma_door",
+          "Puyuma_frame",
+          "Puyuma_front",
+          "Puyuma_front_w",
+          "Puyuma_in_ceil",
+          "Puyuma_in_floor",
+          "Puyuma_in_wall",
+          "Puyuma_part",
+          "Puyuma_rack",
+          "Puyuma_roof",
+          "Puyuma_roof_eq",
+          "Puyuma_seat",
+          "Puyuma_seat_frame",
+          "Puyuma_stripe",
+          "Rubber",
+          "Steel",
+          "SteelDark",
+          "TailLight",
+          "TrainCeilingLight",
+          "TrainUnderframe",
+          "Wheel",
+          "Windshield"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "Puyuma_Lead",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "train/puyuma/middle": [
+      {
+        "id": "puyuma-middle",
+        "file": "models/train/puyuma/middle/puyuma-middle.glb",
+        "bytes": 80840,
+        "tris": 10158,
+        "bounds": {
+          "min": [
+            -1.492,
+            0.007,
+            -0.25
+          ],
+          "max": [
+            1.492,
+            5.49,
+            20.45
+          ]
+        },
+        "materials": [
+          "Bogie",
+          "BogieSpring",
+          "Coupler",
+          "Glass",
+          "Insulator",
+          "Pantograph",
+          "Puyuma_body",
+          "Puyuma_cover",
+          "Puyuma_door",
+          "Puyuma_frame",
+          "Puyuma_in_ceil",
+          "Puyuma_in_floor",
+          "Puyuma_in_wall",
+          "Puyuma_part",
+          "Puyuma_rack",
+          "Puyuma_roof",
+          "Puyuma_roof_eq",
+          "Puyuma_seat",
+          "Puyuma_seat_frame",
+          "Puyuma_stripe",
+          "Rubber",
+          "Steel",
+          "SteelDark",
+          "TailLight",
+          "TrainCeilingLight",
+          "TrainUnderframe",
+          "Wheel"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "Puyuma_Middle",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "train/chukuang/lead": [
+      {
+        "id": "chukuang-lead",
+        "file": "models/train/chukuang/lead/chukuang-lead.glb",
+        "bytes": 39752,
+        "tris": 2454,
+        "bounds": {
+          "min": [
+            -1.542,
+            0.007,
+            -0.06
+          ],
+          "max": [
+            1.542,
+            5.49,
+            17.23
+          ]
+        },
+        "materials": [
+          "Bogie",
+          "BogieSpring",
+          "ChuKuang_body",
+          "ChuKuang_door",
+          "ChuKuang_front",
+          "ChuKuang_louver",
+          "ChuKuang_roof",
+          "ChuKuang_roof_eq",
+          "ChuKuang_stripe",
+          "ChuKuang_under_front",
+          "Coupler",
+          "Glass",
+          "HeadLight",
+          "Insulator",
+          "Pantograph",
+          "Rubber",
+          "Steel",
+          "SteelDark",
+          "TailLight",
+          "TrainUnderframe",
+          "Wheel",
+          "Windshield"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "ChuKuang_Lead",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "train/chukuang/middle": [
+      {
+        "id": "chukuang-middle",
+        "file": "models/train/chukuang/middle/chukuang-middle.glb",
+        "bytes": 78424,
+        "tris": 9726,
+        "bounds": {
+          "min": [
+            -1.542,
+            0.007,
+            -0.25
+          ],
+          "max": [
+            1.542,
+            4.18,
+            20.85
+          ]
+        },
+        "materials": [
+          "Bogie",
+          "BogieSpring",
+          "ChuKuang_body",
+          "ChuKuang_cover",
+          "ChuKuang_curtain",
+          "ChuKuang_door",
+          "ChuKuang_frame",
+          "ChuKuang_in_ceil",
+          "ChuKuang_in_floor",
+          "ChuKuang_in_wall",
+          "ChuKuang_part",
+          "ChuKuang_rack",
+          "ChuKuang_roof",
+          "ChuKuang_roof_eq",
+          "ChuKuang_seat",
+          "ChuKuang_seat_frame",
+          "ChuKuang_stripe",
+          "Coupler",
+          "Glass",
+          "Rubber",
+          "Steel",
+          "SteelDark",
+          "TailLight",
+          "TrainCeilingLight",
+          "TrainUnderframe",
+          "Wheel"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "ChuKuang_Middle",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "train/thsr-700t/lead": [
+      {
+        "id": "thsr-700t-lead",
+        "file": "models/train/thsr-700t/lead/thsr-700t-lead.glb",
+        "bytes": 54740,
+        "tris": 4618,
+        "bounds": {
+          "min": [
+            -1.697,
+            0.007,
+            0
+          ],
+          "max": [
+            1.697,
+            3.65,
+            28.38
+          ]
+        },
+        "materials": [
+          "Bogie",
+          "BogieSpring",
+          "Coupler",
+          "Glass",
+          "HeadLight",
+          "Rubber",
+          "Steel",
+          "SteelDark",
+          "THSR700T_body",
+          "THSR700T_cover",
+          "THSR700T_frame",
+          "THSR700T_front",
+          "THSR700T_in_ceil",
+          "THSR700T_in_floor",
+          "THSR700T_in_wall",
+          "THSR700T_part",
+          "THSR700T_rack",
+          "THSR700T_roof",
+          "THSR700T_seat",
+          "THSR700T_seat_frame",
+          "THSR700T_stripe",
+          "THSR700T_stripe2",
+          "TailLight",
+          "TrainCeilingLight",
+          "TrainUnderframe",
+          "Wheel",
+          "Windshield"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "THSR700T_Lead",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "train/thsr-700t/middle": [
+      {
+        "id": "thsr-700t-middle",
+        "file": "models/train/thsr-700t/middle/thsr-700t-middle.glb",
+        "bytes": 95264,
+        "tris": 13458,
+        "bounds": {
+          "min": [
+            -1.732,
+            0.007,
+            -0.25
+          ],
+          "max": [
+            1.732,
+            5.26,
+            25.45
+          ]
+        },
+        "materials": [
+          "Bogie",
+          "BogieSpring",
+          "Coupler",
+          "Glass",
+          "Insulator",
+          "Pantograph",
+          "Rubber",
+          "Steel",
+          "SteelDark",
+          "THSR700T_body",
+          "THSR700T_cover",
+          "THSR700T_door",
+          "THSR700T_frame",
+          "THSR700T_in_ceil",
+          "THSR700T_in_floor",
+          "THSR700T_in_wall",
+          "THSR700T_part",
+          "THSR700T_rack",
+          "THSR700T_roof",
+          "THSR700T_seat",
+          "THSR700T_seat_frame",
+          "THSR700T_stripe",
+          "THSR700T_stripe2",
+          "TailLight",
+          "TrainCeilingLight",
+          "TrainUnderframe",
+          "Wheel"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "THSR700T_Middle",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "train/taichung-mrt/lead": [
+      {
+        "id": "taichung-mrt-lead",
+        "file": "models/train/taichung-mrt/lead/taichung-mrt-lead.glb",
+        "bytes": 68744,
+        "tris": 6092,
+        "bounds": {
+          "min": [
+            -1.522,
+            0.007,
+            -0.06
+          ],
+          "max": [
+            1.522,
+            3.85,
+            23.05
+          ]
+        },
+        "materials": [
+          "Bogie",
+          "BogieSpring",
+          "Coupler",
+          "DestLED",
+          "Glass",
+          "HeadLight",
+          "Rubber",
+          "SteelDark",
+          "TaichungMRT_body",
+          "TaichungMRT_door",
+          "TaichungMRT_frame",
+          "TaichungMRT_front",
+          "TaichungMRT_front_g",
+          "TaichungMRT_grip",
+          "TaichungMRT_in_ceil",
+          "TaichungMRT_in_floor",
+          "TaichungMRT_in_wall",
+          "TaichungMRT_roof",
+          "TaichungMRT_roof_eq",
+          "TaichungMRT_seat",
+          "TaichungMRT_stripe",
+          "TaichungMRT_stripe2",
+          "TaichungMRT_under_front",
+          "TailLight",
+          "TrainCeilingLight",
+          "TrainPole",
+          "TrainUnderframe",
+          "Wheel",
+          "Windshield"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "TaichungMRT_Lead",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "train/taichung-mrt/middle": [
+      {
+        "id": "taichung-mrt-middle",
+        "file": "models/train/taichung-mrt/middle/taichung-mrt-middle.glb",
+        "bytes": 65232,
+        "tris": 6734,
+        "bounds": {
+          "min": [
+            -1.522,
+            0.007,
+            -0.25
+          ],
+          "max": [
+            1.522,
+            3.85,
+            22.45
+          ]
+        },
+        "materials": [
+          "Bogie",
+          "BogieSpring",
+          "Coupler",
+          "Glass",
+          "Rubber",
+          "SteelDark",
+          "TaichungMRT_body",
+          "TaichungMRT_door",
+          "TaichungMRT_frame",
+          "TaichungMRT_grip",
+          "TaichungMRT_in_ceil",
+          "TaichungMRT_in_floor",
+          "TaichungMRT_in_wall",
+          "TaichungMRT_roof",
+          "TaichungMRT_roof_eq",
+          "TaichungMRT_seat",
+          "TaichungMRT_stripe",
+          "TaichungMRT_stripe2",
+          "TailLight",
+          "TrainCeilingLight",
+          "TrainPole",
+          "TrainUnderframe",
+          "Wheel"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "TaichungMRT_Middle",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "train/kaohsiung-mrt/lead": [
+      {
+        "id": "kaohsiung-mrt-lead",
+        "file": "models/train/kaohsiung-mrt/lead/kaohsiung-mrt-lead.glb",
+        "bytes": 69820,
+        "tris": 6344,
+        "bounds": {
+          "min": [
+            -1.592,
+            0.007,
+            -0.06
+          ],
+          "max": [
+            1.592,
+            3.9,
+            23.05
+          ]
+        },
+        "materials": [
+          "Bogie",
+          "BogieSpring",
+          "Coupler",
+          "DestLED",
+          "Glass",
+          "HeadLight",
+          "KaohsiungMRT_body",
+          "KaohsiungMRT_door",
+          "KaohsiungMRT_frame",
+          "KaohsiungMRT_front",
+          "KaohsiungMRT_grip",
+          "KaohsiungMRT_in_ceil",
+          "KaohsiungMRT_in_floor",
+          "KaohsiungMRT_in_wall",
+          "KaohsiungMRT_roof",
+          "KaohsiungMRT_roof_eq",
+          "KaohsiungMRT_seat",
+          "KaohsiungMRT_stripe",
+          "KaohsiungMRT_stripe2",
+          "KaohsiungMRT_stripe3",
+          "KaohsiungMRT_under_front",
+          "Rubber",
+          "SteelDark",
+          "TailLight",
+          "TrainCeilingLight",
+          "TrainPole",
+          "TrainUnderframe",
+          "Wheel",
+          "Windshield"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "KaohsiungMRT_Lead",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "train/kaohsiung-mrt/middle": [
+      {
+        "id": "kaohsiung-mrt-middle",
+        "file": "models/train/kaohsiung-mrt/middle/kaohsiung-mrt-middle.glb",
+        "bytes": 67208,
+        "tris": 7042,
+        "bounds": {
+          "min": [
+            -1.592,
+            0.007,
+            -0.25
+          ],
+          "max": [
+            1.592,
+            3.9,
+            22.55
+          ]
+        },
+        "materials": [
+          "Bogie",
+          "BogieSpring",
+          "Coupler",
+          "Glass",
+          "KaohsiungMRT_body",
+          "KaohsiungMRT_door",
+          "KaohsiungMRT_frame",
+          "KaohsiungMRT_grip",
+          "KaohsiungMRT_in_ceil",
+          "KaohsiungMRT_in_floor",
+          "KaohsiungMRT_in_wall",
+          "KaohsiungMRT_roof",
+          "KaohsiungMRT_roof_eq",
+          "KaohsiungMRT_seat",
+          "KaohsiungMRT_stripe",
+          "KaohsiungMRT_stripe2",
+          "KaohsiungMRT_stripe3",
+          "Rubber",
+          "SteelDark",
+          "TailLight",
+          "TrainCeilingLight",
+          "TrainPole",
+          "TrainUnderframe",
+          "Wheel"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "KaohsiungMRT_Middle",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "train/circular-line/lead": [
+      {
+        "id": "circular-line-lead",
+        "file": "models/train/circular-line/lead/circular-line-lead.glb",
+        "bytes": 66620,
+        "tris": 6172,
+        "bounds": {
+          "min": [
+            -1.467,
+            0.007,
+            -0.06
+          ],
+          "max": [
+            1.467,
+            3.75,
+            21.95
+          ]
+        },
+        "materials": [
+          "Bogie",
+          "BogieSpring",
+          "CircularLine_body",
+          "CircularLine_door",
+          "CircularLine_frame",
+          "CircularLine_front",
+          "CircularLine_front_y",
+          "CircularLine_grip",
+          "CircularLine_in_ceil",
+          "CircularLine_in_floor",
+          "CircularLine_in_wall",
+          "CircularLine_roof",
+          "CircularLine_roof_eq",
+          "CircularLine_seat",
+          "CircularLine_stripe",
+          "CircularLine_under_front",
+          "Coupler",
+          "Glass",
+          "HeadLight",
+          "Rubber",
+          "SteelDark",
+          "TailLight",
+          "TrainCeilingLight",
+          "TrainPole",
+          "TrainUnderframe",
+          "Wheel",
+          "Windshield"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "CircularLine_Lead",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "train/circular-line/middle": [
+      {
+        "id": "circular-line-middle",
+        "file": "models/train/circular-line/middle/circular-line-middle.glb",
+        "bytes": 63056,
+        "tris": 6514,
+        "bounds": {
+          "min": [
+            -1.467,
+            0.007,
+            -0.25
+          ],
+          "max": [
+            1.467,
+            3.75,
+            21.45
+          ]
+        },
+        "materials": [
+          "Bogie",
+          "BogieSpring",
+          "CircularLine_body",
+          "CircularLine_door",
+          "CircularLine_frame",
+          "CircularLine_grip",
+          "CircularLine_in_ceil",
+          "CircularLine_in_floor",
+          "CircularLine_in_wall",
+          "CircularLine_roof",
+          "CircularLine_roof_eq",
+          "CircularLine_seat",
+          "CircularLine_stripe",
+          "Coupler",
+          "Glass",
+          "Rubber",
+          "SteelDark",
+          "TailLight",
+          "TrainCeilingLight",
+          "TrainPole",
+          "TrainUnderframe",
+          "Wheel"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "CircularLine_Middle",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "train/kaohsiung-lrt/lead": [
+      {
+        "id": "kaohsiung-lrt-lead",
+        "file": "models/train/kaohsiung-lrt/lead/kaohsiung-lrt-lead.glb",
+        "bytes": 45700,
+        "tris": 2424,
+        "bounds": {
+          "min": [
+            -1.367,
+            0.005,
+            -0.06
+          ],
+          "max": [
+            1.367,
+            3.6,
+            10.95
+          ]
+        },
+        "materials": [
+          "Bogie",
+          "BogieSpring",
+          "DestLED",
+          "Glass",
+          "HeadLight",
+          "KaohsiungLRT_body",
+          "KaohsiungLRT_door",
+          "KaohsiungLRT_frame",
+          "KaohsiungLRT_front",
+          "KaohsiungLRT_front_c",
+          "KaohsiungLRT_grip",
+          "KaohsiungLRT_in_ceil",
+          "KaohsiungLRT_in_floor",
+          "KaohsiungLRT_in_wall",
+          "KaohsiungLRT_roof",
+          "KaohsiungLRT_roof_eq",
+          "KaohsiungLRT_seat",
+          "KaohsiungLRT_stripe",
+          "KaohsiungLRT_stripe2",
+          "Rubber",
+          "SteelDark",
+          "TailLight",
+          "TrainCeilingLight",
+          "TrainPole",
+          "TrainUnderframe",
+          "Wheel",
+          "Windshield"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "KaohsiungLRT_Lead",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "train/kaohsiung-lrt/middle": [
+      {
+        "id": "kaohsiung-lrt-middle",
+        "file": "models/train/kaohsiung-lrt/middle/kaohsiung-lrt-middle.glb",
+        "bytes": 46316,
+        "tris": 2854,
+        "bounds": {
+          "min": [
+            -1.367,
+            0.005,
+            0
+          ],
+          "max": [
+            1.367,
+            4.91,
+            7.95
+          ]
+        },
+        "materials": [
+          "Bogie",
+          "BogieSpring",
+          "Glass",
+          "Insulator",
+          "KaohsiungLRT_body",
+          "KaohsiungLRT_door",
+          "KaohsiungLRT_frame",
+          "KaohsiungLRT_grip",
+          "KaohsiungLRT_in_ceil",
+          "KaohsiungLRT_in_floor",
+          "KaohsiungLRT_in_wall",
+          "KaohsiungLRT_roof",
+          "KaohsiungLRT_roof_eq",
+          "KaohsiungLRT_seat",
+          "KaohsiungLRT_stripe",
+          "KaohsiungLRT_stripe2",
+          "Pantograph",
+          "Rubber",
+          "Steel",
+          "SteelDark",
+          "TailLight",
+          "TrainCeilingLight",
+          "TrainPole",
+          "TrainUnderframe",
+          "Wheel"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "KaohsiungLRT_Middle",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "train/danhai-lrt/lead": [
+      {
+        "id": "danhai-lrt-lead",
+        "file": "models/train/danhai-lrt/lead/danhai-lrt-lead.glb",
+        "bytes": 46380,
+        "tris": 2544,
+        "bounds": {
+          "min": [
+            -1.367,
+            0.005,
+            -0.06
+          ],
+          "max": [
+            1.367,
+            3.6,
+            11.15
+          ]
+        },
+        "materials": [
+          "Bogie",
+          "BogieSpring",
+          "DanhaiLRT_body",
+          "DanhaiLRT_door",
+          "DanhaiLRT_frame",
+          "DanhaiLRT_front",
+          "DanhaiLRT_front_c",
+          "DanhaiLRT_grip",
+          "DanhaiLRT_in_ceil",
+          "DanhaiLRT_in_floor",
+          "DanhaiLRT_in_wall",
+          "DanhaiLRT_roof",
+          "DanhaiLRT_roof_eq",
+          "DanhaiLRT_seat",
+          "DanhaiLRT_stripe",
+          "DanhaiLRT_stripe2",
+          "DestLED",
+          "Glass",
+          "HeadLight",
+          "Rubber",
+          "SteelDark",
+          "TailLight",
+          "TrainCeilingLight",
+          "TrainPole",
+          "TrainUnderframe",
+          "Wheel",
+          "Windshield"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "DanhaiLRT_Lead",
+        "source": "",
+        "provider": "procedural"
+      }
+    ],
+    "train/danhai-lrt/middle": [
+      {
+        "id": "danhai-lrt-middle",
+        "file": "models/train/danhai-lrt/middle/danhai-lrt-middle.glb",
+        "bytes": 45580,
+        "tris": 2734,
+        "bounds": {
+          "min": [
+            -1.367,
+            0.005,
+            0
+          ],
+          "max": [
+            1.367,
+            4.91,
+            7.75
+          ]
+        },
+        "materials": [
+          "Bogie",
+          "BogieSpring",
+          "DanhaiLRT_body",
+          "DanhaiLRT_door",
+          "DanhaiLRT_frame",
+          "DanhaiLRT_grip",
+          "DanhaiLRT_in_ceil",
+          "DanhaiLRT_in_floor",
+          "DanhaiLRT_in_wall",
+          "DanhaiLRT_roof",
+          "DanhaiLRT_roof_eq",
+          "DanhaiLRT_seat",
+          "DanhaiLRT_stripe",
+          "DanhaiLRT_stripe2",
+          "Glass",
+          "Insulator",
+          "Pantograph",
+          "Rubber",
+          "Steel",
+          "SteelDark",
+          "TailLight",
+          "TrainCeilingLight",
+          "TrainPole",
+          "TrainUnderframe",
+          "Wheel"
+        ],
+        "license": "CC0-1.0",
+        "author": "rail-assets(Blender 程序化建模)",
+        "title": "DanhaiLRT_Middle",
+        "source": "",
+        "provider": "procedural"
       }
     ]
   },
@@ -1533,6 +2856,406 @@
       "title": "Qwantani Night (Pure Sky)",
       "source": "https://polyhaven.com/a/qwantani_night_puresky",
       "provider": "polyhaven"
+    }
+  },
+  "trains": {
+    "taipei-hc": {
+      "name": "台北捷運高運量列車",
+      "short": "北捷高運量",
+      "system": "metro",
+      "cars": 6,
+      "gap": 0.6,
+      "tailCab": true,
+      "floor": 1.1,
+      "gauge": 1.435,
+      "collect": "third",
+      "lead": {
+        "slot": "train/taipei-hc/lead",
+        "length": 23.5
+      },
+      "middle": {
+        "slot": "train/taipei-hc/middle",
+        "length": 23.5
+      },
+      "spec": {
+        "vmax": 80,
+        "accel": 1,
+        "brake": 1.1,
+        "eb": 1.4,
+        "P": 4,
+        "B": 7,
+        "platform": 145,
+        "radius": 350
+      },
+      "lines": [
+        "metro"
+      ],
+      "desc": "不鏽鋼車體、藍白腰帶、每側 4 門、縱向座椅、第三軌供電"
+    },
+    "emu3000": {
+      "name": "新自強號 EMU3000",
+      "short": "新自強號",
+      "system": "tra",
+      "cars": 8,
+      "gap": 0.7,
+      "tailCab": true,
+      "floor": 1.15,
+      "gauge": 1.067,
+      "collect": "pan",
+      "lead": {
+        "slot": "train/emu3000/lead",
+        "length": 21.3
+      },
+      "middle": {
+        "slot": "train/emu3000/middle",
+        "length": 20
+      },
+      "spec": {
+        "vmax": 130,
+        "accel": 0.8,
+        "brake": 0.95,
+        "eb": 1.3,
+        "P": 5,
+        "B": 8,
+        "platform": 175,
+        "radius": 600
+      },
+      "lines": [
+        "rail"
+      ],
+      "desc": "白色車體、黑色窗帶、橘色腰帶、斜面流線車頭、2+2 座椅"
+    },
+    "pp": {
+      "name": "推拉式自強號(PP 自強)",
+      "short": "PP 自強號",
+      "system": "tra",
+      "cars": 10,
+      "gap": 0.7,
+      "tailCab": true,
+      "locoHauled": true,
+      "floor": 1.15,
+      "gauge": 1.067,
+      "collect": "pan",
+      "lead": {
+        "slot": "train/pp/lead",
+        "length": 17.6
+      },
+      "middle": {
+        "slot": "train/pp/middle",
+        "length": 20.4
+      },
+      "spec": {
+        "vmax": 130,
+        "accel": 0.65,
+        "brake": 0.9,
+        "eb": 1.25,
+        "P": 5,
+        "B": 8,
+        "platform": 200,
+        "radius": 600
+      },
+      "lines": [
+        "rail"
+      ],
+      "desc": "前後 E1000 橘紅流線動力車、白色客車與橘紅腰帶、客室兩端圓拱門、紅色座椅與白色頭枕套"
+    },
+    "emu800": {
+      "name": "區間車 EMU800",
+      "short": "區間車",
+      "system": "tra",
+      "cars": 8,
+      "gap": 0.7,
+      "tailCab": true,
+      "floor": 1.15,
+      "gauge": 1.067,
+      "collect": "pan",
+      "lead": {
+        "slot": "train/emu800/lead",
+        "length": 20.8
+      },
+      "middle": {
+        "slot": "train/emu800/middle",
+        "length": 20
+      },
+      "spec": {
+        "vmax": 110,
+        "accel": 0.9,
+        "brake": 1,
+        "eb": 1.3,
+        "P": 5,
+        "B": 8,
+        "platform": 170,
+        "radius": 500
+      },
+      "lines": [
+        "rail"
+      ],
+      "desc": "白色車體、藍黃腰帶、每側 3 門、縱向座椅"
+    },
+    "puyuma": {
+      "name": "普悠瑪號 TEMU2000",
+      "short": "普悠瑪",
+      "system": "tra",
+      "cars": 8,
+      "gap": 0.7,
+      "tailCab": true,
+      "floor": 1.15,
+      "gauge": 1.067,
+      "collect": "pan",
+      "lead": {
+        "slot": "train/puyuma/lead",
+        "length": 22.4
+      },
+      "middle": {
+        "slot": "train/puyuma/middle",
+        "length": 20
+      },
+      "spec": {
+        "vmax": 140,
+        "accel": 0.85,
+        "brake": 0.95,
+        "eb": 1.3,
+        "P": 5,
+        "B": 8,
+        "platform": 175,
+        "radius": 550
+      },
+      "lines": [
+        "rail"
+      ],
+      "desc": "白色車體、紅色腰帶與紅色長鼻車頭、傾斜式列車"
+    },
+    "chukuang": {
+      "name": "莒光號(E200 牽引)",
+      "short": "莒光號",
+      "system": "tra",
+      "cars": 9,
+      "gap": 0.7,
+      "tailCab": false,
+      "locoHauled": true,
+      "floor": 1.15,
+      "gauge": 1.067,
+      "collect": "pan",
+      "lead": {
+        "slot": "train/chukuang/lead",
+        "length": 16
+      },
+      "middle": {
+        "slot": "train/chukuang/middle",
+        "length": 20.4
+      },
+      "spec": {
+        "vmax": 110,
+        "accel": 0.45,
+        "brake": 0.85,
+        "eb": 1.2,
+        "P": 5,
+        "B": 8,
+        "platform": 185,
+        "radius": 500
+      },
+      "lines": [
+        "rail"
+      ],
+      "desc": "橘色 E200 電力機車(雙集電弓)+ 橘色客車與白色窗下帶"
+    },
+    "thsr-700t": {
+      "name": "台灣高鐵 700T",
+      "short": "高鐵 700T",
+      "system": "thsr",
+      "cars": 12,
+      "gap": 0.6,
+      "tailCab": true,
+      "floor": 1.25,
+      "gauge": 1.435,
+      "collect": "pan",
+      "lead": {
+        "slot": "train/thsr-700t/lead",
+        "length": 27
+      },
+      "middle": {
+        "slot": "train/thsr-700t/middle",
+        "length": 25
+      },
+      "spec": {
+        "vmax": 300,
+        "accel": 0.55,
+        "brake": 0.9,
+        "eb": 1.15,
+        "P": 5,
+        "B": 7,
+        "platform": 310,
+        "radius": 4000
+      },
+      "lines": [
+        "hsr"
+      ],
+      "desc": "白色車體、橘色與黑色腰帶、鴨嘴形長鼻、3+2 座椅"
+    },
+    "taichung-mrt": {
+      "name": "台中捷運綠線列車",
+      "short": "中捷綠線",
+      "system": "metro",
+      "cars": 2,
+      "gap": 0.6,
+      "tailCab": true,
+      "floor": 1.1,
+      "gauge": 1.435,
+      "collect": "third",
+      "lead": {
+        "slot": "train/taichung-mrt/lead",
+        "length": 22.6
+      },
+      "middle": {
+        "slot": "train/taichung-mrt/middle",
+        "length": 22
+      },
+      "spec": {
+        "vmax": 80,
+        "accel": 1,
+        "brake": 1.1,
+        "eb": 1.4,
+        "P": 4,
+        "B": 7,
+        "platform": 50,
+        "radius": 300
+      },
+      "lines": [
+        "metro"
+      ],
+      "desc": "白色車體、深綠與萊姆綠腰帶、綠色車頭裙板、每側 3 門"
+    },
+    "kaohsiung-mrt": {
+      "name": "高雄捷運列車",
+      "short": "高捷",
+      "system": "metro",
+      "cars": 3,
+      "gap": 0.6,
+      "tailCab": true,
+      "floor": 1.1,
+      "gauge": 1.435,
+      "collect": "third",
+      "lead": {
+        "slot": "train/kaohsiung-mrt/lead",
+        "length": 22.6
+      },
+      "middle": {
+        "slot": "train/kaohsiung-mrt/middle",
+        "length": 22.1
+      },
+      "spec": {
+        "vmax": 80,
+        "accel": 1,
+        "brake": 1.1,
+        "eb": 1.4,
+        "P": 4,
+        "B": 7,
+        "platform": 75,
+        "radius": 300
+      },
+      "lines": [
+        "metro"
+      ],
+      "desc": "銀色車體、橘紅紫腰帶、每側 4 門"
+    },
+    "circular-line": {
+      "name": "環狀線無人駕駛列車",
+      "short": "環狀線",
+      "system": "metro",
+      "cars": 4,
+      "gap": 0.6,
+      "tailCab": true,
+      "floor": 1.05,
+      "gauge": 1.435,
+      "collect": "third",
+      "lead": {
+        "slot": "train/circular-line/lead",
+        "length": 21.5
+      },
+      "middle": {
+        "slot": "train/circular-line/middle",
+        "length": 21
+      },
+      "spec": {
+        "vmax": 80,
+        "accel": 1,
+        "brake": 1.1,
+        "eb": 1.4,
+        "P": 4,
+        "B": 7,
+        "platform": 90,
+        "radius": 300
+      },
+      "lines": [
+        "metro"
+      ],
+      "desc": "白色車體、黃色腰帶與黃色車頭、大片前窗(無人駕駛)"
+    },
+    "kaohsiung-lrt": {
+      "name": "高雄環狀輕軌列車",
+      "short": "高雄輕軌",
+      "system": "lrt",
+      "cars": 5,
+      "gap": 0.35,
+      "tailCab": true,
+      "floor": 0.35,
+      "gauge": 1.435,
+      "collect": "pan",
+      "lead": {
+        "slot": "train/kaohsiung-lrt/lead",
+        "length": 10.6
+      },
+      "middle": {
+        "slot": "train/kaohsiung-lrt/middle",
+        "length": 7.6
+      },
+      "spec": {
+        "vmax": 50,
+        "accel": 1.1,
+        "brake": 1.2,
+        "eb": 2.2,
+        "P": 4,
+        "B": 7,
+        "platform": 40,
+        "radius": 120
+      },
+      "lines": [
+        "lrt"
+      ],
+      "desc": "白色車體、藍綠色帶、100% 低地板、模組連接"
+    },
+    "danhai-lrt": {
+      "name": "淡海輕軌列車",
+      "short": "淡海輕軌",
+      "system": "lrt",
+      "cars": 5,
+      "gap": 0.35,
+      "tailCab": true,
+      "floor": 0.35,
+      "gauge": 1.435,
+      "collect": "pan",
+      "lead": {
+        "slot": "train/danhai-lrt/lead",
+        "length": 10.8
+      },
+      "middle": {
+        "slot": "train/danhai-lrt/middle",
+        "length": 7.4
+      },
+      "spec": {
+        "vmax": 70,
+        "accel": 1.1,
+        "brake": 1.2,
+        "eb": 2.2,
+        "P": 4,
+        "B": 7,
+        "platform": 40,
+        "radius": 120
+      },
+      "lines": [
+        "lrt"
+      ],
+      "desc": "白色車體、海洋藍與夕陽橘色帶、藍色車門、低地板"
     }
   }
 }

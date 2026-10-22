@@ -554,6 +554,31 @@
    "file": "name_en_303810e8.mp3",
    "text": "Shoufeng",
    "voice": "en-US-GuyNeural"
+  },
+  "name_zh_9cdfcc71": {
+   "file": "name_zh_9cdfcc71.mp3",
+   "text": "高鐵新竹",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_f7b23fd7": {
+   "file": "name_en_f7b23fd7.mp3",
+   "text": "Hsinchu",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_aa8f17cc": {
+   "file": "name_zh_aa8f17cc.mp3",
+   "text": "高鐵苗栗",
+   "voice": "zh-TW-YunJheNeural"
+  },
+  "name_en_b5f2d304": {
+   "file": "name_en_b5f2d304.mp3",
+   "text": "Miaoli",
+   "voice": "en-US-GuyNeural"
+  },
+  "name_zh_9d225c6d": {
+   "file": "name_zh_9d225c6d.mp3",
+   "text": "高鐵台中",
+   "voice": "zh-TW-YunJheNeural"
   }
  }
 }

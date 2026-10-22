@@ -913,17 +913,10 @@
   const animLib = loadMapLib('anims');
   const CHAR_H = 1.12;            // 遊戲中的身高(格;Q 版 2 頭身)
   const CHAR_SRC_H = 1.52;        // 原始模型身高(公尺;tools/assets/15_build_chibi.py)
-  const CHAR_VARIANTS = ['char_female_a', 'char_male_b', 'char_female_b', 'char_male_a'];
-  const charVariant = new WeakMap();
-  let charSeq = 0;
   const charClock = new THREE.Clock();
   let charDt = 0;
   const deadAt = new WeakMap();
-  function variantFor(f) {
-    if (f === player) return 'char_male_a';
-    if (!charVariant.has(f)) charVariant.set(f, CHAR_VARIANTS[charSeq++ % CHAR_VARIANTS.length]);
-    return charVariant.get(f);
-  }
+  function variantFor(f) { return 'char_' + (f.char || 'aman'); } // 每位角色一個模型(17_build_roster.py)
   function charColors(f) {
     return {
       bottom: f.team === 'red' ? 0x8a2f2f : 0x2a3b6b,
@@ -1002,7 +995,6 @@
       o.frustumCulled = false; // 骨架動畫會改變包圍盒
       const n = o.material.name || '';
       if (n.startsWith('outfit_team')) { o.material = o.material.clone(); o.material.color.set(bottom); }
-      if (n.startsWith('outfit_accent')) { o.material = o.material.clone(); o.material.color.set(accent); }
     });
     g.add(model);
     const mixer = new THREE.AnimationMixer(model);

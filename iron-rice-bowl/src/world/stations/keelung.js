@@ -7,7 +7,7 @@
 // 關卡變化:'maze' 轉運站與月台以圍欄隔出迂迴動線;'obstacle' 行李、貨物推車、排隊人潮。
 // 座標:x 沿軌道(+x 北,往港口)、z 橫向;街道 y = 0,月台層 y = -6。
 import * as THREE from 'three';
-import { Builder, T, baseMats, textTex, sign, crowd, escalator, shopfront, wallBox, trainSet, platformEdge, hills, FONT } from './common.js';
+import { Builder, T, baseMats, textTex, sign, crowd, escalator, shopfront, wallBox, trainSet, railTrain, platformEdge, hills, FONT } from './common.js';
 import { canvasTexture, rng } from '../../core/textures.js';
 import { barrier } from './taipei.js';
 
@@ -145,8 +145,8 @@ export function buildKeelung({ assets, variant = 'normal', quality = {} }) {
     for (let x = -96; x <= 16; x += 22) { b.box(M.steelPaint, 3, 0.45, 0.5, x, B1, zc); b.solid('B1', x - 1.5, zc - 0.3, x + 1.5, zc + 0.3, 0.45); }
   });
   // 列車:1、4 股道各一列(區間車藍帶 / 自強號橙帶)
-  trainSet(b, M, PX1 - 3, 8, B1 - 1.0, TRK[0], { stripe: '#2a6bd1', dir: -1 });
-  trainSet(b, M, PX1 - 3, 6, B1 - 1.0, TRK[3], { stripe: '#e8730c', dir: -1 });
+  if (!railTrain(b, assets.rail, 'emu800', PX1 - 3, 8, B1 - 0.94, TRK[0], -1)) trainSet(b, M, PX1 - 3, 8, B1 - 1.0, TRK[0], { stripe: '#2a6bd1', dir: -1 });
+  if (!railTrain(b, assets.rail, 'emu3000', PX1 - 3, 6, B1 - 0.94, TRK[3], -1)) trainSet(b, M, PX1 - 3, 6, B1 - 1.0, TRK[3], { stripe: '#e8730c', dir: -1 });
 
   // ================================================================ 北站:地下大廳 + 地面玻璃量體(雞籠格子)
   const [L0, LZ0, L1, LZ1] = LOB;

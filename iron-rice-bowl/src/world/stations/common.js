@@ -404,6 +404,32 @@ export function maskFloor(b, mat, x0, z0, x1, z1, y, test, uvScale = 1.2) {
   for (const [a, c, d, e] of maskToBoxes(mask, nx, nz, 1, x0, z0)) b.floor(mat, a, c, d, e, y, uvScale);
 }
 
+/**
+ * 真實列車模型(rail-assets 列車目錄):沿 x 停放,x0 = 車頭前端,dir = 1 車身往 +x 延伸(車頭朝 -x)。
+ * railTop = 軌面高度;沒有模型庫時退回簡易方塊列車。回傳 true 表示使用了模型。
+ */
+export function railTrain(b, rail, id, x0, cars, railTop, z, dir = 1) {
+  const T = rail?.trains?.[id];
+  if (!T || !rail.has(T.lead.slot)) return false;
+  const g = new THREE.Group();
+  let off = 0;
+  for (let k = 0; k < cars; k++) {
+    const isTail = k === cars - 1 && cars > 1;
+    const lead = k === 0 || (isTail && T.tailCab !== false);
+    const part = lead ? T.lead : T.middle;
+    const car = rail.instance(part.slot);
+    if (!car) return false;
+    car.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    const front = x0 + dir * off;
+    if (isTail && lead) { car.position.set(front + dir * part.length, railTop, z); car.rotation.y = -dir * Math.PI / 2; }
+    else { car.position.set(front, railTop, z); car.rotation.y = dir * Math.PI / 2; }
+    g.add(car);
+    off += part.length + (T.gap ?? 0.6);
+  }
+  b.extra.push(g);
+  return true;
+}
+
 /** 鈦鐵列車(EMU 白色車體 + 黑窗帶 + 色帶、車門、車頂設備;端車有斜面車頭)沿 x 停放 */
 export function trainSet(b, M, x0, cars, y, z, { stripe = '#e8730c', len = 20, dir = 1 } = {}) {
   const body = M._trainWhite ??= new THREE.MeshStandardMaterial({ color: '#eef0f0', roughness: 0.32, metalness: 0.45 });

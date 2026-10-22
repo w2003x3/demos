@@ -1,4 +1,4 @@
-// 由 rail-assets/tools/sync.mjs 複製(2026-10-21),請勿在此修改,改 rail-assets/adapters/three/rail-assets.js
+// 由 rail-assets/tools/sync.mjs 複製(2026-10-22),請勿在此修改,改 rail-assets/adapters/three/rail-assets.js
 /**
  * rail-assets.js — three.js 載入器(由 rail-assets/tools/sync.mjs 複製到各專案,請勿在專案內修改)
  *
@@ -188,6 +188,9 @@ export class RailAssets {
     }
 
     /** 授權標示(CC-BY 必須顯示) */
+    /** 列車目錄(catalog/trains.json):{ id: { name, cars, gap, lead:{slot,length}, middle:{slot,length}, spec, … } } */
+    get trains() { return this.manifest?.trains || {}; }
+
     credits() {
         const out = [];
         const add = (kind, v) => out.push({ kind, id: v.id, title: v.title, author: v.author, license: v.license, source: v.source });

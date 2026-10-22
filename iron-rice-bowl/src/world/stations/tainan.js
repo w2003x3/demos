@@ -9,7 +9,7 @@
 //   B2 — 月台層:2 座島式月台、4 股道(1A、1B、2A、2B)。
 // 座標:x 沿軌道(+x 北)、z 橫向(+z 東);地面 y = 0,B1 y = -7,B2 y = -14。
 import * as THREE from 'three';
-import { Builder, T, baseMats, textTex, sign, crowd, escalator, shopfront, wallBox, facadeGeo, maskFloor, trainSet, platformEdge, FONT } from './common.js';
+import { Builder, T, baseMats, textTex, sign, crowd, escalator, shopfront, wallBox, facadeGeo, maskFloor, trainSet, railTrain, platformEdge, FONT } from './common.js';
 import { canvasTexture, rng } from '../../core/textures.js';
 import { barrier } from './taipei.js';
 
@@ -222,8 +222,8 @@ export function buildTainan({ assets, variant = 'normal', quality = {} }) {
     for (const x of [-50, 0, 50]) sign(b, textTex(`${i + 1}A   ←→   ${i + 1}B`, { sub: '往 高雄 · 往 嘉義 / 新營', bg: '#141820', fg: '#ffd23a', h: 100, w: 600 }), 3.2, 0.55, x, B2 + 3.1, (z0 + z1) / 2, Math.PI / 2);
   });
   // 列車:1B 股道(區間車,白車體藍帶)、2B 股道(自強號 EMU3000,橙帶)
-  trainSet(b, M, -60, 4, B2 - 1.0, 6.6, { stripe: '#2a6bd1' });
-  trainSet(b, M, -80, 6, B2 - 1.0, 24.6, { stripe: '#e8730c' });
+  if (!railTrain(b, assets.rail, 'emu800', -60, 4, B2 - 0.94, 6.6, 1)) trainSet(b, M, -60, 4, B2 - 1.0, 6.6, { stripe: '#2a6bd1' });
+  if (!railTrain(b, assets.rail, 'pp', -82, 8, B2 - 0.94, 24.6, 1)) trainSet(b, M, -80, 6, B2 - 1.0, 24.6, { stripe: '#e8730c' });
   // 月台上的候車椅
   for (const [z0, z1] of ISL) for (let x = -70; x <= 70; x += 20) if (Math.abs(x - 45) > 12) {
     b.box(M.steelPaint, 3, 0.45, 0.5, x, B2, (z0 + z1) / 2); b.solid('B2', x - 1.5, (z0 + z1) / 2 - 0.3, x + 1.5, (z0 + z1) / 2 + 0.3, 0.45);

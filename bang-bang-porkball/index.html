@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261023d" />
+  <link rel="stylesheet" href="css/style.css?v=20261023f" />
 </head>
 <body>
 <div id="app">
@@ -59,6 +59,7 @@
       <div id="stat-weather" class="card weather-card"></div>
       <h3 class="ribbon">玩家狀態</h3>
       <div class="card">
+        <div id="stat-char" class="char-head"></div>
         <div id="stat-hp" class="stat"></div>
         <div id="stat-mp" class="stat"></div>
         <div id="stat-power" class="stat"></div>
@@ -92,6 +93,7 @@
       <h3 class="ribbon right">動作</h3>
       <div class="actions">
         <button type="button" class="act primary" data-key=" "><img class="act-img" src="assets/meatballs/mb_1.webp" alt=""><span>放貢丸</span><kbd>空白</kbd></button>
+        <button type="button" class="act skill" data-key="t"><span id="skill-btn" class="skill-in"></span><kbd>T</kbd></button>
         <button type="button" class="act" data-key="e">👟<span>踢/騎</span><kbd>E</kbd></button>
         <button type="button" class="act" data-key="g">🛡️<span>防護盾</span><kbd>G</kbd></button>
         <button type="button" class="act" data-key="z"><img class="act-img" src="assets/items/tongs.webp" alt=""><span>食物夾</span><kbd>Z</kbd></button>
@@ -124,6 +126,10 @@
       <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z" fill="currentColor"/></svg>
       開始對戰
     </button>
+    <div class="char-pick-wrap">
+      <div id="char-pick" class="char-pick" role="group" aria-label="選擇角色"></div>
+      <div id="char-info" class="char-info"></div>
+    </div>
     <div class="map-pick" role="group" aria-label="選擇地圖">
       <button type="button" class="mapbtn active" data-map="park">公園</button>
       <button type="button" class="mapbtn" data-map="market">菜市場</button>
@@ -141,11 +147,8 @@
     <div class="sunburst"></div>
     <div class="sun-inner"></div>
     <div class="hero-floor"></div>
-    <div class="hero-chars">
-      <svg class="hc-side" viewBox="0 0 120 165"><rect x="40" y="118" width="16" height="32" rx="7" fill="#f2c9a0" stroke="#262626" stroke-width="4"/><rect x="64" y="118" width="16" height="32" rx="7" fill="#f2c9a0" stroke="#262626" stroke-width="4"/><path d="M34 146 h24 a6 6 0 0 1 0 12 h-24 a6 6 0 0 1 0 -12z M62 146 h24 a6 6 0 0 1 0 12 h-24 a6 6 0 0 1 0 -12z" fill="#262626"/><path d="M32 100 h56 v24 h-56 z" fill="#3a8ee6" stroke="#262626" stroke-width="4"/><path d="M28 78 q32 -8 64 0 l-4 26 h-56 z" fill="#fff" stroke="#262626" stroke-width="4" stroke-linejoin="round"/><path d="M28 82 L18 104 M92 82 L102 104" stroke="#262626" stroke-width="12" stroke-linecap="round"/><path d="M28 82 L18 104 M92 82 L102 104" stroke="#f2c9a0" stroke-width="5" stroke-linecap="round"/><path d="M96 40 q18 6 12 34 q-8 -6 -14 -12 z" fill="#4a3426" stroke="#262626" stroke-width="4" stroke-linejoin="round"/><circle cx="60" cy="44" r="38" fill="#f2c9a0" stroke="#262626" stroke-width="4"/><path d="M22 40 a38 38 0 0 1 76 0 z" fill="#3a8ee6" stroke="#262626" stroke-width="4" stroke-linejoin="round"/><path d="M60 30 h-44 a5 5 0 0 0 0 10 h44 z" fill="#3a8ee6" stroke="#262626" stroke-width="4"/><ellipse cx="46" cy="52" rx="5" ry="6.5" fill="#262626"/><ellipse cx="74" cy="52" rx="5" ry="6.5" fill="#262626"/><ellipse cx="38" cy="62" rx="6" ry="3.5" fill="#f08a80" opacity=".6"/><ellipse cx="82" cy="62" rx="6" ry="3.5" fill="#f08a80" opacity=".6"/><path d="M54 65 q6 5 12 0" stroke="#262626" stroke-width="3.5" fill="none" stroke-linecap="round"/></svg>
-      <svg class="hc-main" viewBox="0 0 120 165"><rect x="40" y="118" width="16" height="32" rx="7" fill="#f2c9a0" stroke="#262626" stroke-width="4"/><rect x="64" y="118" width="16" height="32" rx="7" fill="#f2c9a0" stroke="#262626" stroke-width="4"/><path d="M34 146 h24 a6 6 0 0 1 0 12 h-24 a6 6 0 0 1 0 -12z M62 146 h24 a6 6 0 0 1 0 12 h-24 a6 6 0 0 1 0 -12z" fill="#262626"/><path d="M32 100 h56 v24 h-56 z" fill="#3a8ee6" stroke="#262626" stroke-width="4"/><path d="M28 78 q32 -8 64 0 l-4 26 h-56 z" fill="#fff" stroke="#262626" stroke-width="4" stroke-linejoin="round"/><path d="M28 82 L14 102 M92 82 L106 62" stroke="#262626" stroke-width="12" stroke-linecap="round"/><path d="M28 82 L14 102 M92 82 L106 62" stroke="#f2c9a0" stroke-width="5" stroke-linecap="round"/><circle cx="60" cy="44" r="38" fill="#f2c9a0" stroke="#262626" stroke-width="4"/><path d="M22 40 a38 38 0 0 1 76 0 z" fill="#f7c51e" stroke="#262626" stroke-width="4" stroke-linejoin="round"/><path d="M60 30 h44 a5 5 0 0 1 0 10 h-44 z" fill="#f7c51e" stroke="#262626" stroke-width="4"/><circle cx="60" cy="14" r="5" fill="#262626"/><ellipse cx="46" cy="52" rx="5" ry="6.5" fill="#262626"/><ellipse cx="74" cy="52" rx="5" ry="6.5" fill="#262626"/><circle cx="47.5" cy="50" r="1.8" fill="#fff"/><circle cx="75.5" cy="50" r="1.8" fill="#fff"/><ellipse cx="38" cy="62" rx="6" ry="3.5" fill="#f08a80" opacity=".6"/><ellipse cx="82" cy="62" rx="6" ry="3.5" fill="#f08a80" opacity=".6"/><path d="M52 64 q8 8 16 0" stroke="#262626" stroke-width="3.5" fill="#fff" stroke-linecap="round" stroke-linejoin="round"/></svg>
-      <svg class="hc-side" viewBox="0 0 120 165"><rect x="40" y="118" width="16" height="32" rx="7" fill="#f2c9a0" stroke="#262626" stroke-width="4"/><rect x="64" y="118" width="16" height="32" rx="7" fill="#f2c9a0" stroke="#262626" stroke-width="4"/><path d="M34 146 h24 a6 6 0 0 1 0 12 h-24 a6 6 0 0 1 0 -12z M62 146 h24 a6 6 0 0 1 0 12 h-24 a6 6 0 0 1 0 -12z" fill="#262626"/><path d="M32 100 h56 v24 h-56 z" fill="#d9483b" stroke="#262626" stroke-width="4"/><path d="M28 78 q32 -8 64 0 l-4 26 h-56 z" fill="#fff" stroke="#262626" stroke-width="4" stroke-linejoin="round"/><path d="M28 82 L22 106 M92 82 L104 98" stroke="#262626" stroke-width="12" stroke-linecap="round"/><path d="M28 82 L22 106 M92 82 L104 98" stroke="#f2c9a0" stroke-width="5" stroke-linecap="round"/><circle cx="60" cy="44" r="38" fill="#f2c9a0" stroke="#262626" stroke-width="4"/><path d="M22 40 a38 38 0 0 1 76 0 z" fill="#d9483b" stroke="#262626" stroke-width="4" stroke-linejoin="round"/><path d="M60 30 h-44 a5 5 0 0 0 0 10 h44 z" fill="#d9483b" stroke="#262626" stroke-width="4"/><path d="M38 44 l14 5 M82 44 l-14 5" stroke="#262626" stroke-width="4.5" stroke-linecap="round"/><ellipse cx="46" cy="55" rx="4.5" ry="5.5" fill="#262626"/><ellipse cx="74" cy="55" rx="4.5" ry="5.5" fill="#262626"/><path d="M50 66 q10 6 20 -2" stroke="#262626" stroke-width="3.5" fill="none" stroke-linecap="round"/></svg>
-    </div>
+    <div class="hero-chars"><img id="hero-char" class="hc-img" src="assets/portraits/aman.webp" alt=""></div>
+    <div id="hero-card" class="hero-card"></div>
     <svg class="hero-ball" viewBox="0 0 96 110"><path d="M50 30 L58 4" stroke="#8d6e63" stroke-width="6" stroke-linecap="round"/><circle cx="59" cy="4" r="5" fill="#e2552e"/><circle cx="48" cy="66" r="40" fill="#b07a45" stroke="#262626" stroke-width="5"/><ellipse cx="34" cy="50" rx="11" ry="8" fill="#d8a978"/><circle cx="62" cy="78" r="4" fill="#8a5a30"/></svg>
     <svg class="hero-sausage" viewBox="0 0 54 130"><rect x="10" y="10" width="34" height="104" rx="17" fill="#c2412a" stroke="#262626" stroke-width="5"/><path d="M14 36 l26 -10 M14 60 l26 -10 M14 84 l26 -10" stroke="#7a2414" stroke-width="4" stroke-linecap="round"/><path d="M27 114 V128" stroke="#8d6e63" stroke-width="5" stroke-linecap="round"/></svg>
     <svg class="hero-boba" viewBox="0 0 64 120"><path d="M42 4 L36 40" stroke="#e2552e" stroke-width="5" stroke-linecap="round"/><path d="M8 30 h48 l-6 86 h-36 z" fill="#f5e6c8" stroke="#262626" stroke-width="5" stroke-linejoin="round"/><path d="M10 56 h44 l-4 58 h-36 z" fill="#c9905a"/><circle cx="22" cy="104" r="5" fill="#262626"/><circle cx="34" cy="108" r="5" fill="#262626"/><circle cx="42" cy="98" r="5" fill="#262626"/><rect x="6" y="26" width="52" height="8" fill="#262626"/></svg>
@@ -201,6 +204,7 @@
       <li><kbd>↑↓←→</kbd> / <kbd>WASD</kbd> 移動(一步一格)</li>
       <li><kbd>空白鍵</kbd> 放置貢丸・<kbd>1</kbd>~<kbd>9</kbd> 切換貢丸(夜市 <kbd>O</kbd> 香腸、<kbd>P</kbd> 米腸)</li>
       <li><kbd>E</kbd>/<kbd>J</kbd> 踢前方貢丸(只有豪雨時)・<kbd>G</kbd> 防護盾(耗 MP,維持 3 秒,擋一次爆炸)</li>
+      <li><kbd>T</kbd> 角色技能(每位角色不同,用完要冷卻)</li>
       <li><kbd>Q</kbd> 吸塵器・<kbd>F</kbd> 垃圾車(清前方貢丸)</li>
       <li><kbd>Z</kbd> 食物夾(夾起/放下)・<kbd>X</kbd> 隔熱手套(丟)・<kbd>C</kbd> 彈弓・<kbd>V</kbd> 藍白拖</li>
       <li><kbd>K</kbd> 放出/收起 老鼠・<kbd>L</kbd> 蟑螂・<kbd>R</kbd> 重新開始</li>
@@ -214,13 +218,13 @@
   </div>
 </div>
 
-<script src="js/config.js?v=20261023d"></script>
-<script src="js/audio.js?v=20261023d"></script>
-<script src="js/net.js?v=20261023d"></script>
-<script src="js/game.js?v=20261023d"></script>
-<script src="js/controls.js?v=20261023d"></script>
-<script src="js/guide.js?v=20261023d"></script>
-<script src="js/tutorial.js?v=20261023d"></script>
-<script src="js/view.js?v=20261023d"></script>
+<script src="js/config.js?v=20261023f"></script>
+<script src="js/audio.js?v=20261023f"></script>
+<script src="js/net.js?v=20261023f"></script>
+<script src="js/game.js?v=20261023f"></script>
+<script src="js/controls.js?v=20261023f"></script>
+<script src="js/guide.js?v=20261023f"></script>
+<script src="js/tutorial.js?v=20261023f"></script>
+<script src="js/view.js?v=20261023f"></script>
 </body>
 </html>

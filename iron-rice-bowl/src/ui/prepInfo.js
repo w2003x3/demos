@@ -10,6 +10,7 @@ import { CHASE_WEAPONS } from '../config/chase.js';
 import { CHASE_LINES } from '../config/voice.js';
 import { STATION_MISSIONS } from '../config/missions.js';
 import { loadNetwork, findLine, lineStations, haversine } from '../core/network.js';
+import { loadTrains } from '../drive/trains.js';
 import { RANKS } from '../config/careerLadder.js';
 
 const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
@@ -90,6 +91,7 @@ const BUILDERS = {
   // 司機員
   async driver(cfg) {
     const L = DRIVER_LEVELS.find((l) => l.id === cfg.level) || DRIVER_LEVELS[0];
+    const T = (await loadTrains())[L.train || 'emu3000'];
     let strip = '';
     try {
       const net = await loadNetwork();
@@ -104,7 +106,7 @@ const BUILDERS = {
       sections: [
         { title: `${L.line}:${L.from} → ${L.to}`, html: strip, wide: true },
         { title: '行車條件', html: kv([['時段', TIME_NAME[L.time]], ['停車容許誤差', `±${L.tol} m`], ['ATP 列車自動防護', L.atp ? '投入(超速自動制動)' : '<b class="bad">切除:彎道過速會出軌</b>'], ['駕駛輔助', L.assist ? '建議制動檔位、限速預告' : '<b class="bad">無</b>']]) },
-        { title: '新自強號 EMU3000', html: `<div class="pv-train"><i></i><i></i><i></i><i></i><i></i><i></i></div>${kv([['最高速度', '130 km/h'], ['主控制器', 'P1~P5 牽引・N 惰行・B1~B8 制動・EB 緊急'], ['常用最大減速度', '0.95 m/s²(約 3.4 km/h/s)']])}` },
+        { title: T ? T.name : '列車', html: `<div class="pv-train"><i></i><i></i><i></i><i></i><i></i><i></i></div>${T ? kv([['編組', `${T.cars} 節`], ['最高速度', `${T.spec.vmax} km/h`], ['主控制器', `P1~P${T.spec.P} 牽引・N 惰行・B1~B${T.spec.B} 制動・EB 緊急`], ['常用最大減速度', `${T.spec.brake} m/s²(約 ${(T.spec.brake * 3.6).toFixed(1)} km/h/s)`], ['外觀', esc(T.desc)]]) : ''}` },
       ],
       tips: [
         ['提早下制動', '制動力要約 0.45 秒才完全建立。進站時先用 B3~B4 大幅減速,剩 50 m 再慢慢放鬆。'],

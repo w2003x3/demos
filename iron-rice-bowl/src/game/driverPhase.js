@@ -11,7 +11,7 @@ import { stationLevel, getPortal, LEVEL_HEIGHT } from '../drive/levels.js';
 import { TRAIN_SPECS, createTrain, stepTrain, notchLabel, suggestNotch, gradeStop, atoNotch } from '../drive/physics.js';
 import { Announcer, scriptDeparture, scriptArrival, scriptDoorsClosing } from '../drive/announcer.js';
 import { PHRASES } from '../drive/phrases.js';
-import { emu3000Car } from '../drive/emu3000.js';
+import { loadTrains, composeSpec } from '../drive/trains.js';
 import { DRIVER_LEVELS } from '../config/driver.js';
 import { uniformTint } from '../world/poses.js';
 
@@ -47,7 +47,9 @@ export class DriverPhase {
     const leg = planLeg(net, line, L.from, L.to);
     if (!leg) throw new Error(`找不到路段 ${L.from} → ${L.to}`);
     this.line = { ...line, code: line.code || 'TZR', color: '#1f4e9a' };
-    const spec = this.spec = TRAIN_SPECS.emu3000;
+    // 列車:關卡指定的車種(rail-assets 列車目錄);性能、車長、編組依車種
+    this.trainDef = (await loadTrains())[L.train || 'emu3000'] || null;
+    const spec = this.spec = this.trainDef ? composeSpec(this.trainDef.system === 'thsr' ? 'hsr' : 'rail', this.trainDef) : TRAIN_SPECS.emu3000;
     const side = this.side = 'right';
     let route = buildDriveRoute(leg.pathLL, leg.stops, { radius: spec.radius, vmax: spec.vmax, lead: spec.platform + 80, straight: spec.platform / 2 + 40 });
     const scale = Math.min(L.scale ?? 1, suggestScale(route) < 1 ? Math.max(0.3, suggestScale(route)) : 1);
@@ -57,7 +59,7 @@ export class DriverPhase {
       route.stations.slice(0, -1).map((rs, k) => getPortal(line, rs.id, route.stations[k + 1].id)));
     const env = levels.every((l) => l === levels[0]) ? levels[0] : 'mixed';
     this.route = route;
-    this.trainLen = spec.cars * spec.carLen;
+    this.trainLen = spec.length || spec.cars * spec.carLen;
 
     // 畫面:獨立的 3D 畫布 + 駕駛 HUD(放在遊戲介面層之下)
     const el = this.el = document.createElement('div');
@@ -100,8 +102,8 @@ export class DriverPhase {
     const termName = stations[n - 1].name;
     const world = this.world = new DriveWorld(el.querySelector('[data-canvas]'), {
       route, env, time: L.time, quality: g.quality.shadows ? 'high' : g.qualityKey === 'low' ? 'low' : 'medium', stations, spec, assets, platformSide: side,
-      overhead: true, limitSigns, destText: `往 ${termName}`, noPsd: true,
-      carFactory: (head) => emu3000Car(head), makeDriver: () => this._driverFigure(),
+      overhead: true, limitSigns, destText: `往 ${termName}`, noPsd: true, train: this.trainDef,
+      makeDriver: () => this._driverFigure(),
     });
     report(0.95);
     await world.ready;

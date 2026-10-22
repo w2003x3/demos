@@ -39,14 +39,41 @@
 | building/tower | tower-a | TowerA | rail-assets(Blender 程序化建模) | CC0-1.0 |  |
 | building/tower | tower-b | TowerB | rail-assets(Blender 程序化建模) | CC0-1.0 |  |
 | people/standing | female-adult-01 | Female Adult 01 | Microsoft Rocketbox | MIT | https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Female_Adult_01 |
+| people/standing | female-adult-03 | Female Adult 03 | Microsoft Rocketbox | MIT | https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Female_Adult_03 |
 | people/standing | female-adult-04 | Female Adult 04 | Microsoft Rocketbox | MIT | https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Female_Adult_04 |
 | people/standing | female-adult-06 | Female Adult 06 | Microsoft Rocketbox | MIT | https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Female_Adult_06 |
 | people/standing | female-adult-09 | Female Adult 09 | Microsoft Rocketbox | MIT | https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Female_Adult_09 |
+| people/standing | female-business-04 | Business Female 04 | Microsoft Rocketbox | MIT | https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Professions/Business_Female_04 |
 | people/standing | male-adult-01 | Male Adult 01 | Microsoft Rocketbox | MIT | https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Male_Adult_01 |
 | people/standing | male-adult-03 | Male Adult 03 | Microsoft Rocketbox | MIT | https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Male_Adult_03 |
 | people/standing | male-adult-05 | Male Adult 05 | Microsoft Rocketbox | MIT | https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Male_Adult_05 |
 | people/standing | male-adult-08 | Male Adult 08 | Microsoft Rocketbox | MIT | https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Male_Adult_08 |
+| people/standing | male-adult-09 | Male Adult 09 | Microsoft Rocketbox | MIT | https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Male_Adult_09 |
+| people/standing | male-adult-10 | Male Adult 10 | Microsoft Rocketbox | MIT | https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Adults/Male_Adult_10 |
+| people/standing | male-business-02 | Business Male 02 | Microsoft Rocketbox | MIT | https://github.com/microsoft/Microsoft-Rocketbox/tree/master/Assets/Avatars/Professions/Business_Male_02 |
 | platform/payphone | payphone | Korean Public Payphone 01 | UM JOORIN | CC0-1.0 | https://polyhaven.com/a/korean_public_payphone_01 |
+| train/emu3000/lead | emu3000-lead | EMU3000_Lead | rail-assets(Blender 程序化建模) | CC0-1.0 |  |
+| train/emu3000/middle | emu3000-middle | EMU3000_Middle | rail-assets(Blender 程序化建模) | CC0-1.0 |  |
+| train/pp/lead | pp-lead | PP_Lead | rail-assets(Blender 程序化建模) | CC0-1.0 |  |
+| train/pp/middle | pp-middle | PP_Middle | rail-assets(Blender 程序化建模) | CC0-1.0 |  |
+| train/emu800/lead | emu800-lead | EMU800_Lead | rail-assets(Blender 程序化建模) | CC0-1.0 |  |
+| train/emu800/middle | emu800-middle | EMU800_Middle | rail-assets(Blender 程序化建模) | CC0-1.0 |  |
+| train/puyuma/lead | puyuma-lead | Puyuma_Lead | rail-assets(Blender 程序化建模) | CC0-1.0 |  |
+| train/puyuma/middle | puyuma-middle | Puyuma_Middle | rail-assets(Blender 程序化建模) | CC0-1.0 |  |
+| train/chukuang/lead | chukuang-lead | ChuKuang_Lead | rail-assets(Blender 程序化建模) | CC0-1.0 |  |
+| train/chukuang/middle | chukuang-middle | ChuKuang_Middle | rail-assets(Blender 程序化建模) | CC0-1.0 |  |
+| train/thsr-700t/lead | thsr-700t-lead | THSR700T_Lead | rail-assets(Blender 程序化建模) | CC0-1.0 |  |
+| train/thsr-700t/middle | thsr-700t-middle | THSR700T_Middle | rail-assets(Blender 程序化建模) | CC0-1.0 |  |
+| train/taichung-mrt/lead | taichung-mrt-lead | TaichungMRT_Lead | rail-assets(Blender 程序化建模) | CC0-1.0 |  |
+| train/taichung-mrt/middle | taichung-mrt-middle | TaichungMRT_Middle | rail-assets(Blender 程序化建模) | CC0-1.0 |  |
+| train/kaohsiung-mrt/lead | kaohsiung-mrt-lead | KaohsiungMRT_Lead | rail-assets(Blender 程序化建模) | CC0-1.0 |  |
+| train/kaohsiung-mrt/middle | kaohsiung-mrt-middle | KaohsiungMRT_Middle | rail-assets(Blender 程序化建模) | CC0-1.0 |  |
+| train/circular-line/lead | circular-line-lead | CircularLine_Lead | rail-assets(Blender 程序化建模) | CC0-1.0 |  |
+| train/circular-line/middle | circular-line-middle | CircularLine_Middle | rail-assets(Blender 程序化建模) | CC0-1.0 |  |
+| train/kaohsiung-lrt/lead | kaohsiung-lrt-lead | KaohsiungLRT_Lead | rail-assets(Blender 程序化建模) | CC0-1.0 |  |
+| train/kaohsiung-lrt/middle | kaohsiung-lrt-middle | KaohsiungLRT_Middle | rail-assets(Blender 程序化建模) | CC0-1.0 |  |
+| train/danhai-lrt/lead | danhai-lrt-lead | DanhaiLRT_Lead | rail-assets(Blender 程序化建模) | CC0-1.0 |  |
+| train/danhai-lrt/middle | danhai-lrt-middle | DanhaiLRT_Middle | rail-assets(Blender 程序化建模) | CC0-1.0 |  |
 | texture | ballast | Rocks Ground 02 | Rob Tuytel | CC0-1.0 | https://polyhaven.com/a/rocks_ground_02 |
 | texture | concrete | Concrete Floor 02 | Rob Tuytel | CC0-1.0 | https://polyhaven.com/a/concrete_floor_02 |
 | texture | tunnel | Concrete Wall 003 | Dimitrios Savva, Rico Cilliers | CC0-1.0 | https://polyhaven.com/a/concrete_wall_003 |

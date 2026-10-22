@@ -19,6 +19,7 @@ import { stationLevel, getPortal, LEVEL_HEIGHT } from '../core/levels.js';
 import { TRAIN_SPECS, createTrain, stepTrain, notchLabel, suggestNotch, gradeStop, atoNotch } from './physics.js';
 import { Announcer, scriptDeparture, scriptArrival, scriptDoorsClosing } from './announcer.js';
 import { PHRASES } from './phrases.js';
+import { loadTrains, defaultTrain, composeSpec } from './trains.js';
 
 const VIEW_NAMES = { cab: '駕駛室視角', third: '第三人稱視角', chase: '車外追蹤視角', side: '車側視角', aerial: '空拍視角' };
 const ENVS = { auto: '依車站層級', underground: '全線地下', elevated: '全線高架', ground: '全線平面' };
@@ -47,12 +48,15 @@ export async function openDriveSetup(ctx) {
     const opt = (obj, v) => Object.entries(obj).map(([k, t]) => `<option value="${k}" ${String(k) === String(v) ? 'selected' : ''}>${t}</option>`).join('');
     const stationsOf = id => store.getLine(id).nodes.filter(n => n.type === 'station').map(n => store.getStation(n.id));
     const announcer = await new Announcer().init();
+    const trains = await loadTrains();
+    const trainOpts = (sel) => Object.entries(trains).map(([k, t]) => `<option value="${k}" ${k === sel ? 'selected' : ''}>${esc(t.name)}・${t.cars} 節</option>`).join('');
 
     const cfg = await openModal({
         title: '駕駛模式(3D)',
         size: 'mid',
         body: `<div class="modal-body drive-setup">
             <div class="field"><label>路線</label><select class="sel" id="dv-line">${lines.map(l => `<option value="${l.id}" ${l.id === lineId ? 'selected' : ''}>${esc((l.code ? l.code + ' ' : '') + l.name)}・${LINE_TYPES[l.type] || ''}</option>`).join('')}</select></div>
+            <div class="field"><label>列車</label><select class="sel" id="dv-train"></select></div>
             <div class="field-row">
                 <div class="field"><label>起站</label><select class="sel" id="dv-from"></select></div>
                 <div class="field"><label>訖站</label><select class="sel" id="dv-to"></select></div>
@@ -94,11 +98,12 @@ export async function openDriveSetup(ctx) {
                 $('#dv-to').innerHTML = o;
                 $('#dv-from').value = st[0].id;
                 $('#dv-to').value = line.loop ? st[0].id : st[st.length - 1].id;
+                $('#dv-train').innerHTML = trainOpts(defaultTrain(trains, line));
                 info();
             };
             const info = () => {
                 const line = store.getLine(lineId);
-                const spec = TRAIN_SPECS[line.type] || TRAIN_SPECS.metro;
+                const spec = composeSpec(line.type, trains[$('#dv-train').value]);
                 let leg = null;
                 try { leg = planLeg(ctx.view, lineId, $('#dv-from').value, $('#dv-to').value); } catch { /* */ }
                 const prevScale = $('#dv-scale').value;
@@ -114,16 +119,17 @@ export async function openDriveSetup(ctx) {
                 [0.5, 0.25, 0.1].forEach(k => { scales[k] = `縮為 ${k}×(${(len * k / 1000).toFixed(1)} km)`; });
                 $('#dv-scale').innerHTML = opt(scales, prevScale && scales[prevScale] ? prevScale : (sug < 1 ? (sug >= 0.5 ? 0.5 : sug >= 0.25 ? 0.25 : 0.1) : 1));
                 const avg = len / Math.max(1, leg.stops.length - 1);
-                $('#dv-info').innerHTML = `${spec.name}・${spec.cars} 節 ${spec.cars * spec.carLen} m・最高 ${spec.vmax} km/h・共 ${leg.stops.length} 站,平均站距 ${Math.round(avg)} m` +
+                $('#dv-info').innerHTML = `${spec.name}・${spec.cars} 節 ${Math.round(spec.length || spec.cars * spec.carLen)} m・最高 ${spec.vmax} km/h・共 ${leg.stops.length} 站,平均站距 ${Math.round(avg)} m` +
                     (sug < 1 ? `<br>站距較長,建議縮小距離比例(全程約 ${Math.round(len / (spec.vmax / 3.6 * 0.6) / 60)} 分鐘)。` : '');
             };
             $('#dv-line').onchange = (e) => { lineId = e.target.value; fill(); };
             $('#dv-from').onchange = info;
+            $('#dv-train').onchange = info;
             $('#dv-to').onchange = info;
             fill();
             const go = () => {
                 const c = {
-                    lineId, fromId: $('#dv-from').value, toId: $('#dv-to').value,
+                    lineId, fromId: $('#dv-from').value, toId: $('#dv-to').value, trainId: $('#dv-train').value,
                     env: $('#dv-env').value, time: $('#dv-time').value, side: $('#dv-side').value,
                     scale: parseFloat($('#dv-scale').value) || 1, tol: parseFloat($('#dv-tol').value) || 1, quality: $('#dv-quality').value,
                     english: $('#dv-en').checked, assist: $('#dv-assist').checked, atp: $('#dv-atp').checked
@@ -248,7 +254,8 @@ function limitCanvas(v) {
 async function startDrive(ctx, cfg, announcer) {
     if (session) return;
     const line = store.getLine(cfg.lineId);
-    const spec = TRAIN_SPECS[line.type] || TRAIN_SPECS.metro;
+    const trainDef = (await loadTrains())[cfg.trainId] || null;
+    const spec = composeSpec(line.type, trainDef);
     const side = cfg.side === 'auto' ? (line.type === 'metro' ? 'left' : 'right') : cfg.side;
     const leg = planLeg(ctx.view, cfg.lineId, cfg.fromId, cfg.toId);
     const route = buildDriveRoute(leg.pathLL, leg.stops, { radius: spec.radius, scale: cfg.scale, vmax: spec.vmax, lead: spec.platform + 80, tail: 400, straight: spec.platform / 2 + 40 });
@@ -259,7 +266,7 @@ async function startDrive(ctx, cfg, announcer) {
         levels.map(lv => ({ y: LEVEL_HEIGHT[lv], half: spec.platform / 2 })),
         route.stations.slice(0, -1).map((rs, k) => getPortal(line, rs.id, route.stations[k + 1].id)));
     const env = levels.every(l => l === levels[0]) ? levels[0] : 'mixed';
-    const trainLen = spec.cars * spec.carLen;
+    const trainLen = spec.length || spec.cars * spec.carLen;
 
     document.body.classList.add('drive-mode');
     const el = document.createElement('div');
@@ -327,7 +334,7 @@ async function startDrive(ctx, cfg, announcer) {
     const termName = stations[stations.length - 1].name;
     const world = new DriveWorld(el.querySelector('[data-canvas]'), {
         route, env, time: cfg.time, quality: cfg.quality || 'medium', stations, spec, assets, platformSide: side,
-        overhead: line.type !== 'metro', limitSigns, destText: `${line.code ? line.code + ' ' : ''}往 ${termName}`
+        overhead: trainDef ? trainDef.collect === 'pan' : line.type !== 'metro', noPsd: trainDef ? trainDef.system === 'tra' || trainDef.system === 'thsr' : false, train: trainDef, limitSigns, destText: `${line.code ? line.code + ' ' : ''}往 ${termName}`
     });
     setLoad(0.97, '載入天空與環境光');
     await world.ready;

@@ -7,7 +7,7 @@
 // 關卡變化:'maze' 2F 平台以施工圍籬與展示架隔出迂迴動線;'obstacle' 擺放行李箱、排隊人龍、清潔車。
 // 座標:x 沿軌道(東西向的長邊)、z 橫向;地面 y = 0,2F 地板 y = 8,3F 月台面 y = 16。
 import * as THREE from 'three';
-import { Builder, T, baseMats, textTex, sign, crowd, escalator, shopfront } from './common.js';
+import { Builder, T, baseMats, textTex, sign, crowd, escalator, shopfront, railTrain } from './common.js';
 import { rng } from '../../core/textures.js';
 import { barrier } from './taipei.js';
 
@@ -87,8 +87,9 @@ export function buildTaichung({ assets, variant = 'normal', quality = {} }) {
   const tracks = [-10.5, -4.5, -1.5, 4.5, 10.5];
   for (const [z0, z1] of [[-9, -6], [-0.3, 3.3], [12, DZ]]) b.box(M.tile, 2 * LX, 1.1, z1 - z0, 0, F3, (z0 + z1) / 2);   // 島式 ×2 + 側式
   for (const z of tracks) for (const s of [-0.53, 0.53]) b.box(M.steel, 2 * LX + 20, 0.16, 0.07, 0, F3, z + s);
-  // 列車(EMU 白色車體 + 黑窗帶):停在 4.5 股道
-  for (let k = 0; k < 6; k++) {
+  // 列車:4.5 股道新自強號、-10.5 股道莒光號(模型庫);沒有模型庫時用簡易車體
+  railTrain(b, assets.rail, 'chukuang', -60, 7, F3 + 0.16, -10.5, 1);
+  if (!railTrain(b, assets.rail, 'emu3000', -55, 6, F3 + 0.16, 4.5, 1)) for (let k = 0; k < 6; k++) {
     const x = -55 + k * 20.5;
     b.box(M.trainWhite, 20, 3.4, 2.9, x, F3 + 0.6, 4.5);
     b.box(M.trainBand, 20.02, 0.9, 2.92, x, F3 + 2.0, 4.5);
