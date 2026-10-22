@@ -236,7 +236,7 @@ function buildSnapshot() {
       x: Math.round(f.x), y: Math.round(f.y), d: [f.dir.x, f.dir.y], mv: f.mvTarget ? 1 : 0,
       hp: f.hp, mh: f.maxHp, mp: Math.round(f.mp), mm: f.maxMp, pw: f.power, sp: f.speed, mb: f.maxBombs,
       al: f.alive ? 1 : 0, iv: r1(f.invuln), bt: r1(f.blindT), pt: r1(f.poisonT),
-      bg: f.blastGuard, mg: f.moldGuard, im: r1(f.immunity), se: f.selected, ie: f.inkEaten, pk: f.porkNext ? 1 : 0,
+      sh: r1(f.shieldT || 0), im: r1(f.immunity), se: f.selected, ie: f.inkEaten, pk: f.porkNext ? 1 : 0,
       to: f.isHuman ? f.tools : undefined,
       ps: f.isHuman ? { rat: f.petState.rat.status, roach: f.petState.roach.status } : undefined,
       hd: f.held ? nid(f.held) : 0, dt: f.deathT !== undefined ? r1(f.deathT) : undefined,
@@ -245,8 +245,7 @@ function buildSnapshot() {
       i: nid(m), x: Math.round(m.x), y: Math.round(m.y), d: m.def.id, o: nid(m.owner), pw: m.power,
       fu: r1(m.fuse), mo: m.moldy ? 1 : 0, hp: Math.round(m.hp), mv: m.moving ? 1 : 0, h: m.held ? 1 : 0, ar: m.armed ? 1 : 0, jp: m.jump ? r1(m.jump) : 0,
     })),
-    it: items.filter((it) => !it.dead).map((it) => ({ i: nid(it), x: Math.round(it.x), y: Math.round(it.y), k: it.key,
-      a: r1(it.age), fr: it.fresh === Infinity ? -1 : r1(it.fresh) })),
+    it: items.filter((it) => !it.dead).map((it) => ({ i: nid(it), x: Math.round(it.x), y: Math.round(it.y), k: it.key })),
     ex: explosions.map((ex) => ({ i: nid(ex), c: ex.cells.map((cl) => cl.c * 100 + cl.r), t: r1(ex.t), co: ex.color, p: ex.poison ? 1 : 0, k: ex.ink ? 1 : 0 })),
     pe: allPets().map((p) => ({ i: nid(p), o: nid(p.owner), d: p.def.id, x: Math.round(p.x), y: Math.round(p.y), hp: r1(p.hp), iv: r1(p.invuln), pt: r1(p.poisonT), tg: p.target ? 1 : 0 })),
     w: wildCritters.map((w) => ({ i: nid(w), d: w.def.id, x: Math.round(w.x), y: Math.round(w.y), l: r1(w.life) })),
@@ -311,7 +310,7 @@ const guest = {
       f.mvTarget = d.mv ? { x: f.tx, y: f.ty } : null;
       f.hp = d.hp; f.maxHp = d.mh; f.mp = d.mp; f.maxMp = d.mm; f.power = d.pw; f.speed = d.sp; f.maxBombs = d.mb;
       f.alive = !!d.al; f.invuln = d.iv; f.blindT = d.bt; f.poisonT = d.pt;
-      f.blastGuard = d.bg; f.moldGuard = d.mg; f.immunity = d.im; f.selected = d.se; f.inkEaten = d.ie; f.porkNext = !!d.pk;
+      f.shieldT = d.sh || 0; f.immunity = d.im; f.selected = d.se; f.inkEaten = d.ie; f.porkNext = !!d.pk;
       if (d.to) f.tools = d.to;
       if (d.ps && f.petState.rat) { f.petState.rat.status = d.ps.rat; f.petState.roach.status = d.ps.roach; }
       f.heldId = d.hd;
@@ -343,7 +342,7 @@ const guest = {
     const is = this.sync(this.items, s.it, (d) => new Item(toCol(d.x), toRow(d.y), d.k),
       (it, d, fresh) => {
         this.target(it, d, fresh); it.key = d.k;
-        it.age = d.a; it.fresh = d.fr < 0 ? Infinity : d.fr; it.moldy = it.age >= it.fresh;
+
       });
     this.items = is.map;
     items = is.list;

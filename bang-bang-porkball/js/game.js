@@ -233,8 +233,7 @@ class Player {
     this.invuln = 0;            // 無敵時間
     this.poisonT = 0;           // 黴毒剩餘秒數
     this.poisonTick = 0;        // 黴毒每秒結算用
-    this.blastGuard = 0;        // 防護盾/防爆衣:可抵免幾次爆炸波
-    this.moldGuard = 0;         // N95 口罩:可抵免幾次中黴毒
+    this.shieldT = 0;           // 防護盾剩餘秒數(期間擋一次爆炸)
     this.immunity = 1;          // 免疫力:越高,負面狀態時效越短(白蘿蔔提升)
     this.throwBonus = 0;        // 丟擲距離加成(胡椒粉)
     this.enokiEaten = 0;        // 吃過的金針菇數(死亡會噴出等量)
@@ -266,27 +265,12 @@ class Player {
     return meatballs.filter((m) => m.owner === this).length;
   }
 
-  // 黴毒(吃到發霉的道具):N95 口罩可抵免一次,否則中毒
-  moldPoison() {
+  hurt(dmg = 1) {
     if (!this.alive) return;
-    if (this.moldGuard > 0) {
-      this.moldGuard--;
-      spawnText(this.x, this.y - TS * 0.6, '😷口罩擋下黴毒', '#90caf9');
-    } else {
-      // 中毒時效隨免疫力縮短
-      this.poisonT = POISON_TIME / this.immunity;
-      this.poisonTick = 0;
-      spawnText(this.x, this.y - TS * 0.6, '中黴毒!🤢', '#7cb342');
-    }
-  }
-
-  hurt(dmg = 1, poison = false) {
-    if (!this.alive) return;
-    if (poison) this.moldPoison();
     if (this.invuln > 0) return;
-    // 爆炸傷害:防護盾/防爆衣可抵免一次爆炸波
-    if (this.blastGuard > 0) {
-      this.blastGuard--;
+    // 防護盾作用中:擋下這次爆炸,盾立刻失效
+    if (this.shieldT > 0) {
+      this.shieldT = 0;
       this.invuln = INVULN_TIME;
       sfx('block', this.x, this.y);
       spawnText(this.x, this.y - TS * 0.4, '🛡️擋下爆炸', '#ffd54f');
@@ -419,21 +403,7 @@ class Pet {
   update(dt) {
     if (!this.alive) return;
 
-    // 最高優先:場上若有「對應自己的毒餌」,優先去咬(咬到會死)
-    const bait = nearestBait(this);
-    if (bait) {
-      petStep(this, bait.x, bait.y, dt); // 沿通道繞過障礙
-      const bd = Math.hypot(bait.x - this.x, bait.y - this.y);
-      if (bd < TS * 0.5) {
-        bait.dead = true;                 // 毒餌被吃掉
-        this.alive = false;               // 寵物中毒身亡
-        spawnText(this.x, this.y - 14, this.def.emoji + '吃了' + BAITS[bait.key].name + '☠️', '#ff8a80');
-      }
-      this.target = null;
-      return;
-    }
-
-    // 否則:找最近且未在滑行的貢丸當目標
+    // 找最近且未在滑行的貢丸當目標
     if (!this.target || this.target.exploded || this.target.eaten ||
         this.target.moving || this.target.held) {
       this.target = null;
@@ -519,18 +489,6 @@ function petStep(pet, gx, gy, dt) {
   return true;
 }
 
-// 找出吸引此寵物的最近毒餌(老鼠藥→老鼠、蟑螂藥→蟑螂)
-function nearestBait(pet) {
-  let best = Infinity, found = null;
-  for (const it of items) {
-    if (it.dead || !BAITS[it.key]) continue;
-    if (BAITS[it.key].target !== pet.def.id) continue;
-    const d = (it.x - pet.x) ** 2 + (it.y - pet.y) ** 2;
-    if (d < best) { best = d; found = it; }
-  }
-  return found;
-}
-
 // ---------- 道具 ----------
 class Item {
   constructor(col, row, key) {
@@ -538,10 +496,7 @@ class Item {
     this.y = tileCenter(row);
     this.key = key;
     this.t = 0;
-    // 會壞掉:新鮮期過後發霉,再過一段時間消失(毒餌本身就是毒,不會壞)
     this.age = 0;
-    this.fresh = BAITS[key] ? Infinity : itemFreshTime(key);
-    this.moldy = false;
     // 墨魚會在小範圍內自行游走
     this.wander = key === 'squid';
     if (this.wander) {
@@ -688,14 +643,12 @@ function explodeMeatball(m) {
     const tt = grid[cell.r][cell.c];
     if (tt === TILE.BRICK) {
       grid[cell.r][cell.c] = TILE.EMPTY;
-      // 可破壞物(木箱/蔬菜箱/摺疊桌):
-      // 60% 裝備/防護、24% 工具、8% 毒餌、6% 台灣小吃、1% 福袋、1% 空
+      // 可破壞物(木箱/蔬菜箱/摺疊桌):55% 工具、25% 食物、8% 台灣小吃、2% 福袋、10% 空
       const rr = Math.random();
-      if (rr < 0.60) spawnItem(cell.c, cell.r, pick(Object.keys(GEAR)));
-      else if (rr < 0.84) spawnItem(cell.c, cell.r, pick(Object.keys(TOOLS)));
-      else if (rr < 0.92) spawnItem(cell.c, cell.r, pick(Object.keys(BAITS)));
-      else if (rr < 0.98) spawnItem(cell.c, cell.r, snackDrop());
-      else if (rr < 0.99) spawnItem(cell.c, cell.r, 'luckybag');
+      if (rr < 0.55) spawnItem(cell.c, cell.r, pick(Object.keys(TOOLS)));
+      else if (rr < 0.80) spawnItem(cell.c, cell.r, pick(FOOD_DROP_KEYS));
+      else if (rr < 0.88) spawnItem(cell.c, cell.r, snackDrop());
+      else if (rr < 0.90) spawnItem(cell.c, cell.r, 'luckybag');
     } else if (tt === TILE.TRASH) {
       grid[cell.r][cell.c] = TILE.EMPTY;
       // 垃圾桶(廚餘寶庫):2% 福袋、8% 台灣小吃、80% 基本食用道具(含竹籤)、10% 空
@@ -734,8 +687,8 @@ function explodeMeatball(m) {
   explosions.push({
     cells,
     t: EXPLOSION_TIME,
-    color: m.moldy ? '#558b2f' : m.def.glow,
-    poison: m.moldy,                    // 發霉貢丸 → 黴毒爆炸
+    color: m.def.glow,
+    poison: false,
     ink: m.def.behavior === 'ink',      // 墨魚貢丸 → 黑畫面
   });
 }
@@ -745,8 +698,8 @@ function spawnItem(c, r, key) {
   items.push(new Item(c, r, key));
 }
 
-// 取得道具定義(食物 / 工具 / 毒餌 / 防護裝備)
-function itemDef(key) { return ITEMS[key] || TOOLS[key] || BAITS[key] || GEAR[key]; }
+// 取得道具定義(食物 / 工具)
+function itemDef(key) { return ITEMS[key] || TOOLS[key]; }
 
 const pick = (arr) => arr[rand(arr.length)];
 
@@ -1069,12 +1022,16 @@ function updateHeldMeatball(p) {
 
 // 防護盾:花 MP 啟動,增加一次「抵免爆炸波」的護盾
 function activateShield(p) {
+  if (p.shieldT > 0) {
+    spawnText(p.x, p.y - TS * 0.5, '防護盾作用中', '#ffd54f');
+    return;
+  }
   if (p.mp < SHIELD_MP_COST) {
     spawnText(p.x, p.y - TS * 0.5, 'MP 不足', '#42a5f5');
     return;
   }
   p.mp -= SHIELD_MP_COST;
-  p.blastGuard++;
+  p.shieldT = SHIELD_TIME;
   sfx('shield', p.x, p.y);
   spawnText(p.x, p.y - TS * 0.55, '🛡️防護盾 +1', '#ffd54f');
   updateHud();
@@ -1456,9 +1413,9 @@ function aiDecide(e) {
   const canBomb = e.aiBombCd <= 0 && e.bombsPlaced() < e.maxBombs;
   // 2) 敵人在爆炸線上且有退路 → 放彈攻擊
   if (canBomb && aiEnemyInBlast(e) && aiHasEscape(e)) { aiPlaceBomb(e); return; }
-  // 3) 附近有道具 → 去撿(毒餌不撿)
+  // 3) 附近有道具 → 去撿
   let p = aiPath(e, (c, r) =>
-    items.some((it) => !it.dead && !it.moldy && !BAITS[it.key] && it.col === c && it.row === r), 12, 1.0);
+    items.some((it) => !it.dead && it.col === c && it.row === r), 12, 1.0);
   if (p && p.length) { e.path = p; return; }
   // 4) 站在可炸箱子旁就放彈;否則走去箱子旁準備炸
   if (canBomb) {
@@ -1526,8 +1483,9 @@ function update(dt) {
   player.tickPoison(dt);
   updateHeldMeatball(player);
 
-  // MP 自然回復(所有角色)
+  // MP 自然回復、防護盾倒數(所有角色)
   for (const f of fighters()) {
+    if (f.shieldT > 0) f.shieldT = Math.max(0, f.shieldT - dt);
     if (f.alive) f.mp = Math.min(f.mp + MP_REGEN * dt, f.maxMp);
   }
 
@@ -1584,32 +1542,17 @@ function update(dt) {
 
   // 道具拾取
   items = items.filter((it) => {
-    if (it.dead) return false;                 // 已被寵物吃掉的毒餌
+    if (it.dead) return false;
     it.t += dt;
     it.age += dt;
-    if (!it.moldy && it.age >= it.fresh) {     // 放太久 → 發霉(變綠)
-      it.moldy = true;
-      spawnText(it.x, it.y - TS * 0.5, '發霉了🦠', '#7cb342');
-    }
-    if (it.moldy && it.age >= it.fresh + MOLD_STAGE) return false; // 爛掉消失
     it.update(dt);                             // 墨魚會自行游走
-    if (BAITS[it.key]) return true;            // 毒餌不會被人物撿走,只吸引寵物
     // 所有角色(玩家與 AI)都能撿道具
     for (const f of fighters()) {
       if (!f.alive || it.col !== f.col || it.row !== f.row) continue;
-      if (it.moldy) {                                           // 發霉的道具:沒效果還中黴毒
-        sfx('yuck', f.x, f.y);
-        spawnText(f.x, f.y - TS * 0.5, '吃到發霉的' + itemDef(it.key).name + '!', '#7cb342');
-        f.moldPoison();
-      } else if (TOOLS[it.key]) {
+      if (TOOLS[it.key]) {
         sfx('gear', f.x, f.y);
         f.tools[it.key] = (f.tools[it.key] || 0) + 1;           // 工具入庫
         spawnText(f.x, f.y - TS * 0.5, '+' + TOOLS[it.key].name, '#80d8ff');
-      } else if (GEAR[it.key]) {                                // 防護裝備
-        sfx('gear', f.x, f.y);
-        if (GEAR[it.key].guard === 'blast') f.blastGuard++;
-        else f.moldGuard++;
-        spawnText(f.x, f.y - TS * 0.5, '+' + GEAR[it.key].name, GEAR[it.key].color);
       } else {
         sfx(SNACKS.includes(it.key) || it.key === 'luckybag' ? 'jackpot' : 'pickup', f.x, f.y);
         applyItem(f, it.key);                                   // 食用道具
@@ -1755,11 +1698,8 @@ function drawBlind() {
 function drawItem(it) {
   const bob = Math.sin(it.t * 4) * 1.5;
   const pulse = 1 + Math.sin(it.t * 5) * 0.04;
-  // 發霉:縮小、快消失時閃爍,並蓋上綠色黴斑
-  const rot = it.moldy ? clamp((it.age - it.fresh) / MOLD_STAGE, 0, 1) : 0;
-  if (it.moldy && rot > 0.7 && Math.floor(it.t * 8) % 2 === 0) return;
   // 道具(寫實圖,影子已含在圖裡)
-  sprite('items/' + it.key, it.x, it.y + bob, TS * 0.95 * pulse * (1 - rot * 0.35));
+  sprite('items/' + it.key, it.x, it.y + bob, TS * 0.95 * pulse);
   if (it.moldy) {
     ctx.fillStyle = 'rgba(110,170,40,0.5)';
     ctx.beginPath(); ctx.arc(it.x, it.y + bob, TS * 0.3, 0, Math.PI * 2); ctx.fill();
@@ -1851,23 +1791,13 @@ function drawCharacter(e) {
   ctx.lineTo(e.x + 6, headY - 10 + bob);
   ctx.closePath(); ctx.fill(); ctx.stroke();
   const midY = footY - size * 0.42;
-  // 防護盾光環(抵免爆炸)
-  if (e.blastGuard > 0) {
+  // 防護盾光環(作用中;快結束時閃爍)
+  if (e.shieldT > 0 && !(e.shieldT < 0.8 && Math.floor(e.shieldT * 10) % 2 === 0)) {
     ctx.strokeStyle = 'rgba(255,213,79,0.9)';
     ctx.lineWidth = 3;
     ctx.beginPath();
     ctx.ellipse(e.x, midY, e.r * 1.35 + Math.sin(elapsed * 6) * 2, size * 0.48, 0, 0, Math.PI * 2);
     ctx.stroke();
-  }
-  // 口罩光環(抵免黴毒)
-  if (e.moldGuard > 0) {
-    ctx.strokeStyle = 'rgba(144,202,249,0.7)';
-    ctx.lineWidth = 2;
-    ctx.setLineDash([4, 4]);
-    ctx.beginPath();
-    ctx.ellipse(e.x, midY, e.r * 1.6, size * 0.52, 0, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.setLineDash([]);
   }
 }
 
@@ -1996,28 +1926,15 @@ function updateHud() {
     `<div class="wx-map">${theme().icon} ${theme().name}</div>` +
     meter('溫度', `${Math.round(env.temp)}°C`, tempNorm(), '#e8742a') +
     meter('濕度', `${Math.round(env.humidity)}%`, humNorm(), '#2f8fbf') +
-    `<p class="wx-note">貢丸約 <b>${computeFuse().toFixed(1)} 秒</b>爆・地上食物約 <b>${Math.round(itemFreshTime('mushroom'))} 秒</b>發霉</p>`);
-  document.getElementById('stat-bombs').textContent =
-    `🍢 竹籤 ${player.bombsPlaced()}/${player.maxBombs}`;
+    `<p class="wx-note">越熱越潮濕,貢丸爆得越快:現在約 <b>${computeFuse().toFixed(1)} 秒</b></p>`);
+  const left = Math.max(0, player.maxBombs - player.bombsPlaced());
+  setHtml('stat-bombs', meter('貢丸數', `${left} / ${player.maxBombs}`, left / player.maxBombs, '#b07a45'));
   const mark = { out: '放出', stored: '收起', dead: '昏倒' };
   setHtml('stat-pet', '寵物 ' + Object.values(player.petState)
     .map((s) => `${hudIcon('pets/' + s.def.id)}${mark[s.status]}`).join(' '));
   const t = player.tools;
   setHtml('stat-tools', ['vacuum', 'garbage', 'slippers', 'tongs', 'glove', 'slingshot']
     .map((k) => `${hudIcon('items/' + k)}${t[k] || 0}`).join(' '));
-  document.getElementById('stat-guard').textContent =
-    `🛡️${player.blastGuard} 😷${player.moldGuard} 🦠免疫${player.immunity.toFixed(1)}`;
-  const poisonEl = document.getElementById('stat-poison');
-  const st = [];
-  if (player.poisonT > 0) st.push('🤢黴毒' + player.poisonT.toFixed(1) + 's');
-  if (player.blindT > 0) st.push('🦑黑畫面' + player.blindT.toFixed(1) + 's');
-  if (st.length) {
-    poisonEl.textContent = st.join(' ');
-    poisonEl.style.background = '#e8f5c8';
-  } else {
-    poisonEl.textContent = '🟢 健康';
-    poisonEl.style.background = '';
-  }
   const mm = Math.floor(Math.max(0, matchTime) / 60);
   const ss = Math.floor(Math.max(0, matchTime) % 60);
   setHtml('stat-enemies',
@@ -2057,7 +1974,7 @@ function refreshActionButtons() {
     ' ': playing && player.bombsPlaced() < player.maxBombs &&       // 放貢丸:有額度且腳下沒丸
          !meatballs.some((m) => !m.exploded && m.col === player.col && m.row === player.row),
     'e': kickMb && player.mp >= RIDE_MP_PER_TILE,                   // 踢/騎:前方相鄰有丸且 MP 夠
-    'g': playing && player.mp >= SHIELD_MP_COST,                    // 防護盾:MP 夠
+    'g': playing && player.mp >= SHIELD_MP_COST && !(player.shieldT > 0), // 防護盾:MP 夠且沒在作用中
     'z': playing && (player.held ? true : (t.tongs > 0 && frontMb)),// 食物夾:夾著可放下;否則需有夾子+目標
     'x': playing && t.glove > 0 && (!!player.held || frontMb),      // 手套:有手套+有丸可丟
     'c': playing && t.slingshot > 0,                                // 彈弓:有彈弓

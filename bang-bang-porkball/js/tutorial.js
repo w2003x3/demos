@@ -1,7 +1,7 @@
 // ====================================================================
 //  新手教學關卡(2D / 3D 共用)
 //  固定的小練習場,一步一步完成任務才進下一步;不計時、被炸到會原地重來
-//  內容:基本操作 → 9 種貢丸 → 所有食物/小吃/防護 → 6 種工具 → 2 隻寵物與毒餌 → 實戰
+//  內容:基本操作 → 貢丸 → 食物/小吃 → 6 種工具 → 2 隻寵物 → 實戰
 //  game.js 的 update() 在教學中改呼叫 tutorial.update(),restart() 會結束教學
 // ====================================================================
 (function () {
@@ -65,9 +65,9 @@
       done() { return grid[5][9] !== TILE.BRICK; },
     },
     {
-      title: '撿裝備',
-      text: '📦 木箱炸開常掉<b>裝備</b>和<b>工具</b>。去撿 🦺 <b>防爆衣</b>:<br>可以擋下一次爆炸,左側面板的 🛡️ 數字會 +1。',
-      setup(s) { s.item = replaceDrop(9, 5, 'blastsuit'); },
+      title: '撿工具',
+      text: '📦 木箱炸開常掉<b>工具</b>和食物。去撿 🥢 <b>食物夾</b>:<br>工具會收進左側面板,用完就沒了(後面會教每種工具怎麼用)。',
+      setup(s) { s.item = replaceDrop(9, 5, 'tongs'); },
       done(s) { return !has(s.item); },
     },
     {
@@ -92,11 +92,11 @@
     },
     {
       title: '防護盾',
-      text: '按 <kbd>G</kbd> 花 ' + SHIELD_MP_COST + ' MP 開防護盾,效果跟防爆衣一樣能擋一次爆炸。<br>危急時記得留一點 MP 保命!',
-      setup(s) { s.guard = player.blastGuard; },
+      text: '按 <kbd>G</kbd> 花 ' + SHIELD_MP_COST + ' MP 開防護盾:維持 ' + SHIELD_TIME + ' 秒,期間擋下一次爆炸(擋完就消失)。<br>看到火焰快到了再開,時機最重要!',
+      setup(s) {},
       // 上一步踢出的貢丸滑行會一直扣 MP,這裡保證至少夠開一次盾
       update() { if (player.mp < SHIELD_MP_COST) player.mp = SHIELD_MP_COST; },
-      done(s) { return player.blastGuard > s.guard; },
+      done() { return player.shieldT > 0; },
     },
 
     // ---------- 9 種貢丸 ----------
@@ -159,16 +159,6 @@
       done(s) { return gone(s.list); },
     },
     {
-      title: '發霉與口罩',
-      text: '道具放在地上太久會<b>發霉變綠</b>,吃到會<b>中黴毒</b>(每秒 −1 HP),再放更久就爛掉消失。<br>天氣越熱越潮濕壞得越快。先撿 😷 <b>N95 口罩</b>,再走過發霉的 🍠,口罩會幫你擋下黴毒。',
-      setup(s) {
-        s.mask = put(5, 11, 'mask');
-        s.bad = put(9, 11, 'taro');
-        s.bad.tutMoldy = true;
-      },
-      done(s) { return gone([s.mask, s.bad]); },
-    },
-    {
       title: '台灣小吃神器',
       text: '稀有的小吃會把能力直接拉滿,最上面一排全部吃掉:<br>🍗 雞排:HP 補滿 · 🍡 豬血糕:MP 補滿 · 🧋 早餐店奶茶:速度拉滿 · 🧋 珍奶:貢丸數拉滿<br>🥡 臭豆腐:火焰拉滿 · 🧧 <b>福袋:全部能力一次拉滿</b>(超稀有)',
       setup(s) {
@@ -224,7 +214,7 @@
     },
     {
       title: '🪳 放出蟑螂',
-      text: '左下角又有一顆貢丸。按 <kbd>L</kbd> 放出蟑螂:<b>跑得快但啃得慢</b>。<br>兩隻寵物可以同時放出,一起幫你拆彈。',
+      text: '左下角又有一顆貢丸。按 <kbd>L</kbd> 放出蟑螂:<b>跑得快但啃得慢</b>。<br>兩隻寵物可以同時放出,一起幫你拆彈。🩴 藍白拖 <kbd>V</kbd> 可以踩附近的寵物。',
       setup(s) {
         clearLong();
         s.ball = longBall(3, 9);
@@ -232,34 +222,15 @@
       },
       done(s) { return s.ball.eaten && player.petState.roach.status === 'out'; },
     },
-    {
-      title: '⚠️ 毒餌',
-      text: '地上出現了 🧀 老鼠藥和 🧴 蟑螂藥!寵物會被引過去,<b>吃到就死掉</b>。<br>快按 <kbd>K</kbd>、<kbd>L</kbd> 把兩隻都收回來。(🩴 藍白拖 <kbd>V</kbd> 可以踩附近的寵物)',
-      setup(s) {
-        for (const id of ['rat', 'roach']) {
-          if (player.petState[id].status === 'dead') revivePet(player);
-          if (player.petState[id].status !== 'out') deployPet(player, id);
-        }
-        s.baits = [put(13, 11, 'ratbait'), put(13, 1, 'roachbait')];
-      },
-      update(s) {
-        // 寵物被毒死 → 救回來重來
-        if (['rat', 'roach'].some((id) => player.petState[id].status === 'dead')) {
-          while (revivePet(player)) { /* 全部救回 */ }
-          render('☠️ 寵物吃到毒餌了!再試一次');
-          T.retry();
-        }
-      },
-      done() { return ['rat', 'roach'].every((id) => player.petState[id].status === 'stored'); },
-    },
 
     // ---------- 實戰 ----------
     {
       title: '實戰:炸倒敵人',
       text: '下面出現了一個 🔴 <b>稻草人敵人</b>(不會動也不會反擊)。<br>用貢丸把它炸倒!小心別炸到自己。',
       setup(s) {
-        items = items.filter((it) => !BAITS[it.key]);
-        clearLong();
+        // 寵物會啃掉炸稻草人的貢丸:先收回
+        for (const id of ['rat', 'roach']) if (player.petState[id].status === 'out') recallPet(player, id);
+                clearLong();
         s.dummy = dummy(7, 9);
       },
       done(s) { return !s.dummy.alive; },
@@ -379,11 +350,6 @@
     },
     update(dt) {
       env.temp = 18; env.humidity = 45;
-      // 教學中道具不會壞(指定要示範發霉的除外)
-      for (const it of items) {
-        it.age = it.tutMoldy ? it.fresh + 1 : 0;
-        it.moldy = !!it.tutMoldy;
-      }
       if (!player.alive) {       // 被炸到 → 原地重來這一步
         meatballs = meatballs.filter((m) => m.fuse >= LONG / 2);
         respawn();

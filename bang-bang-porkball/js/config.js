@@ -236,22 +236,13 @@ const ENOKI_FUSE_BONUS = 0.7;  // 每顆金針菇增加自己貢丸的時效(秒
 const BLIND_TIME = 3.5;        // 被墨魚貢丸炸到的黑畫面基礎秒數
 const SLIPPER_DMG = 2;         // 藍白拖每踩對寵物造成的傷害
 
-// ===== 毒餌 =====
-// 出現在場上會吸引「對應的寵物」優先去咬(無視貢丸),咬到就毒死該寵物
-const BAITS = {
-  ratbait:   { name: '老鼠藥', emoji: '🧀', target: 'rat',   color: '#9e9e9e' },
-  roachbait: { name: '蟑螂藥', emoji: '🧴', target: 'roach', color: '#8bc34a' },
-};
+// 毒餌(老鼠藥/蟑螂藥)、防護裝備(防爆衣/N95 口罩)已移除;保留空表讓舊程式路徑不出錯
+const BAITS = {};
+const GEAR = {};
 
-// ===== 防護裝備(被動道具,拾取後自動消耗)=====
-// 防爆衣:抵免一次爆炸波;N95 口罩:抵免一次中黴毒
-const GEAR = {
-  blastsuit: { name: '防爆衣',  emoji: '🦺', guard: 'blast', desc: '抵免一次爆炸波', color: '#ff9800' },
-  mask:      { name: 'N95口罩', emoji: '😷', guard: 'mold',  desc: '抵免一次中黴毒', color: '#90caf9' },
-};
-
-// 防護盾:花 MP 啟動,抵免一次爆炸波(效果同防爆衣)
+// 防護盾:花 MP 啟動,維持幾秒;期間擋下一次爆炸(被炸到就立刻失效),不能累積
 const SHIELD_MP_COST = 30;
+const SHIELD_TIME = 3;
 
 // MP 自然回復(每秒):讓防護盾、踢/騎乘貢丸等 MP 技能更常派上用場
 const MP_REGEN = 4;
@@ -320,13 +311,9 @@ function computeFuse() {
   return lerp(3.6, 1.0, tempNorm() * 0.7 + humNorm() * 0.3);
 }
 
-// 地上的道具會壞掉:新鮮期過後「發霉」(變綠,吃到會中黴毒),再過 MOLD_STAGE 秒就消失
-// 新鮮期:濕度為主、溫度為輔,越濕越熱壞得越快;食物比工具/裝備更容易壞
+// 小貢丸發霉的閃爍時間(秒)
 const MOLD_STAGE = 6;
-function itemFreshTime(key) {
-  const base = lerp(24, 9, humNorm() * 0.75 + tempNorm() * 0.25);
-  return ITEMS[key] ? base : base * 1.6;
-}
+
 
 // 小貢丸(未滿三顆、還沒啟動時)放太久會發霉分解:越潮濕越快,8~16 秒
 function computeMiniDecay() {

@@ -1125,13 +1125,13 @@
       u.marker.visible = f.alive;
       u.marker.position.y = (u.real ? 1.5 : 1.42) + Math.sin(elapsed * 5) * 0.05;
       // 防護盾:金色護罩球(呼吸脈動);口罩:藍色地環(旋轉)
-      u.shield.visible = f.alive && f.blastGuard > 0;
+      u.shield.visible = f.alive && f.shieldT > 0;
       if (u.shield.visible) {
         u.shield.material.opacity = 0.16 + 0.1 * Math.sin(elapsed * 6);
         const sp = 1.7 + Math.sin(elapsed * 6) * 0.06;
         u.shield.scale.set(sp, sp * 1.12, sp);
       }
-      u.maskRing.visible = f.alive && f.moldGuard > 0;
+      u.maskRing.visible = f.alive && false;
       if (u.maskRing.visible) u.maskRing.rotation.z = elapsed * 1.5;
     });
   }
