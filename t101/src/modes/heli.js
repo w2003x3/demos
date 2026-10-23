@@ -1,8 +1,8 @@
 // 直升機環景:自動環繞 101 飛行。W/S 高度、A/D 半徑、Q/E 速度、Space 懸停。跨年夜可看煙火。
 import * as THREE from 'three';
-import { buildHelicopter } from '../world/helicopter.js';
-import { OrbitCam } from './common.js';
-import { VIS } from '../ui/tutorial.js';
+import { buildHelicopter } from '../world/helicopter.js?v=f1aef92';
+import { OrbitCam } from './common.js?v=f1aef92';
+import { VIS } from '../ui/tutorial.js?v=f1aef92';
 
 const clamp = THREE.MathUtils.clamp;
 const SECTORS = [

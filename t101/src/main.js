@@ -1,26 +1,26 @@
 // 台北101 攀登挑戰 — 進入點:建立世界、主選單、模式切換與主迴圈。
 import * as THREE from 'three';
-import { Input } from './core/input.js';
-import { Audio } from './core/audio.js';
-import { UI, fmtTime } from './ui/ui.js';
-import { setAnisotropy } from './world/textures.js';
-import { createSky, createLights, buildGround, buildTerrain, buildCity, buildTrees, buildTraffic, applyTime, TIMES } from './world/environment.js';
-import { buildTower, buildPodium } from './world/tower.js';
-import { buildInteriors } from './world/interiors.js';
-import { buildLandmarks, landmarkZones } from './world/landmarks.js';
-import { loadXinyi, buildXinyi } from './world/xinyi.js';
-import { applyOsmLandmarks, applyOsmBuildings, GEO } from './world/geo.js';
-import { Fireworks } from './world/fireworks.js';
-import { buildElevatorScene } from './world/elevator.js';
-import { buildStairScene } from './world/stairwell.js';
-import { ClimbMode } from './modes/climb.js';
-import { RaceMode } from './modes/race.js';
-import { ExploreMode } from './modes/explore.js';
-import { HeliMode } from './modes/heli.js';
-import { GlideMode } from './modes/glide.js';
-import { RACES } from './config.js';
-import { Tutorial } from './ui/tutorial.js';
-import { TowerLights } from './world/towerLights.js';
+import { Input } from './core/input.js?v=f1aef92';
+import { Audio } from './core/audio.js?v=f1aef92';
+import { UI, fmtTime } from './ui/ui.js?v=f1aef92';
+import { setAnisotropy } from './world/textures.js?v=f1aef92';
+import { createSky, createLights, buildGround, buildTerrain, buildCity, buildTrees, buildTraffic, applyTime, TIMES } from './world/environment.js?v=f1aef92';
+import { buildTower, buildPodium } from './world/tower.js?v=f1aef92';
+import { buildInteriors } from './world/interiors.js?v=f1aef92';
+import { buildLandmarks, landmarkZones } from './world/landmarks.js?v=f1aef92';
+import { loadXinyi, buildXinyi } from './world/xinyi.js?v=f1aef92';
+import { applyOsmLandmarks, applyOsmBuildings, GEO } from './world/geo.js?v=f1aef92';
+import { Fireworks } from './world/fireworks.js?v=f1aef92';
+import { buildElevatorScene } from './world/elevator.js?v=f1aef92';
+import { buildStairScene } from './world/stairwell.js?v=f1aef92';
+import { ClimbMode } from './modes/climb.js?v=f1aef92';
+import { RaceMode } from './modes/race.js?v=f1aef92';
+import { ExploreMode } from './modes/explore.js?v=f1aef92';
+import { HeliMode } from './modes/heli.js?v=f1aef92';
+import { GlideMode } from './modes/glide.js?v=f1aef92';
+import { RACES } from './config.js?v=f1aef92';
+import { Tutorial } from './ui/tutorial.js?v=f1aef92';
+import { TowerLights } from './world/towerLights.js?v=f1aef92';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -111,7 +111,9 @@ class Game {
     this.fwCube.position.set(0, 300, 0);
     this.fwCube.children.forEach((c) => c.layers.set(1));
     this.fireworks.points.layers.enable(1);
-    this.glassMats = [...this.tower.userData.sections.filter((s) => s.name !== '頂冠').map((s) => s.glass), ...this.city.glassMats, ...(this.xinyi ? this.xinyi.glassMats : [])];
+    // 只有 101 與周邊大樓反射煙火(遠處城市不反射)
+    this.towerGlass = this.tower.userData.sections.filter((s) => s.name !== '頂冠').map((s) => s.glass);
+    this.glassMats = [...this.towerGlass, ...(this.xinyi ? this.xinyi.glassMats : [])];
     this.fwEnvOn = false;
     this.stars = this.makeStars();
     scene.add(this.stars);
@@ -190,7 +192,7 @@ class Game {
       for (const m of this.glassMats) {
         if (m.userData.baseEnv == null) m.userData.baseEnv = m.envMapIntensity;
         m.envMap = on ? this.fwCubeRT.texture : null;
-        m.envMapIntensity = on ? 4 : m.userData.baseEnv;
+        m.envMapIntensity = on ? (this.towerGlass.includes(m) ? 2.2 : 1.5) : m.userData.baseEnv;
         m.needsUpdate = true;
       }
     }

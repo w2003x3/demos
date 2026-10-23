@@ -1,8 +1,8 @@
 // 飛行碰撞:城市大樓(格網加速)、地標、101 本體與地形。
-import { halfWidthAt, CROWN_Y, SPIRE_TOP } from '../config.js';
-import { terrainHeight } from './environment.js';
-import { landmarkSolids } from './landmarks.js';
-import { inPoly } from './xinyi.js';
+import { halfWidthAt, CROWN_Y, SPIRE_TOP } from '../config.js?v=f1aef92';
+import { terrainHeight } from './environment.js?v=f1aef92';
+import { landmarkSolids } from './landmarks.js?v=f1aef92';
+import { inPoly } from './xinyi.js?v=f1aef92';
 
 export function makeCollider(boxes, polys = []) {
   const C = 120, grid = new Map();

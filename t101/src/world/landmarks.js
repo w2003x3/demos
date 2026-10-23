@@ -1,9 +1,9 @@
 // 台北地標(簡化模型,位置依 101 為原點的大致方位與距離;北 = -Z、東 = +X)。
 import * as THREE from 'three';
-import { terrainHeight } from './environment.js';
-import { canvasTex } from './textures.js';
+import { terrainHeight } from './environment.js?v=f1aef92';
+import { canvasTex } from './textures.js?v=f1aef92';
 
-import { GEO } from './geo.js';
+import { GEO } from './geo.js?v=f1aef92';
 
 const box = (c, w, d, h, name) => [c.x - w / 2, c.z - d / 2, c.x + w / 2, c.z + d / 2, h, name];
 // 城市產生器要避開的範圍 [x0, z0, x1, z1]

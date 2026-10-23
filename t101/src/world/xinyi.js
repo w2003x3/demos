@@ -1,8 +1,8 @@
 // 信義區真實街景:依 OpenStreetMap 資料(assets/data/xinyi.json)建出 101 周邊建築、道路、綠地、行道樹與車流。
 // 資料授權:© OpenStreetMap contributors(ODbL)。
 import * as THREE from 'three';
-import { glassCurtainTexture, roofTexture, canvasTex } from './textures.js';
-import { applyInterior } from './interior.js';
+import { glassCurtainTexture, roofTexture, canvasTex } from './textures.js?v=f1aef92';
+import { applyInterior } from './interior.js?v=f1aef92';
 
 function rng(seed) {
   let s = seed >>> 0;
@@ -11,7 +11,7 @@ function rng(seed) {
 
 export async function loadXinyi() {
   try {
-    const r = await fetch('assets/data/xinyi.json');
+    const r = await fetch('assets/data/xinyi.json?v=f1aef92');
     if (!r.ok) return null;
     return await r.json();
   } catch { return null; }
@@ -50,7 +50,10 @@ export function buildXinyi(scene, data, { exclude = [] } = {}) {
   root.name = 'xinyi';
   const r = rng(101);
   const palette = [0x8fa9b6, 0x86a89c, 0x9a9ea2, 0xa8927a, 0x7d93ad, 0xb5bcc0, 0x6f8a8f, 0x8c8c94, 0x9fb3a8];
-  const groups = { mid: { pos: [], uv: [], col: [] }, glass: { pos: [], uv: [], col: [] }, mall: { pos: [], uv: [], col: [] }, roof: { pos: [], uv: [], col: [] } };
+  const grp = () => ({ pos: [], uv: [], col: [] });
+  // 101 周邊(NEAR 公尺內)的玻璃另外一組材質:跨年夜只有這些會反射煙火
+  const NEAR = 450;
+  const groups = { mid: grp(), glass: grp(), mall: grp(), midN: grp(), glassN: grp(), mallN: grp(), roof: grp() };
   const c = new THREE.Color();
   const solids = [];
 
@@ -62,7 +65,9 @@ export function buildXinyi(scene, data, { exclude = [] } = {}) {
     if (exclude.some((e) => Math.hypot(cx - e.x, cz - e.z) < e.r)) continue;
     const tall = h > 90;
     const mall = b.k === 'mall' || /101/.test(b.n || '');
-    const G = mall ? groups.mall : tall ? groups.glass : groups.mid;
+    const bcx = pts.reduce((s2, q2) => s2 + q2[0], 0) / pts.length, bcz = pts.reduce((s2, q2) => s2 + q2[1], 0) / pts.length;
+    const near = Math.hypot(bcx, bcz) < NEAR ? 'N' : '';
+    const G = groups[(mall ? 'mall' : tall ? 'glass' : 'mid') + near];
     c.setHex(mall ? 0xffffff : palette[Math.floor(r() * palette.length)]);
     if (!mall) c.multiplyScalar(0.9 + r() * 0.15);
     // 牆面
@@ -131,7 +136,12 @@ export function buildXinyi(scene, data, { exclude = [] } = {}) {
   });
   const mallMat = new THREE.MeshStandardMaterial({ map: mallTex, roughness: 0.18, metalness: 0.45, envMapIntensity: 1.2, emissive: 0xffffff, emissiveIntensity: 0 });
   applyInterior(mallMat, { cells: [6, 6], win: [0.02, 0.98, 0.0, 0.69], store: true, seed: 5, depth: 1.4 });
-  for (const [d, mat] of [[groups.mid, midMat], [groups.glass, glassMat], [groups.mall, mallMat], [groups.roof, roofMat]]) {
+  // 同樣的材質複製一份給 101 周邊(複製後需重新套用室內映射)
+  const nearOf = (m, opts) => applyInterior(m.clone(), opts);
+  const midN = nearOf(midMat, { cells: [8, 8], win: [0.02, 0.98, 0.17, 0.985], lit: 0.3, seed: 7, depth: 1.1 });
+  const glassN = nearOf(glassMat, { cells: [8, 8], win: [0.01, 0.99, 0.04, 0.99], lit: 0.36, seed: 31, depth: 1.3 });
+  const mallN = nearOf(mallMat, { cells: [6, 6], win: [0.02, 0.98, 0.0, 0.69], store: true, seed: 5, depth: 1.4 });
+  for (const [d, mat] of [[groups.mid, midMat], [groups.glass, glassMat], [groups.mall, mallMat], [groups.midN, midN], [groups.glassN, glassN], [groups.mallN, mallN], [groups.roof, roofMat]]) {
     if (!d.pos.length) continue;
     const mesh = new THREE.Mesh(mk(d), mat);
     mesh.castShadow = mat !== roofMat;
@@ -301,11 +311,11 @@ export function buildXinyi(scene, data, { exclude = [] } = {}) {
   scene.add(root);
   return {
     root, solids, updateTraffic,
-    glassMats: [midMat, glassMat, mallMat],
+    glassMats: [midN, glassN, mallN],
     setNight(nf) {
-      midMat.emissiveIntensity = nf * 0.7;
-      glassMat.emissiveIntensity = nf * 0.7;
-      mallMat.emissiveIntensity = nf * 1.0;
+      midMat.emissiveIntensity = midN.emissiveIntensity = nf * 0.7;
+      glassMat.emissiveIntensity = glassN.emissiveIntensity = nf * 0.7;
+      mallMat.emissiveIntensity = mallN.emissiveIntensity = nf * 1.0;
       tail.visible = head.visible = nf > 0.2;
     }
   };

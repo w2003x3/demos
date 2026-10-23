@@ -1,8 +1,8 @@
 // 創意滑翔翼:設計選項、性能計算、3D 模型,以及 101 頂樓起飛跳台。
 import * as THREE from 'three';
-import { ROOF_Y } from '../config.js';
-import { createCharacter } from './character.js';
-import { canvasTex, textTexture } from './textures.js';
+import { ROOF_Y } from '../config.js?v=f1aef92';
+import { createCharacter } from './character.js?v=f1aef92';
+import { canvasTex, textTexture } from './textures.js?v=f1aef92';
 
 export const OPTS = {
   wing: [

@@ -1,11 +1,11 @@
 // 創意滑翔賽:打造滑翔翼 → 從 101 頂樓起飛台出發 → 滑得越遠越好。撞到建築物會墜落(心算降落傘)。
 import * as THREE from 'three';
-import { OPTS, DEFAULT_DESIGN, performance, buildGlider, buildRamp, rampPoint, RAMP } from '../world/glider.js';
-import { makeCollider } from '../world/collide.js';
-import { createCharacter, poseCheer, poseIdle, resetPose } from '../world/character.js';
-import { OrbitCam, buildParachute } from './common.js';
-import { askQuiz, fmtTime } from '../ui/ui.js';
-import { VIS } from '../ui/tutorial.js';
+import { OPTS, DEFAULT_DESIGN, performance, buildGlider, buildRamp, rampPoint, RAMP } from '../world/glider.js?v=f1aef92';
+import { makeCollider } from '../world/collide.js?v=f1aef92';
+import { createCharacter, poseCheer, poseIdle, resetPose } from '../world/character.js?v=f1aef92';
+import { OrbitCam, buildParachute } from './common.js?v=f1aef92';
+import { askQuiz, fmtTime } from '../ui/ui.js?v=f1aef92';
+import { VIS } from '../ui/tutorial.js?v=f1aef92';
 
 const clamp = THREE.MathUtils.clamp;
 const RHO = 1.225, G = 9.8;

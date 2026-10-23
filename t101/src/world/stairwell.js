@@ -1,7 +1,7 @@
 // 樓梯間(登高賽,獨立場景)。每層 = 兩跑樓梯 + 中間平台 + 樓層平台;用 5 組模組循環擺放。
 import * as THREE from 'three';
-import { FH, WATER_FLOORS } from '../config.js';
-import { canvasTex, concreteTexture, drawStairSign, textTexture } from './textures.js';
+import { FH, WATER_FLOORS } from '../config.js?v=f1aef92';
+import { canvasTex, concreteTexture, drawStairSign, textTexture } from './textures.js?v=f1aef92';
 
 export const U_PER_FLOOR = 28; // 一層的「步」數(含兩個轉角平台各 3 步)
 const RUN = 3.2, STEPS = 11, HALF_W = 1.45, TURN_R = 0.72;

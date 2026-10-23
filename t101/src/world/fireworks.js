@@ -1,7 +1,7 @@
 // 跨年煙火:101 外牆倒數 + 從各節竹節施放的煙火秀。
 import * as THREE from 'three';
-import { BASE_TOP, SEG_H, SEG_COUNT, SEG_HW1, halfWidthAt } from '../config.js';
-import { canvasTex } from './textures.js';
+import { BASE_TOP, SEG_H, SEG_COUNT, SEG_HW1, halfWidthAt } from '../config.js?v=f1aef92';
+import { canvasTex } from './textures.js?v=f1aef92';
 
 const MAX = 40000;
 const COUNTDOWN = 30; // 倒數階段長度(秒)
@@ -134,7 +134,7 @@ export class Fireworks {
     scene.add(this.points);
 
     // 爆炸照明
-    this.flash = new THREE.PointLight(0xffffff, 0, 400, 1.2);
+    this.flash = new THREE.PointLight(0xffffff, 0, 280, 1.6);
     scene.add(this.flash);
 
     // 外牆倒數 LED(四面,第 5~6 節)

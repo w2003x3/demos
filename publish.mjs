@@ -12,7 +12,7 @@ const projects = path.resolve(here, '..');
 // 輸出資料夾 ← 來源專案;files 為要複製的檔案/資料夾(相對於來源);redirect 為輸出資料夾首頁要導向的子路徑
 const sites = [
   { out: 'route-map', src: '路網連連看', files: ['v2', 'v3'], redirect: 'v3/', exclude: /[\\/]tests($|[\\/])|\.blend$/ },
-  { out: 't101', src: 'T101', files: ['index.html', 'style.css', 'src', 'assets'] },
+  { out: 't101', src: 'T101', files: ['index.html', 'style.css', 'src', 'assets'], stamp: true },
   { out: 'iron-rice-bowl', src: '火車便當', files: ['index.html', 'style.css', 'drive.css', 'src', 'assets'] },
   { out: '3d-box', src: '3D紙箱', files: ['index.html', 'app.js', 'styles.css'] },
   { out: 'zhu-ying-tai', src: '注英台', files: ['index.html', 'styles.css', 'app.js', 'data'] },
@@ -35,10 +35,34 @@ for (const s of sites) {
     const filter = s.exclude ? (from) => !s.exclude.test(from) : undefined;
     for (const f of s.files) fs.cpSync(path.join(src, f), path.join(out, f), { recursive: true, filter });
   }
+  if (s.stamp) stampVersion(src, out);
   if (s.redirect) {
     fs.writeFileSync(path.join(out, 'index.html'),
       `<!doctype html><meta charset="utf-8"><title>轉址中…</title>` +
       `<meta http-equiv="refresh" content="0; url=${s.redirect}"><a href="${s.redirect}">${s.redirect}</a>\n`);
   }
   console.log(`✓ ${s.out}  ←  ${s.src}`);
+}
+
+/**
+ * 快取破壞:在 JS 模組的相對 import、index.html 的進入點與樣式、程式裡讀取的資料/音檔網址後面
+ * 加上 ?v=<原始專案 git 版本>,讓瀏覽器在每次更新後一定抓到新檔(GitHub Pages 會快取 10 分鐘)。
+ */
+function stampVersion(src, out) {
+  let v;
+  try { v = execSync('git rev-parse --short HEAD', { cwd: src }).toString().trim(); } catch { v = Date.now().toString(36); }
+  const walk = (dir) => fs.readdirSync(dir, { withFileTypes: true }).flatMap((d) => (d.isDirectory() ? walk(path.join(dir, d.name)) : [path.join(dir, d.name)]));
+  let n = 0;
+  for (const f of walk(out)) {
+    if (!/\.(js|mjs|html)$/.test(f)) continue;
+    let t = fs.readFileSync(f, 'utf8');
+    const before = t;
+    t = t.replace(/((?:from|import)\s*\(?\s*['"])(\.{1,2}\/[^'"?]+?\.js)(['"])/g, `$1$2?v=${v}$3`);
+    t = t.replace(/(src=["'])(src\/main\.js)(["'])/g, `$1$2?v=${v}$3`);
+    t = t.replace(/(href=["']style\.css)(\?v=[^"']*)?(["'])/g, `$1?v=${v}$3`);
+    t = t.replace(/(['"`]assets\/[^'"`?]+?\.(?:json|mp3))(['"`])/g, `$1?v=${v}$2`);
+    t = t.replace(/(\$\{[^}]+\}\.mp3)(`)/g, `$1?v=${v}$2`);
+    if (t !== before) { fs.writeFileSync(f, t); n++; }
+  }
+  console.log(`  版本戳記 ?v=${v}(${n} 個檔案)`);
 }

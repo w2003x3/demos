@@ -1,9 +1,9 @@
 // 高速電梯車廂(獨立場景)與行駛曲線。上行最高 1010 m/min(5F→89F 約 37 秒),下行 600 m/min。
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
-import { ELEV_VMAX, ELEV_ACC, floorY, floorAtY } from '../config.js';
-import { canvasTex, stoneTileTexture } from './textures.js';
-import { createCharacter, poseIdle } from './character.js';
+import { ELEV_VMAX, ELEV_ACC, floorY, floorAtY } from '../config.js?v=f1aef92';
+import { canvasTex, stoneTileTexture } from './textures.js?v=f1aef92';
+import { createCharacter, poseIdle } from './character.js?v=f1aef92';
 
 /** 梯形速度曲線:回傳 { T, at(t) → { s, v } }。 */
 export function rideProfile(dist, vmax, acc) {

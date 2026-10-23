@@ -1,6 +1,6 @@
 // 共用:環繞攝影機、降落傘模型。
 import * as THREE from 'three';
-import { canvasTex } from '../world/textures.js';
+import { canvasTex } from '../world/textures.js?v=f1aef92';
 
 /** 第三人稱環繞攝影機(拖曳轉向、滾輪縮放)。 */
 export class OrbitCam {
