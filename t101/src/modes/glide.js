@@ -9,6 +9,8 @@ import { VIS } from '../ui/tutorial.js';
 
 const clamp = THREE.MathUtils.clamp;
 const RHO = 1.225, G = 9.8;
+const SKIM = 2.0; // 離樓頂小於這個高度就算擦過
+const FALLING = ['falling', 'chute', 'crash', 'tumble'];
 
 export class GlideMode {
   constructor(game) {
@@ -49,9 +51,9 @@ export class GlideMode {
 
   tutorial(force) {
     this.g.tutorial.pages('glide', [
-      { title: '創意滑翔賽', html: '自己打造一架滑翔翼,從 <b>101 頂樓(434 公尺)的起飛台</b>出發,<b>滑翔距離就是成績</b>。中途撞到大樓會墜落,墜落時一樣要在 <b>10 秒內答對心算</b>才能打開降落傘。' },
+      { title: '創意滑翔賽', html: '自己打造一架滑翔翼,從 <b>101 頂樓(434 公尺)的起飛台</b>出發,<b>滑翔距離就是成績</b>。前方有大樓時<b>強風會把你吹開</b>;但飛太低<b>擦過樓頂</b>會重心不穩墜落,墜落時要在 <b>10 秒內答對心算</b>才能打開降落傘。' },
       { title: '打造滑翔翼', html: '<ul><li><b>翼型</b>:直翼平衡、後掠翼快、三角翼穩、雙翼慢速飄</li><li><b>翼展</b>:越長滑翔比越好,但越重越難轉彎</li><li><b>材質</b>:碳纖維最輕</li><li><b>尾翼</b>:沒有尾翼阻力小但會晃</li><li><b>造型主題</b>:珍奶號、鳳梨酥號…創意分高,但阻力較大</li></ul>右側會即時顯示<b>滑翔比、速度、穩定度與預估距離</b>。' },
-      { title: '飛行操作', visual: VIS.glide, html: '保持在<b>最佳空速</b>附近滑得最遠(HUD 會提示)。拉太多會<b>失速</b>往下掉;按住 <kbd>Space</kbd> 時間加速。避開南山廣場等高樓,降落在空地或道路上。' }
+      { title: '飛行操作', visual: VIS.glide, html: '保持在<b>最佳空速</b>附近滑得最遠(HUD 會提示)。拉太多會<b>失速</b>往下掉;按住 <kbd>Space</kbd> 時間加速。飛太低時小心<b>擦過樓頂</b>,保持高度、降落在空地或道路上。' }
     ], { finishLabel: force ? '繼續' : '開始打造' });
   }
 
@@ -196,10 +198,11 @@ export class GlideMode {
         this.gam = -RAMP.slope;
         this.yaw = 0;
         this.start = new THREE.Vector3(p.x, 0, p.z);
+        this.gustT = 0; this.gustDir = 0; this.windCheckT = 0; this.windMsgT = 0; this.windSaid = false;
       }
     } else if (this.state === 'fly') {
       this.fly(dt, input);
-    } else if (['falling', 'chute', 'crash'].includes(this.state)) {
+    } else if (FALLING.includes(this.state)) {
       this.updateFall(dt);
     } else if (this.state === 'landed') {
       this.v = Math.max(0, this.v - 6 * dt);
@@ -219,6 +222,25 @@ export class GlideMode {
     const steer = (input.is('KeyD', 'ArrowRight') ? 1 : 0) - (input.is('KeyA', 'ArrowLeft') ? 1 : 0);
     const steps = 4, h = (dt * accel) / steps;
     let stalled = false;
+    this.windMsgT -= dt;
+    this.windCheckT -= dt;
+    if (this.windCheckT <= 0) {
+      this.windCheckT = 0.12;
+      const wall = this.wallAhead(this.yaw);
+      if (wall != null && this.gustT <= 0.3) {
+        // 比較左右哪一側比較空,往那邊吹
+        const freeL = this.freeDist(this.yaw + 0.7), freeR = this.freeDist(this.yaw - 0.7);
+        this.gustDir = freeL >= freeR ? 1 : -1;
+        this.gustRate = wall < 30 ? 1.6 : 1.0;
+        this.gustT = 1.0;
+        if (this.windMsgT <= 0) {
+          this.windMsgT = 3;
+          g.audio.whoosh();
+          g.ui.banner('強風把你吹離大樓!', false, 1.6);
+          if (!this.windSaid) { this.windSaid = true; g.audio.say('glide_wind'); }
+        }
+      }
+    }
     for (let s = 0; s < steps; s++) {
       this.flightT += h;
       const wobble = P.stab < 1 ? Math.sin(this.flightT * 2.7) * 0.12 * (1 - P.stab) : 0;
@@ -234,13 +256,17 @@ export class GlideMode {
       this.gam += ((L * Math.cos(this.bank)) / (P.mass * this.v) - (G * Math.cos(this.gam)) / this.v) * h;
       this.gam = clamp(this.gam, -1.4, 0.9);
       this.yaw += ((L * Math.sin(this.bank)) / (P.mass * this.v * Math.max(0.2, Math.cos(this.gam)))) * h;
+      if (this.gustT > 0) { this.gustT -= h; this.yaw += this.gustDir * this.gustRate * h; }
       this.pos.x += this.v * Math.cos(this.gam) * Math.sin(this.yaw) * h;
       this.pos.z += this.v * Math.cos(this.gam) * Math.cos(this.yaw) * h;
       this.pos.y += this.v * Math.sin(this.gam) * h;
       this.maxV = Math.max(this.maxV, this.v);
-      // 碰撞
-      const hit = this.collider.hit(this.pos.x, this.pos.y + 0.6, this.pos.z, 1.5);
-      if (hit) { this.crashInto(hit); return; }
+      // 擦過樓頂:離屋頂太近 → 摩擦造成重心不穩
+      const roof = this.collider.roofAt(this.pos.x, this.pos.z, 0.8);
+      if (roof && this.pos.y > roof[4] - 1.5 && this.pos.y - roof[4] < SKIM) { this.skim(roof, roof[5]); return; }
+      // 萬一還是正面撞上(強風來不及吹開)
+      const hit = this.collider.hit(this.pos.x, this.pos.y + 0.6, this.pos.z, 1.0);
+      if (hit) { this.skim(hit.box || null, hit.name); return; }
       const gy = this.collider.ground(this.pos.x, this.pos.z);
       if (this.pos.y <= gy + 0.3) { this.touchdown(gy); return; }
     }
@@ -249,7 +275,7 @@ export class GlideMode {
     G0.position.copy(this.pos);
     G0.rotation.set(0, 0, 0);
     G0.rotation.order = 'YXZ';
-    G0.rotation.set(-this.gam - (this.cl - P.clBest) * 0.25, this.yaw, -this.bank);
+    G0.rotation.set(-this.gam - (this.cl - P.clBest) * 0.25, this.yaw, -this.bank - (this.gustT > 0 ? this.gustDir * 0.35 : 0));
     g.audio.setWind(clamp(this.v / 30, 0.15, 1));
     // HUD
     const dist = this.dist();
@@ -266,6 +292,86 @@ export class GlideMode {
 
   dist() { return Math.hypot(this.pos.x - this.start.x, this.pos.z - this.start.z); }
 
+  /** 沿下滑線往前探測,前方是牆(低於屋頂)時回傳距離。 */
+  wallAhead(yaw) {
+    const tg = Math.tan(clamp(this.gam, -0.6, 0.3));
+    for (const d of [12, 22, 35, 50, 70, 90]) {
+      const x = this.pos.x + Math.sin(yaw) * d, z = this.pos.z + Math.cos(yaw) * d, y = this.pos.y + d * tg;
+      const hit = this.collider.hit(x, y, z, 2.5);
+      if (hit && y < hit.h - 1.5) return d;
+    }
+    return null;
+  }
+  freeDist(yaw) {
+    const tg = Math.tan(clamp(this.gam, -0.6, 0.3));
+    for (let d = 10; d <= 140; d += 10) {
+      const x = this.pos.x + Math.sin(yaw) * d, z = this.pos.z + Math.cos(yaw) * d, y = this.pos.y + d * tg;
+      const hit = this.collider.hit(x, y, z, 2.5);
+      if (hit && y < hit.h - 1.5) return d;
+    }
+    return 999;
+  }
+
+  /** 擦過樓頂:飛行員脫離,先在屋頂上翻滾滑出邊緣,離開屋頂後才開始墜落。 */
+  skim(box, name) {
+    const g = this.g;
+    g.audio.thud();
+    g.audio.slip();
+    g.audio.say('glide_skim');
+    g.ui.banner(`擦過${name === '大樓' ? '大樓樓頂' : name}!重心不穩`, true, 2.5);
+    this.fallPos = this.pos.clone();
+    this.glider.pilot.root.visible = false;
+    this.fallChar.root.visible = true;
+    this.fallChar.root.rotation.set(0, 0, 0);
+    this.g.scene.add(this.fallChar.root);
+    this.wreckV = new THREE.Vector3(Math.sin(this.yaw) * 4, 1, Math.cos(this.yaw) * 4);
+    const fwd = new THREE.Vector3(Math.sin(this.yaw), 0, Math.cos(this.yaw));
+    if (box) {
+      // 沿前進方向繼續滑出去(至少 8 m/s),同時往最近的邊緣推
+      const e = this.edgeDir(box, this.fallPos);
+      this.fallVel = fwd.multiplyScalar(Math.max(8, this.v * 0.8)).addScaledVector(e, 4);
+      this.fallVel.y = 0;
+      this.tumbleBox = box;
+      this.state = 'tumble';
+    } else {
+      // 撞到 101 本體:往後彈開
+      this.fallVel = fwd.multiplyScalar(-6);
+      this.fallVel.y = 1;
+      this.beginFall();
+    }
+  }
+
+  /** 從點到盒子最近邊緣的水平方向。 */
+  edgeDir(b, p) {
+    const d = [[p.x - b[0], -1, 0], [b[2] - p.x, 1, 0], [p.z - b[1], 0, -1], [b[3] - p.z, 0, 1]].sort((a, c) => a[0] - c[0])[0];
+    return new THREE.Vector3(d[1], 0, d[2]);
+  }
+
+  beginFall() {
+    const g = this.g, p = this.fallPos;
+    this.state = 'falling';
+    const h = p.y - this.collider.ground(p.x, p.z);
+    if (h < 15) { this.state = 'crash'; this.lowFall = true; return; }
+    this.lowFall = false;
+    g.timeScale = Math.min(0.12, Math.sqrt((2 * h) / 9.8) / 12);
+    askQuiz(g.ui, g.audio, Math.min(1, h / 434), 10).then((ok) => {
+      g.timeScale = 1;
+      if (g.mode !== this) return;
+      if (ok) {
+        this.state = 'chute';
+        this.chute.visible = true;
+        this.chute.scale.setScalar(0.05);
+        this.fallVel.set(this.fallVel.x * 0.3, Math.min(this.fallVel.y, -10), this.fallVel.z * 0.3);
+        g.audio.chute();
+        g.audio.say('chute_ok');
+        g.ui.banner('降落傘打開了!A / D 控制方向', false, 3);
+      } else {
+        this.state = 'crash';
+        g.audio.say('chute_fail');
+      }
+    });
+  }
+
   touchdown(gy) {
     const g = this.g;
     this.pos.y = gy + 0.3;
@@ -278,42 +384,6 @@ export class GlideMode {
     this.finish(soft ? '成功著陸' : '硬著陸(成績仍列入)', this.dist(), true);
   }
 
-  crashInto(name) {
-    const g = this.g;
-    g.audio.thud();
-    g.audio.say('glide_crash');
-    g.ui.banner(`撞到${name}了!`, true, 2.5);
-    this.crashDist = this.dist();
-    // 飛行員脫離,滑翔翼翻落
-    this.state = 'falling';
-    const p = this.pos.clone();
-    this.fallPos = p;
-    this.fallVel = new THREE.Vector3(-Math.sin(this.yaw) * 3, 2, -Math.cos(this.yaw) * 3);
-    this.glider.pilot.root.visible = false;
-    this.fallChar.root.visible = true;
-    g.scene.add(this.fallChar.root);
-    this.wreckV = new THREE.Vector3(0, 0, 0);
-    const h = p.y - this.collider.ground(p.x, p.z);
-    if (h < 15) { this.state = 'crash'; return; }
-    g.timeScale = Math.min(0.12, Math.sqrt((2 * h) / 9.8) / 12);
-    askQuiz(g.ui, g.audio, Math.min(1, h / 434), 10).then((ok) => {
-      g.timeScale = 1;
-      if (g.mode !== this) return;
-      if (ok) {
-        this.state = 'chute';
-        this.chute.visible = true;
-        this.chute.scale.setScalar(0.05);
-        this.fallVel.set(0, Math.min(this.fallVel.y, -10), 0);
-        g.audio.chute();
-        g.audio.say('chute_ok');
-        g.ui.banner('降落傘打開了!A / D 控制方向', false, 3);
-      } else {
-        this.state = 'crash';
-        g.audio.say('chute_fail');
-      }
-    });
-  }
-
   updateFall(dt) {
     const g = this.g, v = this.fallVel, p = this.fallPos, c = this.fallChar;
     // 滑翔翼殘骸往下掉
@@ -322,6 +392,19 @@ export class GlideMode {
     W.position.addScaledVector(this.wreckV, dt);
     W.rotation.x += dt * 1.5;
     if (W.position.y < this.collider.ground(W.position.x, W.position.z)) W.visible = false;
+    if (this.state === 'tumble') {
+      // 在屋頂上翻滾、滑向邊緣
+      const b = this.tumbleBox;
+      p.addScaledVector(v, dt);
+      p.y = b[4] + 0.9;
+      c.root.position.set(p.x, p.y - 0.6, p.z);
+      c.root.rotation.x += dt * 9;
+      c.root.rotation.y = Math.atan2(v.x, v.z);
+      poseCheer(c, g.t * 3);
+      const inside = p.x > b[0] - 0.8 && p.x < b[2] + 0.8 && p.z > b[1] - 0.8 && p.z < b[3] + 0.8;
+      if (!inside) { v.y = 1.5; v.multiplyScalar(0.6); this.beginFall(); }
+      return;
+    }
     if (this.state === 'chute') {
       this.chute.scale.setScalar(Math.min(1, this.chute.scale.x + dt * 2.5));
       const steer = (g.input.is('KeyD') ? 1 : 0) - (g.input.is('KeyA') ? 1 : 0);
@@ -341,9 +424,20 @@ export class GlideMode {
       c.root.rotation.x += dt * 2;
       poseCheer(c, g.t * 2);
     }
+    // 不會停在其他大樓樓頂:碰到樓頂就被推出邊緣
+    const rb = this.collider.roofAt(p.x, p.z, 0.4);
+    if (rb && p.y - 1 < rb[4] + 0.2 && p.y - 1 > rb[4] - 3) {
+      p.y = rb[4] + 1.2;
+      v.y = Math.max(v.y, 0);
+      const e = this.edgeDir(rb, p);
+      v.x += (e.x * 9 - v.x) * Math.min(1, dt * 6);
+      v.z += (e.z * 9 - v.z) * Math.min(1, dt * 6);
+      if (this.state === 'chute') this.chute.position.set(p.x, p.y - 0.9, p.z);
+      c.root.position.set(p.x, p.y - 0.95, p.z);
+      return;
+    }
     const gy = this.collider.ground(p.x, p.z);
-    const roof = this.collider.hit(p.x, p.y - 1, p.z, 0.2);
-    if (p.y - 1 <= gy || (roof && this.state === 'chute')) {
+    if (p.y - 1 <= gy) {
       if (this.state === 'chute') {
         this.state = 'landedChute';
         this.chute.visible = false;
@@ -352,6 +446,13 @@ export class GlideMode {
         g.audio.say('landed');
         this.pos = p.clone();
         this.finish('降落傘著陸', this.dist(), true);
+      } else if (this.lowFall) {
+        this.state = 'landedChute';
+        g.audio.thud();
+        poseIdle(c, 0);
+        c.root.rotation.set(0, 0, 0);
+        this.pos = p.clone();
+        this.finish('摔落地面(高度不高,成績列入)', this.dist(), true);
       } else {
         this.state = 'crashed';
         g.audio.thud();
@@ -368,14 +469,14 @@ export class GlideMode {
   camera(rawDt) {
     const g = this.g, input = g.input;
     let target, yaw = 0;
-    if (['falling', 'chute', 'crash', 'crashed', 'landedChute'].includes(this.state)) {
+    if ([...FALLING, 'crashed', 'landedChute'].includes(this.state)) {
       target = this.fallPos.clone();
       yaw = this.yaw + Math.PI;
     } else {
       target = this.glider.group.position.clone().add(new THREE.Vector3(0, 0.8, 0));
       yaw = (this.yaw || 0) + Math.PI;
     }
-    this.glider.pilot.root.visible = !(this.view === 2 && this.state === 'fly') && !['falling', 'chute', 'crash', 'crashed', 'landedChute'].includes(this.state);
+    this.glider.pilot.root.visible = !(this.view === 2 && this.state === 'fly') && ![...FALLING, 'crashed', 'landedChute'].includes(this.state);
     if (this.view === 2 && this.state === 'fly') {
       // 第一人稱:飛行員視角
       const G0 = this.glider.group;

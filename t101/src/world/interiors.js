@@ -273,12 +273,12 @@ function build35F() {
     ['濃縮咖啡', '大杯 $95'], ['美式咖啡', '大杯 $120'], ['那堤', '大杯 $135'], ['卡布奇諾', '大杯 $135'],
     ['焦糖瑪奇朵', '大杯 $160'], ['抹茶那堤', '大杯 $150'], ['冷萃咖啡', '大杯 $150'], ['去冰補奶', '+$25']
   ];
-  const m1 = F.menuBoard(2.6, 1.3, '咖啡 COFFEE', menu.slice(0, 4), { bg: '#1e2b25' });
+  const m1 = F.menuBoard(2.6, 1.3, '咖啡 CAFE', menu.slice(0, 4), { bg: '#1e2b25' });
   m1.position.set(8.02, 2.2, -2.2); m1.rotation.y = Math.PI / 2;
   const m2 = F.menuBoard(2.6, 1.3, '特調 SIGNATURE', menu.slice(4), { bg: '#1e2b25' });
   m2.position.set(8.02, 2.2, 1.0); m2.rotation.y = Math.PI / 2;
   f.group.add(m1, m2);
-  const sign = F.signPlane(4.2, 0.7, '488K COFFEE', { bg: green, fg: '#ffffff', font: '700 150px "Barlow Condensed", sans-serif', glow: 0.9 });
+  const sign = F.signPlane(4.2, 0.7, '488K CAFE', { bg: green, fg: '#ffffff', font: '700 150px "Barlow Condensed", sans-serif', glow: 0.9 });
   sign.position.set(8.03, 3.35, -0.6); sign.rotation.y = Math.PI / 2; sign.scale.set(0.9, 0.9, 1);
   f.group.add(sign);
   const sign2 = F.signPlane(3.2, 0.5, '四八八克 101 門市 · 35F', { bg: null, fg: '#e6f2ec', font: '700 110px "Noto Sans TC", sans-serif', glow: 0.6 });
@@ -383,10 +383,10 @@ function build88F(damper) {
   backWall.castShadow = true;
   f.group.add(backWall);
   f.box(17.6, 0, 0.6, 9);
-  const kafSign = F.signPlane(5, 0.9, '心缽咖啡 XIN BO KAFFA', { bg: '#14110f', fg: '#e9d6b0', font: '700 120px "Noto Sans TC", sans-serif', glow: 0.8 });
+  const kafSign = F.signPlane(5, 0.9, '心缽咖啡 XIN BO CAFE', { bg: '#14110f', fg: '#e9d6b0', font: '700 120px "Noto Sans TC", sans-serif', glow: 0.8 });
   kafSign.position.set(17.44, 3.3, 0); kafSign.rotation.y = -Math.PI / 2;
   f.group.add(kafSign);
-  const km = F.menuBoard(2.4, 1.25, '手沖 POUR OVER', [['招牌綜合', '$280'], ['衣索比亞', '$320'], ['101 拿鐵', '$300'], ['去冰補奶', '免費']], { bg: '#1a1714', accent: '#d9b25a' });
+  const km = F.menuBoard(2.4, 1.0, '手沖 POUR OVER', [['招牌綜合', '$280'], ['衣索比亞', '$320'], ['101 拿鐵', '$300']], { bg: '#1a1714', accent: '#d9b25a' });
   km.position.set(17.44, 2.2, -2.8); km.rotation.y = -Math.PI / 2;
   f.group.add(km);
   f.add(F.pastryCase(1.8), 15.5, -5.0, -Math.PI / 2);

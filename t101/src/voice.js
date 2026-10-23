@@ -56,5 +56,7 @@ export const LINES = [
   { id: 'glide_stall', role: 'announcer', text: '失速了!壓低機頭加速!' },
   { id: 'glide_land', role: 'announcer', text: '成功著陸!來看看飛了多遠!' },
   { id: 'glide_crash', role: 'announcer', text: '撞到建築物了!' },
+  { id: 'glide_skim', role: 'announcer', text: '擦過樓頂了!重心不穩!' },
+  { id: 'glide_wind', role: 'announcer', text: '前方有大樓,強風把你吹開了!' },
   { id: 'glide_record', role: 'announcer', text: '新紀錄!這是目前飛得最遠的滑翔翼!' }
 ];

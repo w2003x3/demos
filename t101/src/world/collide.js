@@ -17,17 +17,26 @@ export function makeCollider(boxes) {
   };
   for (const b of boxes) put([b[0], b[1], b[2], b[3], b[4], '大樓']);
   for (const b of LANDMARK_SOLIDS) put(b);
+  const towerHw = (y) => (y < CROWN_Y ? halfWidthAt(y) : 3.6);
   return {
-    /** 回傳撞到的名稱,沒撞到回傳 null。 */
+    /**
+     * 撞到什麼:回傳 { name, box:[x0,z0,x1,z1,h] } 或 { name:'台北101', tower:true },沒撞到回傳 null。
+     */
     hit(x, y, z, r = 0.6) {
-      // 101 本體
       if (y < SPIRE_TOP) {
-        const hw = y < CROWN_Y ? halfWidthAt(y) : 3.6;
-        if (Math.abs(x) < hw + r && Math.abs(z) < hw + r) return '台北101';
+        const hw = towerHw(y);
+        if (Math.abs(x) < hw + r && Math.abs(z) < hw + r) return { name: '台北101', tower: true, h: y < CROWN_Y ? CROWN_Y : SPIRE_TOP };
       }
       const list = grid.get(key(Math.floor(x / C), Math.floor(z / C)));
-      if (list) for (const b of list) if (y < b[4] + r && x > b[0] - r && x < b[2] + r && z > b[1] - r && z < b[3] + r) return b[5];
+      if (list) for (const b of list) if (y < b[4] + r && x > b[0] - r && x < b[2] + r && z > b[1] - r && z < b[3] + r) return { name: b[5], box: b, h: b[4] };
       return null;
+    },
+    /** (x,z) 正下方最高的屋頂(不含 101),沒有則回傳 null。 */
+    roofAt(x, z, r = 0) {
+      const list = grid.get(key(Math.floor(x / C), Math.floor(z / C)));
+      let best = null;
+      if (list) for (const b of list) if (x > b[0] - r && x < b[2] + r && z > b[1] - r && z < b[3] + r && (!best || b[4] > best[4])) best = b;
+      return best;
     },
     ground(x, z) { return Math.max(0, terrainHeight(x, z)); }
   };
