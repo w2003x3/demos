@@ -22,6 +22,8 @@ export class RaceMode {
     this.scene = game.stair.scene;
     this.camera = new THREE.PerspectiveCamera(68, innerWidth / innerHeight, 0.05, 60);
     addEventListener('resize', () => { this.camera.aspect = innerWidth / innerHeight; this.camera.updateProjectionMatrix(); });
+    this.views = [{ name: '後方追蹤' }, { name: '側面' }, { name: '第一人稱' }, { name: '前方' }];
+    this.view = 0;
     this.me = createCharacter({ shirt: 0xe2553b, pants: 0x1d2433, shorts: true, bib: '0732', shoes: 0xf2f2f2 });
     this.scene.add(this.me.root);
     this.rivals = RIVALS.map((r, i) => {
@@ -60,7 +62,8 @@ export class RaceMode {
     g.audio.say('race_ready');
     g.ui.subtitle('各就各位,預備。', 2);
   }
-  exit() { this.g.ui.big(''); }
+  exit() { this.g.ui.big(''); this.me.root.visible = true; }
+  setView(i) { this.view = i; this.camInit = false; }
 
   buildHud() {
     const ui = this.g.ui;
@@ -207,16 +210,31 @@ export class RaceMode {
     }
     this.g.stair.update(this.race.from, this.p);
 
-    // 攝影機:沿路徑跟在後方
+    // 攝影機(依預設視角)
     const me = stairPath(this.p, 0);
-    const back = stairPath(Math.max(-0.05, this.p - 5 / U_PER_FLOOR), 0.15);
     const cam = this.camera;
-    const want = new THREE.Vector3(back.x, back.y + 2.2, back.z);
-    if (!this.camInit) { cam.position.copy(want); this.camInit = true; }
-    cam.position.lerp(want, 1 - Math.pow(0.001, rawDt));
+    const U = 1 / U_PER_FLOOR;
+    let want, look = new THREE.Vector3(me.x, me.y + 1.3, me.z);
+    this.me.root.visible = this.view !== 2;
+    if (this.view === 1) { // 側面:從樓梯井中央看
+      want = new THREE.Vector3(me.x, me.y + 2.4, -Math.sign(me.z || 1) * 0.9);
+    } else if (this.view === 2) { // 第一人稱
+      const ahead = stairPath(this.p + 4 * U, 0);
+      want = new THREE.Vector3(me.x, me.y + 1.65, me.z);
+      look = new THREE.Vector3(ahead.x, ahead.y + 1.5, ahead.z);
+    } else if (this.view === 3) { // 前方回看
+      const f = stairPath(this.p + 5 * U, 0.15);
+      want = new THREE.Vector3(f.x, f.y + 2.0, f.z);
+    } else {
+      const back = stairPath(Math.max(-0.05, this.p - 5 * U), 0.15);
+      want = new THREE.Vector3(back.x, back.y + 2.2, back.z);
+    }
+    if (!this.camInit) { cam.position.copy(want); this.camInit = true; this.lookS = look.clone(); }
+    cam.position.lerp(want, 1 - Math.pow(this.view === 2 ? 1e-6 : 0.001, rawDt));
     cam.position.x = clamp(cam.position.x, -4.4, 4.4);
     cam.position.z = clamp(cam.position.z, -1.3, 1.3);
-    cam.lookAt(me.x, me.y + 1.3, me.z);
+    this.lookS.lerp(look, 1 - Math.pow(1e-4, rawDt));
+    cam.lookAt(this.lookS);
 
     // HUD
     const all = [{ name: '你', p: this.p, me: true, done: this.state === 'done' ? this.time : null }, ...this.rivals];

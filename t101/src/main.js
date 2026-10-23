@@ -41,6 +41,13 @@ class Game {
     addEventListener('pointerdown', () => this.audio.unlock(), { once: false });
     addEventListener('keydown', () => this.audio.unlock());
     this.timeKey = store.get('time', 'day');
+    this.settings = { sfx: 90, voice: 100, muted: false, quality: matchMedia('(pointer: coarse)').matches ? 'mid' : 'high', fps: false, ...store.get('settings', {}) };
+    this.audio.setVolume(this.settings.sfx / 100);
+    this.audio.setVoiceVolume(this.settings.voice / 100);
+    this.audio.setMuted(this.settings.muted);
+    this.paused = false;
+    this.fpsN = 0; this.fpsT = 0;
+    this.ui.$('gear').addEventListener('click', () => this.toggleSettings());
     this.clock = new THREE.Clock();
     this.t = 0;
     setTimeout(() => this.build(), 30);
@@ -79,6 +86,7 @@ class Game {
     this.stair = buildStairScene();
     this.pmrem = new THREE.PMREMGenerator(this.renderer);
     this.setTime(this.timeKey);
+    this.applyQuality(this.settings.quality);
     await step(100);
     this.modes = { climb: new ClimbMode(this), race: new RaceMode(this), explore: new ExploreMode(this) };
     this.ui.modal('');
@@ -145,6 +153,8 @@ class Game {
     this.ui.clear();
     this.audio.setWind(0); this.audio.setHum(0); this.audio.setMurmur(0);
     this.interiors.setActive(null);
+    this.closeSettings();
+    this.ui.$('topbar').style.display = 'none';
     this.menuT = 0;
     const best = store.get('best', {});
     const climbBest = store.get('climbBest', null);
@@ -167,12 +177,13 @@ class Game {
             <button class="mode-btn" data-mode="explore"><span class="no">04</span><span class="t"><b>高速電梯 · 樓層導覽</b><span>5F 售票 → 35F 星巴克 · 88F 興波咖啡與阻尼器 · 89F 觀景台</span></span><span class="tag">探索</span></button>
           </div>
           <div class="row"><span class="label">時段</span><div class="seg" role="group" aria-label="時段">${timeBtns}</div>
-            <button class="icon-btn" id="mute" aria-label="音效開關" title="音效開關">${this.audio.muted ? speakerOff : speakerOn}</button></div>
+            <button class="icon-btn" id="mute" aria-label="音效開關" title="音效開關">${this.audio.muted ? speakerOff : speakerOn}</button>
+            <button class="icon-btn" id="menu-set" aria-label="設定" title="設定">${gearIcon}</button></div>
           <div class="records">
             最佳紀錄 · 全程 <b>${best.full ? fmtTime(best.full) : '--'}</b> · 短程 <b>${best.sprint ? fmtTime(best.sprint) : '--'}</b>
             · 攀爬登頂 <b>${climbBest ? fmtTime(climbBest) : '--'}</b> · 紀念章 <b>${stamps}</b>
           </div>
-          <div class="help desk-only">拖曳滑鼠轉視角 · 滾輪縮放 · <kbd>Esc</kbd> 回主選單</div>
+          <div class="help desk-only">拖曳滑鼠轉視角 · 滾輪縮放 · <kbd>V</kbd> 切換視角 · <kbd>Esc</kbd> 設定與返回選單</div>
         </div>
       </div>`;
     const L = this.ui.layer;
@@ -183,8 +194,11 @@ class Game {
     }));
     L.querySelector('#mute').addEventListener('click', (e) => {
       this.audio.setMuted(!this.audio.muted);
+      this.settings.muted = this.audio.muted;
+      store.set('settings', this.settings);
       e.currentTarget.innerHTML = this.audio.muted ? speakerOff : speakerOn;
     });
+    L.querySelector('#menu-set').addEventListener('click', () => this.toggleSettings());
     L.querySelectorAll('[data-mode]').forEach((b) => b.addEventListener('click', () => {
       this.audio.unlock();
       this.ui.layer.innerHTML = '';
@@ -196,16 +210,125 @@ class Game {
   startMode(name, opts = {}) {
     if (this.mode) this.mode.exit();
     this.ui.clear();
+    this.closeSettings();
     this.mode = this.modes[name];
     this.mode.enter(opts);
+    this.renderViewbar();
+    this.ui.$('topbar').style.display = '';
+  }
+
+  renderViewbar() {
+    const vb = this.ui.$('viewbar');
+    const m = this.mode;
+    if (!m || !m.views) { vb.innerHTML = ''; return; }
+    vb.innerHTML = m.views.map((v, i) => `<button data-v="${i}" class="${i === m.view ? 'on' : ''}" title="視角:${v.name}(按 ${i + 1} 或 V)"><kbd>${i + 1}</kbd>${v.name}</button>`).join('');
+    vb.querySelectorAll('[data-v]').forEach((b) => b.addEventListener('click', () => {
+      const i = Number(b.dataset.v);
+      // 小螢幕只顯示目前視角,點它就切到下一個
+      this.setView(i === m.view && matchMedia('(max-width: 900px)').matches ? (i + 1) % m.views.length : i);
+    }));
+  }
+
+  setView(i) {
+    if (!this.mode || !this.mode.views) return;
+    this.mode.setView(i);
+    this.renderViewbar();
+    this.ui.banner(`視角:${this.mode.views[i].name}`, false, 1.2);
+  }
+
+  // ── 設定面板 ──
+  toggleSettings() { if (this.settingsOpen) this.closeSettings(); else this.openSettings(); }
+  closeSettings() {
+    if (!this.settingsOpen) return;
+    this.settingsOpen = false;
+    this.paused = false;
+    this.ui.$('settings').innerHTML = '';
+    this.clock.getDelta();
+  }
+  openSettings() {
+    if (this.ui.layer.querySelector('.quiz')) return;
+    this.settingsOpen = true;
+    this.paused = !!this.mode;
+    const s = this.settings;
+    const q = (k, l) => `<button data-q="${k}" class="${s.quality === k ? 'on' : ''}">${l}</button>`;
+    const el = this.ui.$('settings');
+    el.innerHTML = `
+      <div class="modal-wrap">
+        <div class="modal settings" role="dialog" aria-label="設定">
+          <h2>設定${this.mode ? '<span style="font-size:14px;font-weight:500;color:var(--muted);margin-left:10px">遊戲已暫停</span>' : ''}</h2>
+          <label class="set-row"><span>音效音量</span><input type="range" id="s-sfx" min="0" max="100" value="${s.sfx}"><output id="o-sfx">${s.sfx}</output></label>
+          <label class="set-row"><span>語音音量</span><input type="range" id="s-voice" min="0" max="100" value="${s.voice}"><output id="o-voice">${s.voice}</output></label>
+          <label class="check"><input type="checkbox" id="s-mute" ${s.muted ? 'checked' : ''}>全部靜音</label>
+          <div class="set-row" style="grid-template-columns:88px minmax(0,1fr)"><span>畫質</span><div class="seg" role="group" aria-label="畫質">${q('low', '低 · 流暢')}${q('mid', '中')}${q('high', '高 · 精緻')}</div></div>
+          <label class="check"><input type="checkbox" id="s-fps" ${s.fps ? 'checked' : ''}>顯示 FPS</label>
+          <div class="small" style="line-height:1.7"><kbd>Esc</kbd> 開關設定 · <kbd>V</kbd> 切換視角 · <kbd>1</kbd>~<kbd>5</kbd> 指定視角 · 拖曳轉視角、滾輪縮放</div>
+          <div class="row">
+            <button class="btn primary" id="s-close">${this.mode ? '繼續遊戲' : '完成'}</button>
+            ${this.mode ? '<button class="btn" id="s-menu">返回主選單</button>' : ''}
+          </div>
+        </div>
+      </div>`;
+    const save = () => store.set('settings', s);
+    const range = (id, key, fn) => {
+      const r = el.querySelector('#s-' + id);
+      r.addEventListener('input', () => { s[key] = Number(r.value); el.querySelector('#o-' + id).textContent = r.value; fn(s[key] / 100); save(); });
+    };
+    range('sfx', 'sfx', (v) => { this.audio.setVolume(v); this.audio.click(); });
+    range('voice', 'voice', (v) => this.audio.setVoiceVolume(v));
+    el.querySelector('#s-mute').addEventListener('change', (e) => { s.muted = e.target.checked; this.audio.setMuted(s.muted); save(); });
+    el.querySelector('#s-fps').addEventListener('change', (e) => { s.fps = e.target.checked; if (!s.fps) this.ui.set('fps', ''); save(); });
+    el.querySelectorAll('[data-q]').forEach((b) => b.addEventListener('click', () => {
+      s.quality = b.dataset.q;
+      el.querySelectorAll('[data-q]').forEach((x) => x.classList.toggle('on', x === b));
+      this.applyQuality(s.quality);
+      save();
+    }));
+    el.querySelector('#s-close').addEventListener('click', () => this.closeSettings());
+    el.querySelector('#s-menu')?.addEventListener('click', () => this.showMenu());
+    el.querySelector('#s-close').focus();
+  }
+
+  /** 畫質:解析度與陰影。 */
+  applyQuality(q) {
+    const r = this.renderer, dpr = devicePixelRatio || 1;
+    r.setPixelRatio({ low: Math.min(dpr, 1) * 0.75, mid: Math.min(dpr, 1.25), high: Math.min(dpr, 2) }[q]);
+    r.setSize(innerWidth, innerHeight);
+    const shadows = q !== 'low';
+    const type = q === 'high' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
+    const size = q === 'high' ? 2048 : 1024;
+    const sh = this.lights.sun.shadow;
+    if (sh.mapSize.x !== size) { sh.mapSize.set(size, size); if (sh.map) { sh.map.dispose(); sh.map = null; } }
+    if (r.shadowMap.enabled !== shadows || r.shadowMap.type !== type) {
+      r.shadowMap.enabled = shadows;
+      r.shadowMap.type = type;
+      for (const sc of [this.scene, this.stair.scene, this.elevator.scene]) {
+        sc.traverse((o) => { if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach((m) => { m.needsUpdate = true; }); });
+      }
+    }
   }
 
   loop() {
-    const rawDt = Math.min(0.05, this.clock.getDelta());
+    const realDt = this.clock.getDelta();
+    const input = this.input;
+    this.fpsN++; this.fpsT += realDt;
+    if (this.fpsT > 0.5) { if (this.settings.fps) this.ui.set('fps', `${Math.round(this.fpsN / this.fpsT)} FPS`); this.fpsN = 0; this.fpsT = 0; }
+    if (input.hit('Escape') && !this.ui.layer.querySelector('.quiz')) {
+      if (this.settingsOpen) this.closeSettings();
+      else if (this.mode) this.openSettings();
+    }
+    if (this.paused) {
+      this.renderer.render(this.lastScene || this.scene, this.lastCamera || this.camera);
+      input.endFrame();
+      return;
+    }
+    if (this.mode && this.mode.views && !this.ui.layer.querySelector('.quiz')) {
+      const n = this.mode.views.length;
+      if (input.hit('KeyV')) this.setView((this.mode.view + 1) % n);
+      for (let i = 0; i < n; i++) if (input.hit('Digit' + (i + 1), 'Numpad' + (i + 1))) this.setView(i);
+    }
+    const rawDt = Math.min(0.05, realDt);
     const dt = rawDt * (this.timeScale ?? 1);
     this.t += dt;
-    const input = this.input;
-    if (input.hit('Escape') && this.mode && !this.ui.layer.querySelector('.quiz')) this.showMenu();
     this.updateTraffic(dt);
     this.interiors.update(this.t, dt);
     this.tower.userData.beacon.visible = Math.sin(this.t * 3) > 0;
@@ -228,11 +351,13 @@ class Game {
       this.camera.updateProjectionMatrix();
     }
     this.ui.update(rawDt);
+    this.lastScene = scene; this.lastCamera = camera;
     this.renderer.render(scene, camera);
     input.endFrame();
   }
 }
 
+const gearIcon = '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M4.2 4.2l2.1 2.1M17.7 17.7l2.1 2.1M2 12h3M19 12h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1"/></svg>';
 const speakerOn = '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 0 1 0 7"/><path d="M19 5a10 10 0 0 1 0 14"/></svg>';
 const speakerOff = '<svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 5 6 9H2v6h4l5 4V5z"/><path d="m22 9-6 6"/><path d="m16 9 6 6"/></svg>';
 

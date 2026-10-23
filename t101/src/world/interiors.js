@@ -316,6 +316,7 @@ function build35F() {
   f.npc(randomVisitor(21), -17.1, 0, Math.PI / 2, 'sit');
   for (const [x, z] of [[19.5, -17], [-19, 17], [19.5, 17], [-19, -17]]) { f.add(F.planter(1.3), x, z); f.circle(x, z, 0.4); }
   f.interact.push({ id: 'order-sbux', x: 12.0, z: -1, r: 1.8, label: '點一杯咖啡' });
+  f.interact.push({ id: 'order-sbux', x: 11.7, z: 5.9, r: 1.3, label: '點甜點與咖啡' });
   f.interact.push({ id: 'window', x: -2, z: f.hw - 1.4, r: 3, label: '靠窗欣賞 35 樓景色' });
   return f;
 }
@@ -406,6 +407,7 @@ function build88F(damper) {
   f.npc(randomVisitor(32), -4.2, 5.6, Math.PI * 0.8, 'lean');
   f.npc(randomVisitor(33), 5.8, -2.6, -Math.PI / 2 - 0.2);
   f.interact.push({ id: 'order-kaffa', x: 13.6, z: 0, r: 1.8, label: '點一杯手沖咖啡' });
+  f.interact.push({ id: 'order-kaffa', x: 14.2, z: -5, r: 1.3, label: '點甜點與手沖咖啡' });
   return f;
 }
 

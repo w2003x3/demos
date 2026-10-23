@@ -5,6 +5,8 @@ export class Audio {
   constructor() {
     this.ctx = null;
     this.muted = false;
+    this.volume = 0.9;
+    this.voiceVolume = 1;
     this.voiceOk = new Set();
     this.voiceCache = {};
     this.current = null;
@@ -15,7 +17,7 @@ export class Audio {
     if (this.ctx) { this.ctx.resume(); return; }
     const ctx = (this.ctx = new AudioContext());
     this.master = ctx.createGain();
-    this.master.gain.value = this.muted ? 0 : 0.9;
+    this.master.gain.value = this.muted ? 0 : this.volume;
     this.master.connect(ctx.destination);
     // 噪音緩衝
     const len = ctx.sampleRate * 2;
@@ -41,9 +43,11 @@ export class Audio {
 
   setMuted(m) {
     this.muted = m;
-    if (this.master) this.master.gain.value = m ? 0 : 0.9;
+    if (this.master) this.master.gain.value = m ? 0 : this.volume;
     if (this.current) this.current.muted = m;
   }
+  setVolume(v) { this.volume = v; if (this.master && !this.muted) this.master.gain.value = v; }
+  setVoiceVolume(v) { this.voiceVolume = v; if (this.current) this.current.volume = v; }
 
   _set(node, v, tc = 0.25) { if (this.ctx) node.gain.setTargetAtTime(v, this.ctx.currentTime, tc); }
   /** 風聲:strength 0~1。 */
@@ -126,7 +130,7 @@ export class Audio {
     if (!a) { a = new window.Audio(`assets/audio/voice/${id}.mp3`); this.voiceCache[id] = a; }
     a.currentTime = 0;
     a.muted = this.muted;
-    a.volume = 1;
+    a.volume = this.voiceVolume;
     a.onended = () => { if (this.current === a) this.current = null; onEnd && onEnd(); };
     a.play().catch(() => onEnd && onEnd());
     this.current = a;

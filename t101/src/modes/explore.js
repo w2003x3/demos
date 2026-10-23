@@ -17,19 +17,41 @@ export class ExploreMode {
     this.cup.visible = false;
     this.char.arms.R.elbow.children[0].add(this.cup);
     this.cam = new OrbitCam(game.camera, { dist: 4.2, min: 1.2, max: 9, pitch: 0.25, pitchMin: -0.3, pitchMax: 1.1 });
+    this.views = [
+      { name: '跟隨', dyaw: 0, pitch: 0.25, dist: 4.2 },
+      { name: '肩後', dyaw: 0.35, pitch: 0.1, dist: 1.7 },
+      { name: '第一人稱', fp: true, pitch: -0.05 },
+      { name: '俯視', dyaw: 0, pitch: 1.05, dist: 7 },
+      { name: '正面', dyaw: Math.PI, pitch: 0.12, dist: 3 }
+    ];
+    this.view = 0;
+    this.ray = new THREE.Raycaster();
+    this.marker = new THREE.Mesh(new THREE.RingGeometry(0.22, 0.32, 32), new THREE.MeshBasicMaterial({ color: 0x7fe0d0, transparent: true, opacity: 0.9, depthWrite: false }));
+    this.marker.rotation.x = -Math.PI / 2;
+    this.marker.visible = false;
+  }
+
+  setView(i) {
+    this.view = i;
+    const v = this.views[i];
+    this.char.root.visible = !v.fp;
+    if (v.fp) this.cam.preset({ yaw: this.heading + Math.PI, pitch: v.pitch, dist: this.cam.dist });
+    else this.cam.preset({ yaw: this.heading + Math.PI + v.dyaw, pitch: v.pitch, dist: v.dist });
   }
 
   enter(opts = {}) {
     const g = this.g;
-    g.scene.add(this.char.root);
+    g.scene.add(this.char.root, this.marker);
     this.cup.visible = false;
     this.state = 'walk';
     this.arrive(opts.floor || 5, true);
     this.buildHud();
+    this.setView(this.view);
   }
   exit() {
     const g = this.g;
-    g.scene.remove(this.char.root);
+    g.scene.remove(this.char.root, this.marker);
+    this.char.root.visible = true;
     g.interiors.setActive(null);
     g.camera.fov = 55;
     g.camera.updateProjectionMatrix();
@@ -45,7 +67,7 @@ export class ExploreMode {
         <div style="font-size:22px;font-weight:900" id="e-name"></div>
         <div class="kv small"><span id="e-alt"></span><span id="e-nye" style="color:var(--gold)"></span></div>
       </div>
-      <div class="pnl br desk-only small" style="line-height:1.8"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 走動 · <kbd>Shift</kbd> 快走 · <kbd>E</kbd> 互動 · 拖曳轉視角</div>
+      <div class="pnl br desk-only small" style="line-height:1.8"><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 走動 · <kbd>Shift</kbd> 快走 · <kbd>E</kbd> 互動 · 點擊地面前往(連點兩下快走)· 點擊物件直接互動 · 拖曳轉視角</div>
       <div class="dpad touch">
         <span></span><button data-code="KeyW" aria-label="前">▲</button><span></span>
         <button data-code="KeyA" aria-label="左">◀</button><button data-code="KeyE" aria-label="互動">E</button><button data-code="KeyD" aria-label="右">▶</button>
@@ -76,6 +98,10 @@ export class ExploreMode {
     this.cam.yaw = Math.PI; // 從角色後方看
     this.cam.first = true;
     this.doorT = instant ? 0 : 1;
+    this.path = null;
+    this.autoIt = null;
+    this.marker.visible = false;
+    this.grid = null;
     this.openDoor = this.floor.doors[0];
     if (!instant) {
       g.audio.ding();
@@ -113,11 +139,35 @@ export class ExploreMode {
     const fwd = (input.is('KeyW', 'ArrowUp') ? 1 : 0) - (input.is('KeyS', 'ArrowDown') ? 1 : 0);
     const side = (input.is('KeyD', 'ArrowRight') ? 1 : 0) - (input.is('KeyA', 'ArrowLeft') ? 1 : 0);
     const camYaw = this.cam.yaw + this.heading0();
-    const moving = fwd || side;
+    if (fwd || side) { this.path = null; this.autoIt = null; this.marker.visible = false; }
+    for (const c of input.clicks) this.onClick(c);
+    let moving = fwd || side;
+    let dir = 0, run = input.is('ShiftLeft', 'ShiftRight');
+    if (moving) dir = camYaw + Math.PI - Math.atan2(side, fwd);
+    else if (this.path) {
+      const wp = this.path[0];
+      const dx = wp.x - this.pos.x, dz = wp.z - this.pos.z;
+      if (Math.hypot(dx, dz) < 0.15) {
+        this.path.shift();
+        if (!this.path.length) this.arrivePath();
+      } else { moving = true; dir = Math.atan2(dx, dz); run = this.pathRun; }
+      // 卡住超過 0.6 秒:重新規劃,再不行就放棄
+      if (this.path) {
+        const moved = this.lastPos ? Math.hypot(this.pos.x - this.lastPos.x, this.pos.z - this.lastPos.z) : 1;
+        this.stuckT = moved < 0.002 ? (this.stuckT || 0) + dt : 0;
+        if (this.stuckT > 0.6) {
+          this.stuckT = 0;
+          const end = this.path[this.path.length - 1];
+          const np = (this.replans = (this.replans || 0) + 1) < 3 ? this.findPath(end.x, end.z) : null;
+          if (np && np.length) this.path = np;
+          else if (this.autoIt && Math.hypot(this.pos.x - this.autoIt.x, this.pos.z - this.autoIt.z) < this.autoIt.r) this.arrivePath();
+          else { this.path = null; this.autoIt = null; this.marker.visible = false; }
+        }
+      }
+      this.lastPos = { x: this.pos.x, z: this.pos.z };
+    }
     if (moving) {
-      const ang = Math.atan2(side, fwd);
-      const dir = camYaw + Math.PI - ang;
-      const sp = (input.is('ShiftLeft', 'ShiftRight') ? 2.6 : 1.4) * dt;
+      const sp = (run ? 2.6 : 1.4) * dt;
       const nx = this.pos.x + Math.sin(dir) * sp, nz = this.pos.z + Math.cos(dir) * sp;
       if (!this.blocked(nx, this.pos.z)) this.pos.x = nx;
       if (!this.blocked(this.pos.x, nz)) this.pos.z = nz;
@@ -126,10 +176,11 @@ export class ExploreMode {
       this.heading += d * Math.min(1, dt * 10);
       this.walkPhase = (this.walkPhase || 0) + sp * 4.2;
       if (Math.floor(this.walkPhase / Math.PI) !== Math.floor((this.walkPhase - sp * 4.2) / Math.PI)) g.audio.step();
-      poseWalk(this.char, this.walkPhase, input.is('ShiftLeft', 'ShiftRight') ? 0.6 : 0.15);
+      poseWalk(this.char, this.walkPhase, run ? 0.6 : 0.15);
     } else if (this.leaning) poseLean(this.char, g.t);
     else poseIdle(this.char, g.t);
     if (moving) this.leaning = false;
+    if (this.marker.visible) this.marker.material.opacity = 0.55 + Math.sin(g.t * 6) * 0.35;
     this.char.root.position.copy(this.pos);
     this.char.root.rotation.set(0, this.heading, 0);
 
@@ -145,7 +196,11 @@ export class ExploreMode {
     // 攝影機(限制在室內)
     const head = this.pos.clone().add(new THREE.Vector3(0, 1.55, 0));
     this.cam.update(rawDt, head, this.heading0());
-    this.clampCamera(head);
+    if (this.views[this.view].fp) {
+      const cam = g.camera, y = this.cam.yaw + Math.PI, p = -this.cam.pitch;
+      cam.position.copy(this.pos).add(new THREE.Vector3(0, 1.62, 0));
+      cam.lookAt(cam.position.clone().add(new THREE.Vector3(Math.sin(y) * Math.cos(p), Math.sin(p), Math.cos(y) * Math.cos(p))));
+    } else this.clampCamera(head);
     g.focusShadow(this.pos);
 
     // 跨年
@@ -160,6 +215,155 @@ export class ExploreMode {
   }
 
   heading0() { return 0; }
+
+  /** 點擊:打到物件 → 走到互動點並互動;打到地面 → 走過去。 */
+  onClick(c) {
+    if (this.state !== 'walk') return;
+    const g = this.g, f = this.floor;
+    this.ray.setFromCamera(new THREE.Vector2(c.x, c.y), g.camera);
+    const damper = (f.n === 88 || f.n === 89) ? g.interiors.damper.group : null;
+    const hits = this.ray.intersectObjects(damper ? [f.group, damper] : [f.group], true).filter((h) => h.object.visible && !h.object.isInstancedMesh && h.object.material && !h.object.material.transparent);
+    let px, pz;
+    if (hits.length) { px = hits[0].point.x; pz = hits[0].point.z; }
+    else {
+      const t = (f.y - this.ray.ray.origin.y) / this.ray.ray.direction.y;
+      if (!(t > 0)) return;
+      px = this.ray.ray.origin.x + this.ray.ray.direction.x * t;
+      pz = this.ray.ray.origin.z + this.ray.ray.direction.z * t;
+    }
+    // 是否點在可互動物件上(點地面時要點在互動範圍內)
+    let it = null, bd = 1e9;
+    const onFloor = hits.length && hits[0].point.y < f.y + 0.05;
+    let onDamper = false;
+    if (damper && hits.length) hits[0].object.traverseAncestors((a) => { if (a === damper) onDamper = true; });
+    if (onDamper) it = f.interact.find((x) => x.id === 'damper');
+    else if (!onFloor) {
+      for (const x of f.interact) {
+        const d = Math.hypot(px - x.x, pz - x.z);
+        if (d < x.r + 1.2 && d < bd) { it = x; bd = d; }
+      }
+    }
+    const tx = it ? it.x : px, tz = it ? it.z : pz;
+    const path = this.findPath(tx, tz);
+    if (!path) { g.ui.banner('那裡過不去', true, 1.2); return; }
+    this.path = path;
+    this.replans = 0;
+    this.pathRun = !!c.dbl;
+    this.autoIt = it;
+    const end = path[path.length - 1] || this.pos;
+    this.marker.position.set(end.x, f.y + 0.03, end.z);
+    this.marker.material.color.setHex(it ? 0xf5c76a : 0x7fe0d0);
+    this.marker.visible = true;
+    this.leaning = false;
+    g.audio.click();
+    if (!path.length) this.arrivePath();
+  }
+
+  arrivePath() {
+    this.path = null;
+    this.marker.visible = false;
+    const it = this.autoIt;
+    this.autoIt = null;
+    if (it) {
+      if (it.look != null) this.heading = it.look;
+      this.interact(it);
+    }
+  }
+
+  /** 格子 A*(0.4m),回傳平滑後的路徑點。 */
+  findPath(tx, tz) {
+    const f = this.floor, C = 0.4, N = Math.ceil((f.hw * 2) / C);
+    const toC = (v) => Math.max(0, Math.min(N - 1, Math.floor((v + f.hw) / C)));
+    const toW = (i) => -f.hw + (i + 0.5) * C;
+    if (!this.grid) {
+      this.grid = new Uint8Array(N * N);
+      for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) this.grid[j * N + i] = this.blocked(toW(i), toW(j), 0.34) ? 1 : 0;
+    }
+    const G = this.grid;
+    const free = (i, j) => i >= 0 && j >= 0 && i < N && j < N && !G[j * N + i];
+    const si = toC(this.pos.x), sj = toC(this.pos.z);
+    let gi = toC(tx), gj = toC(tz);
+    // 目標被擋住 → 找最近的空格
+    if (!free(gi, gj)) {
+      let best = null, bd = 1e9;
+      for (let r = 1; r < 12 && !best; r++) {
+        for (let dj = -r; dj <= r; dj++) {
+          for (let di = -r; di <= r; di++) {
+            if (free(gi + di, gj + dj)) { const d = di * di + dj * dj; if (d < bd) { bd = d; best = [gi + di, gj + dj]; } }
+          }
+        }
+      }
+      if (!best) return null;
+      [gi, gj] = best;
+    }
+    const start = sj * N + si, goal = gj * N + gi;
+    const gS = new Float32Array(N * N).fill(Infinity), from = new Int32Array(N * N).fill(-1), closed = new Uint8Array(N * N);
+    gS[start] = 0;
+    const heap = [[0, start]];
+    const swap = (a, b) => { const t = heap[a]; heap[a] = heap[b]; heap[b] = t; };
+    const push = (e) => {
+      heap.push(e);
+      let k = heap.length - 1;
+      while (k > 0) { const p = (k - 1) >> 1; if (heap[p][0] <= heap[k][0]) break; swap(p, k); k = p; }
+    };
+    const pop = () => {
+      const top = heap[0], last = heap.pop();
+      if (heap.length) {
+        heap[0] = last;
+        let k = 0;
+        while (true) {
+          const l = 2 * k + 1, r = l + 1;
+          let m = k;
+          if (l < heap.length && heap[l][0] < heap[m][0]) m = l;
+          if (r < heap.length && heap[r][0] < heap[m][0]) m = r;
+          if (m === k) break;
+          swap(m, k);
+          k = m;
+        }
+      }
+      return top;
+    };
+    const h = (n) => Math.hypot((n % N) - gi, Math.floor(n / N) - gj);
+    let found = start === goal;
+    while (heap.length && !found) {
+      const n = pop()[1];
+      if (closed[n]) continue;
+      closed[n] = 1;
+      const i = n % N, j = Math.floor(n / N);
+      for (let dj = -1; dj <= 1; dj++) {
+        for (let di = -1; di <= 1; di++) {
+          if (!di && !dj) continue;
+          const ni = i + di, nj = j + dj;
+          if (!free(ni, nj) || (di && dj && (!free(i + di, j) || !free(i, j + dj)))) continue;
+          const m = nj * N + ni, cost = gS[n] + (di && dj ? 1.414 : 1);
+          if (cost < gS[m]) { gS[m] = cost; from[m] = n; push([cost + h(m), m]); if (m === goal) found = true; }
+        }
+      }
+    }
+    if (!found) return null;
+    const cells = [];
+    for (let n = goal; n !== -1 && n !== start; n = from[n]) cells.push(n);
+    cells.reverse();
+    const pts = cells.map((n) => ({ x: toW(n % N), z: toW(Math.floor(n / N)) }));
+    if (!this.blocked(tx, tz, 0.3) && pts.length) pts[pts.length - 1] = { x: tx, z: tz };
+    // 視線平滑:能直線走到的中間點略過
+    const clear = (a, b) => {
+      const d = Math.hypot(b.x - a.x, b.z - a.z), n = Math.ceil(d / 0.2);
+      for (let k = 1; k <= n; k++) if (this.blocked(a.x + (b.x - a.x) * k / n, a.z + (b.z - a.z) * k / n, 0.36)) return false;
+      return true;
+    };
+    const out = [];
+    let cur = { x: this.pos.x, z: this.pos.z }, k = 0;
+    while (k < pts.length) {
+      let far = k;
+      for (let m = pts.length - 1; m > k; m--) if (clear(cur, pts[m])) { far = m; break; }
+      out.push(pts[far]);
+      cur = pts[far];
+      k = far + 1;
+    }
+    return out;
+  }
+
 
   nyeVoice(st) {
     const g = this.g;

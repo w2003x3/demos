@@ -31,7 +31,17 @@ export class ClimbMode {
     this.chute = buildParachute();
     this.chute.visible = false;
     this.cam = new OrbitCam(game.camera, { dist: 7, min: 3, max: 60, yawLimit: 1.35, pitch: 0.12, pitchMin: -0.5, pitchMax: 1.2 });
+    this.views = [
+      { name: '跟隨', yaw: 0, pitch: 0.12, dist: 7 },
+      { name: '側面', yaw: 1.2, pitch: 0.1, dist: 9 },
+      { name: '遠景', yaw: 0.6, pitch: 0.22, dist: 45 },
+      { name: '俯瞰', yaw: 0, pitch: 1.1, dist: 14 },
+      { name: '仰望', yaw: 0.15, pitch: -0.45, dist: 10 }
+    ];
+    this.view = 0;
   }
+
+  setView(i) { this.view = i; this.cam.preset(this.views[i]); }
 
   faceZ(s, y) {
     const S = this.secs[s];
@@ -52,6 +62,8 @@ export class ClimbMode {
     this.gust = { t: 20 + Math.random() * 15, phase: 'idle', k: 0, dir: 1 };
     this.buildHud();
     this.toLedge(-1);
+    this.cam.first = true;
+    this.setView(this.view);
     g.audio.say('climb_start');
     g.ui.subtitle('攀爬開始。安全繩已扣好,抓穩每一節竹節外牆。');
     this.fwHit = (p, n) => this.onFirework(p, n);

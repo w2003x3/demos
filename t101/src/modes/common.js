@@ -10,7 +10,10 @@ export class OrbitCam {
     this.smooth = new THREE.Vector3();
     this.first = true;
   }
+  /** 切換到預設視角(平滑過渡)。 */
+  preset(v) { this.goal = { yaw: v.yaw ?? this.yaw, pitch: v.pitch ?? this.pitch, dist: v.dist ?? this.dist }; }
   handle(input, sens = 0.005) {
+    if (input.drag.dx || input.drag.dy || input.wheel) this.goal = null;
     this.yaw -= input.drag.dx * sens;
     this.pitch = THREE.MathUtils.clamp(this.pitch + input.drag.dy * sens, this.pitchMin, this.pitchMax);
     if (this.yawLimit != null) this.yaw = THREE.MathUtils.clamp(this.yaw, -this.yawLimit, this.yawLimit);
@@ -18,7 +21,16 @@ export class OrbitCam {
   }
   /** baseYaw:攝影機預設所在方位(弧度,0 = 在 +Z 側)。 */
   update(dt, target, baseYaw = 0, distOverride) {
-    if (this.first) { this.smooth.copy(target); this.first = false; }
+    if (this.first) { this.smooth.copy(target); this.first = false; if (this.goal) { Object.assign(this, this.goal); this.goal = null; } }
+    if (this.goal) {
+      const k = 1 - Math.pow(0.004, dt);
+      let dy = this.goal.yaw - this.yaw;
+      dy = Math.atan2(Math.sin(dy), Math.cos(dy));
+      this.yaw += dy * k;
+      this.pitch += (this.goal.pitch - this.pitch) * k;
+      this.dist += (this.goal.dist - this.dist) * k;
+      if (Math.abs(dy) < 0.002 && Math.abs(this.goal.dist - this.dist) < 0.01 && Math.abs(this.goal.pitch - this.pitch) < 0.002) this.goal = null;
+    }
     this.smooth.lerp(target, 1 - Math.pow(0.0005, dt));
     const d = distOverride ?? this.dist;
     const y = baseYaw + this.yaw;
