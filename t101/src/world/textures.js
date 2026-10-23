@@ -39,62 +39,43 @@ export function facadeTextures() {
   const W = 512, H = 1024;
   const floorPx = H / 2, colPx = W / 4;
   const r = rng(101);
-  const panelShade = [];
-  for (let i = 0; i < 16; i++) panelShade.push(r());
+  const band = 0.145; // 每層頂部的窗間牆(遮樓板)比例
   const map = canvasTex(W, H, (g) => {
     for (let f = 0; f < 2; f++) {
       const y0 = f * floorPx;
       for (let c = 0; c < 4; c++) {
         const x0 = c * colPx;
-        const s = panelShade[f * 4 + c];
-        // 玻璃:由上往下漸層,模擬天空反射
+        // 綠藍色反射玻璃(片與片之間有些微色差)
+        const l = 15 + r() * 4, hue = 168 + r() * 8;
         const grd = g.createLinearGradient(0, y0, 0, y0 + floorPx);
-        const l = 20 + s * 7;
-        grd.addColorStop(0, `hsl(172, 26%, ${l + 10}%)`);
-        grd.addColorStop(0.55, `hsl(178, 30%, ${l + 3}%)`);
-        grd.addColorStop(1, `hsl(184, 32%, ${l - 3}%)`);
+        grd.addColorStop(0, `hsl(${hue}, 30%, ${l + 5}%)`);
+        grd.addColorStop(1, `hsl(${hue + 6}, 34%, ${l}%)`);
         g.fillStyle = grd;
         g.fillRect(x0, y0, colPx, floorPx);
-        // 窗間牆(遮住樓板)
-        g.fillStyle = `hsl(178, 18%, ${15 + s * 3}%)`;
-        g.fillRect(x0, y0, colPx, floorPx * 0.14);
-        // 玻璃上微弱的斜向反光
-        g.fillStyle = 'rgba(255,255,255,0.05)';
-        g.beginPath();
-        g.moveTo(x0 + colPx * 0.15, y0 + floorPx);
-        g.lineTo(x0 + colPx * 0.6, y0 + floorPx * 0.2);
-        g.lineTo(x0 + colPx * 0.8, y0 + floorPx * 0.2);
-        g.lineTo(x0 + colPx * 0.35, y0 + floorPx);
-        g.fill();
+        // 窗間牆:不透明的深色玻璃
+        g.fillStyle = `hsl(${hue}, 22%, ${l - 4}%)`;
+        g.fillRect(x0, y0, colPx, floorPx * band);
       }
       // 橫料
-      g.fillStyle = '#8e9c9e';
-      g.fillRect(0, y0 + floorPx * 0.14 - 2, W, 4);
-      g.fillStyle = '#7d8a8c';
-      g.fillRect(0, y0, W, 5);
+      g.fillStyle = '#7f9091';
+      g.fillRect(0, y0 + floorPx * band - 2, W, 4);
+      g.fillStyle = '#6c7c7e';
+      g.fillRect(0, y0, W, 4);
     }
-    // 直料(鋁擠型,帶陰影)
+    // 直料(細)
     for (let c = 0; c <= 4; c++) {
-      const x = c * colPx;
-      g.fillStyle = '#9aa7a9';
-      g.fillRect(x - 3, 0, 6, H);
-      g.fillStyle = 'rgba(0,0,0,0.3)';
-      g.fillRect(x + 3, 0, 2, H);
+      g.fillStyle = '#8fa1a3';
+      g.fillRect(c * colPx - 2, 0, 4, H);
     }
   });
   const rough = canvasTex(W, H, (g) => {
-    g.fillStyle = '#1a1a1a'; // 玻璃:很光滑
+    g.fillStyle = '#0d0d0d'; // 玻璃:非常光滑
     g.fillRect(0, 0, W, H);
-    for (let f = 0; f < 2; f++) {
-      g.fillStyle = '#707070';
-      g.fillRect(0, f * floorPx, W, floorPx * 0.14);
-    }
-    g.fillStyle = '#5a5a5a';
-    for (let c = 0; c <= 4; c++) g.fillRect(c * colPx - 4, 0, 8, H);
+    g.fillStyle = '#555';
+    for (let f = 0; f < 2; f++) { g.fillRect(0, f * floorPx + floorPx * band - 2, W, 4); g.fillRect(0, f * floorPx, W, 4); }
+    for (let c = 0; c <= 4; c++) g.fillRect(c * colPx - 2, 0, 4, H);
   }, { srgb: false });
-  const emissive = interiorLights(16, 8, 0.14, 7, 0.62);
-  emissive.repeat.set(6 / 24, 8.6 / 34.4);
-  return { map, rough, emissive };
+  return { map, rough };
 }
 
 /**
@@ -154,6 +135,31 @@ export function interiorLights(cols, rows, band, seed, lit, inset = false) {
         }
       }
     }
+  });
+}
+
+/** 玻璃帷幕大樓外牆(灰階,顏色由頂點色決定):一張 = 寬 24m × 8 層,每格 3m。 */
+export function glassCurtainTexture(seed = 5) {
+  return canvasTex(512, 512, (g, W, H) => {
+    const r = rng(seed);
+    const cw = W / 8, rh = H / 8;
+    for (let y = 0; y < 8; y++) {
+      for (let x = 0; x < 8; x++) {
+        const l = 52 + r() * 12;
+        const grd = g.createLinearGradient(0, y * rh, 0, (y + 1) * rh);
+        grd.addColorStop(0, `hsl(200, 8%, ${l + 6}%)`);
+        grd.addColorStop(1, `hsl(200, 8%, ${l - 4}%)`);
+        g.fillStyle = grd;
+        g.fillRect(x * cw, y * rh, cw, rh);
+      }
+      // 每層底部的窗間牆(不透明玻璃)
+      g.fillStyle = 'rgba(30,36,40,0.55)';
+      g.fillRect(0, (y + 1) * rh - rh * 0.16, W, rh * 0.16);
+      g.fillStyle = '#c9d0d3';
+      g.fillRect(0, y * rh, W, 3);
+    }
+    g.fillStyle = '#c9d0d3';
+    for (let x = 0; x <= 8; x++) g.fillRect(x * cw - 1.5, 0, 3, H);
   });
 }
 

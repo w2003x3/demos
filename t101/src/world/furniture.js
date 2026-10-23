@@ -18,7 +18,7 @@ export const MAT = {
   darkStone: std(0x2e2f31, 0.25),
   plant: std(0x2f5d2c, 0.8),
   soil: std(0x3b2b1f, 1),
-  glassClear: new THREE.MeshPhysicalMaterial({ color: 0xffffff, metalness: 0, roughness: 0.04, transmission: 0.9, transparent: true, opacity: 0.35, thickness: 0.02 }),
+  glassClear: new THREE.MeshPhysicalMaterial({ color: 0xffffff, metalness: 0, roughness: 0.04, transparent: true, opacity: 0.35, thickness: 0.02 }),
   emissiveWarm: new THREE.MeshStandardMaterial({ color: 0xfff1d6, emissive: 0xffd9a0, emissiveIntensity: 2.2 }),
   emissiveCool: new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xf4f7ff, emissiveIntensity: 1.6 })
 };
@@ -142,7 +142,7 @@ export function coffeeCounter(len, { front = MAT.woodDark, top = MAT.stone, bran
   // 磨豆機
   for (const gx of [-len * 0.42, len * 0.2]) {
     g.add(mesh(new THREE.BoxGeometry(0.2, 0.32, 0.22), MAT.blackMetal, gx, 1.26, -0.15));
-    { const _m = mesh(new THREE.ConeGeometry(0.09, 0.2, 14), new THREE.MeshPhysicalMaterial({ color: 0x5a3a20, transmission: 0.5, roughness: 0.1, transparent: true, opacity: 0.7 }), gx, 1.52, -0.15); _m.rotation.x = Math.PI; g.add(_m); }
+    { const _m = mesh(new THREE.ConeGeometry(0.09, 0.2, 14), new THREE.MeshPhysicalMaterial({ color: 0x5a3a20, roughness: 0.1, transparent: true, opacity: 0.7 }), gx, 1.52, -0.15); _m.rotation.x = Math.PI; g.add(_m); }
   }
   // 收銀機
   g.add(mesh(new THREE.BoxGeometry(0.34, 0.08, 0.26), MAT.blackMetal, len * 0.38, 1.14, 0.1));
@@ -232,7 +232,7 @@ export function telescope() {
 /** 玻璃欄杆(沿圓周,半徑 r,高 h)。 */
 export function glassRailCircle(r, h = 1.1, seg = 48, gaps = []) {
   const g = new THREE.Group();
-  const glass = new THREE.MeshPhysicalMaterial({ color: 0xd8f0f0, roughness: 0.05, transmission: 0.85, transparent: true, opacity: 0.28, side: THREE.DoubleSide });
+  const glass = new THREE.MeshPhysicalMaterial({ color: 0xd8f0f0, roughness: 0.05, transparent: true, opacity: 0.28, side: THREE.DoubleSide });
   const panel = new THREE.Mesh(new THREE.CylinderGeometry(r, r, h - 0.1, seg, 1, true), glass);
   panel.position.y = (h - 0.1) / 2;
   g.add(panel);

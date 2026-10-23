@@ -1,7 +1,8 @@
 // 台北101 外觀(程序化):鋸齒內縮轉角的正方形斷面,基座內收、8 節竹節外擴、塔頂、頂冠、塔尖。
 import * as THREE from 'three';
-import { towerSections, BASE_TOP, SEG_COUNT, SEG_H, TOP_Y, ROOF_Y, CROWN_Y, SPIRE_TOP, SEG_HW0, SEG_HW1, BASE_HW1, TOP_HW0, TOP_HW1, halfWidthAt } from '../config.js';
-import { facadeTextures } from './textures.js';
+import { towerSections, BASE_TOP, SEG_COUNT, SEG_H, TOP_Y, ROOF_Y, CROWN_Y, SPIRE_TOP, SEG_HW0, SEG_HW1, BASE_HW1, TOP_HW0, TOP_HW1, halfWidthAt, floorY, FH } from '../config.js';
+import { facadeTextures, canvasTex } from './textures.js';
+import { applyInterior } from './interior.js';
 
 /** 斷面多邊形:正方形四角各兩階鋸齒(101 的「竹節」轉角)。回傳 [[x,z],...]。 */
 export function towerPolygon(h, notch = 0.11) {
@@ -24,6 +25,10 @@ export function frustumGeometry(y0, h0, y1, h1, { notch = 0.11, uvScale = [6, 8.
   const pos = [], uv = [];
   let uA = 0, uB = 0;
   const n = A.length;
+  const per = (P) => P.reduce((s, p, i) => s + Math.hypot(P[(i + 1) % P.length][0] - p[0], P[(i + 1) % P.length][1] - p[1]), 0);
+  const PA = per(A), PB = per(B);
+  // 整圈的貼圖張數固定,上下端依同一比例對應 → 直料沿著實際的面板線
+  const Nu = Math.max(1, Math.round((PA + PB) / 2 / uvScale[0]));
   for (let i = 0; i < n; i++) {
     const j = (i + 1) % n;
     const a0 = A[i], a1 = A[j], b0 = B[i], b1 = B[j];
@@ -31,10 +36,10 @@ export function frustumGeometry(y0, h0, y1, h1, { notch = 0.11, uvScale = [6, 8.
     const lb = Math.hypot(b1[0] - b0[0], b1[1] - b0[1]);
     const v0 = (y0 - vOffset) / uvScale[1], v1 = (y1 - vOffset) / uvScale[1];
     const quad = [
-      [a0[0], y0, a0[1], uA / uvScale[0], v0],
-      [a1[0], y0, a1[1], (uA + la) / uvScale[0], v0],
-      [b1[0], y1, b1[1], (uB + lb) / uvScale[0], v1],
-      [b0[0], y1, b0[1], uB / uvScale[0], v1]
+      [a0[0], y0, a0[1], (uA / PA) * Nu, v0],
+      [a1[0], y0, a1[1], ((uA + la) / PA) * Nu, v0],
+      [b1[0], y1, b1[1], ((uB + lb) / PB) * Nu, v1],
+      [b0[0], y1, b0[1], (uB / PB) * Nu, v1]
     ];
     // 判斷外法線方向
     const e1 = new THREE.Vector3(quad[1][0] - quad[0][0], quad[1][1] - quad[0][1], quad[1][2] - quad[0][2]);
@@ -94,18 +99,25 @@ export function buildTower(envMap) {
   const group = new THREE.Group();
   group.name = 'tower';
   const fx = facadeTextures();
+  // 玻璃帷幕:深綠藍色的反射玻璃 + 鋁擠型直料;室內有燈就透出(室內映射),沒燈就反射外界
   const glass = new THREE.MeshPhysicalMaterial({
     map: fx.map,
     roughnessMap: fx.rough,
     roughness: 1,
-    metalness: 0.55,
-    envMapIntensity: 1.25,
+    metalness: 0.82,
+    envMapIntensity: 1.6,
     emissive: new THREE.Color(0xffe2b0),
-    emissiveMap: fx.emissive,
     emissiveIntensity: 0,
-    clearcoat: 0.4,
-    clearcoatRoughness: 0.08
+    clearcoat: 0.6,
+    clearcoatRoughness: 0.05
   });
+  // 頂冠的百葉外牆
+  const louverTex = canvasTex(128, 256, (g, W, H) => {
+    g.fillStyle = '#9aa3a6'; g.fillRect(0, 0, W, H);
+    for (let y = 0; y < H; y += 8) { g.fillStyle = '#6f777a'; g.fillRect(0, y, W, 3); g.fillStyle = '#c4cbcd'; g.fillRect(0, y + 3, W, 1); }
+    g.fillStyle = '#4c5457'; g.fillRect(0, 0, 4, H); g.fillRect(W - 4, 0, 4, H);
+  });
+  const louver = new THREE.MeshStandardMaterial({ map: louverTex, metalness: 0.75, roughness: 0.35, emissive: 0xffe2b0, emissiveIntensity: 0 });
   const metal = new THREE.MeshStandardMaterial({ color: 0xbfc8cb, metalness: 0.85, roughness: 0.32 });
   const darkMetal = new THREE.MeshStandardMaterial({ color: 0x5c6668, metalness: 0.8, roughness: 0.4 });
   const ledge = new THREE.MeshStandardMaterial({ color: 0x9aa4a6, metalness: 0.4, roughness: 0.55 });
@@ -123,12 +135,19 @@ export function buildTower(envMap) {
 
   const secs = towerSections();
   const sections = [];
-  for (const s of secs) {
-    const notch = s.name === '頂冠' ? 0.08 : 0.11;
-    const m = glass.clone();
-    add(frustumGeometry(s.y0, s.hw0, s.y1, s.hw1, { notch }), m);
+  secs.forEach((s, i) => {
+    const crown = s.name === '頂冠';
+    const notch = crown ? 0.08 : 0.11;
+    let m;
+    if (crown) m = louver;
+    else {
+      m = glass.clone();
+      // 每格 = 3m 寬(兩片玻璃)× 1 層樓;窗間牆在每層頂部 14%
+      applyInterior(m, { cells: [4, 2], win: [0.025, 0.975, 0.0, 0.855], depth: 1.6, lit: 0.3, seed: i + 1 });
+    }
+    add(frustumGeometry(s.y0, s.hw0, s.y1, s.hw1, { notch, uvScale: crown ? [3, 4] : [6, 8.6] }), m);
     sections.push({ name: s.name, seg: s.seg || 0, glass: m, band: null });
-  }
+  });
 
   // 各段交界的平台(上方水平面)與挑出底面
   // 基座頂 → 第 1 節
@@ -200,35 +219,137 @@ export function buildTower(envMap) {
     group.add(o);
   }
 
-  // 塔尖
-  const spireMat = new THREE.MeshStandardMaterial({ color: 0xc9d1d4, metalness: 0.9, roughness: 0.25 });
-  const spire = [
-    [CROWN_Y, 3.6, 3.2, 10],
-    [CROWN_Y + 10, 2.8, 2.5, 14],
-    [CROWN_Y + 24, 1.9, 1.6, 14],
-    [CROWN_Y + 38, 1.1, 0.8, 12],
-    [CROWN_Y + 50, 0.45, 0.12, SPIRE_TOP - CROWN_Y - 50]
-  ];
-  for (const [y, r0, r1, h] of spire) {
-    const m = add(new THREE.CylinderGeometry(r1, r0, h, 24), spireMat, true);
-    m.position.y = y + h / 2;
-    const collar = add(new THREE.CylinderGeometry(r0 + 0.35, r0 + 0.35, 0.6, 24), darkMetal);
-    collar.position.y = y + 0.3;
-  }
-  const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.35, 12, 8), new THREE.MeshBasicMaterial({ color: 0xff2a1a }));
-  beacon.position.y = SPIRE_TOP + 0.2;
-  group.add(beacon);
+  const beacon = buildTop(group, { metal, darkMetal, ledge });
 
-  // 頂冠上的天線平台
-  for (let i = 0; i < 4; i++) {
-    const a = i * Math.PI / 2 + Math.PI / 4;
-    const fin = add(new THREE.BoxGeometry(0.4, 6, 3), darkMetal);
-    fin.position.set(Math.sin(a) * 5, CROWN_Y + 3, Math.cos(a) * 5);
-    fin.rotation.y = a;
-  }
-
-  group.userData = { mats, beacon, sections };
+  group.userData = { ...group.userData, mats, beacon, sections };
   return group;
+}
+
+/**
+ * 塔頂(依實景照片):91F 環狀簷與天線架、92~101F 挑簷與轉角如意紋、
+ * 百葉頂冠上的圓形碟盤、八角錐形塔尖、環形維修走道與爬梯、不鏽鋼圓頂與航空警示燈。
+ */
+function buildTop(group, { metal, darkMetal, ledge }) {
+  const add = (geo, mat, x = 0, y = 0, z = 0, cast = true) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = cast; m.receiveShadow = true; group.add(m); return m; };
+  const steel = new THREE.MeshStandardMaterial({ color: 0xd9dee0, metalness: 1, roughness: 0.18 });
+  const white = new THREE.MeshStandardMaterial({ color: 0xe8eceb, metalness: 0.5, roughness: 0.35 });
+  const grey = new THREE.MeshStandardMaterial({ color: 0x8d9597, metalness: 0.7, roughness: 0.4 });
+  // 塔尖外板(白灰色金屬板,格線)
+  const panelTex = canvasTex(128, 512, (g, W, H) => {
+    g.fillStyle = '#dfe3e2'; g.fillRect(0, 0, W, H);
+    g.fillStyle = 'rgba(0,0,0,0.16)';
+    for (let y = 0; y < H; y += 32) g.fillRect(0, y, W, 2);
+    for (let x = 0; x < W; x += 32) g.fillRect(x, 0, 2, H);
+    g.fillStyle = 'rgba(255,255,255,0.25)'; g.fillRect(0, 0, W, 1);
+  });
+  const panel = new THREE.MeshStandardMaterial({ map: panelTex, metalness: 0.55, roughness: 0.32 });
+  const mastTex = canvasTex(128, 256, (g, W, H) => {
+    g.fillStyle = '#b7bec0'; g.fillRect(0, 0, W, H);
+    // 百葉窗與維修門
+    g.fillStyle = '#5d6669';
+    for (let y = 20; y < H; y += 64) { for (let k = 0; k < 6; k++) g.fillRect(16, y + k * 5, 40, 2); }
+    g.fillStyle = 'rgba(0,0,0,0.2)'; for (let x = 0; x < W; x += 32) g.fillRect(x, 0, 2, H);
+  });
+  const mast = new THREE.MeshStandardMaterial({ map: mastTex, metalness: 0.6, roughness: 0.35 });
+
+  // ── 91F 戶外觀景台:環繞塔身的圓形環狀簷(照片俯視可見)──
+  const ringY = TOP_Y + 0.2;
+  add(new THREE.CylinderGeometry(19.6, 19.8, 2.4, 64, 1, true), grey, 0, ringY + 1.2, 0);
+  const ringTop = add(new THREE.RingGeometry(TOP_HW0 + 0.4, 19.6, 64), ledge, 0, ringY + 2.4, 0);
+  ringTop.rotation.x = -Math.PI / 2;
+  const ringIn = add(new THREE.CylinderGeometry(19.2, 19.2, 2.0, 64, 1, true), darkMetal, 0, ringY + 1.2, 0);
+  ringIn.material = darkMetal;
+  add(new THREE.TorusGeometry(19.7, 0.12, 6, 96), steel, 0, ringY + 2.45, 0).rotation.x = Math.PI / 2;
+  // 四角的格柵天線架
+  for (let c = 0; c < 4; c++) {
+    const a = c * Math.PI / 2 + Math.PI / 4;
+    const cx = Math.cos(a) * 29, cz = Math.sin(a) * 29;
+    const rack = new THREE.Group();
+    const bar = (w, h, d, x, y, z) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), grey); m.position.set(x, y, z); rack.add(m); };
+    for (const [px, pz] of [[-2, -2], [2, -2], [-2, 2], [2, 2]]) bar(0.18, 6, 0.18, px, 3, pz);
+    for (let y = 0.5; y <= 6; y += 1.1) { bar(4.2, 0.1, 0.1, 0, y, -2); bar(4.2, 0.1, 0.1, 0, y, 2); bar(0.1, 0.1, 4.2, -2, y, 0); bar(0.1, 0.1, 4.2, 2, y, 0); }
+    for (let x = -1.5; x <= 1.5; x += 0.75) { bar(0.06, 6, 0.06, x, 3, -2); bar(0.06, 6, 0.06, x, 3, 2); }
+    rack.position.set(cx * 0.82, TOP_Y, cz * 0.82);
+    rack.rotation.y = -a;
+    group.add(rack);
+  }
+
+  // ── 92~101F:每層挑簷 + 轉角如意紋 ──
+  for (let n = 92; n <= 101; n++) {
+    const y = floorY(n);
+    const hw = halfWidthAt(y) + 0.35;
+    add(frustumGeometry(y - 0.3, hw, y, hw, { uvScale: [4, 1] }), metal, 0, 0, 0, false);
+  }
+  for (let c = 0; c < 4; c++) {
+    const a = c * Math.PI / 2 + Math.PI / 4;
+    const y = floorY(98);
+    const r = (halfWidthAt(y) * (1 - 0.11)) * Math.SQRT2 + 0.6;
+    const orn = new THREE.Group();
+    const curl = new THREE.Mesh(new THREE.TorusGeometry(1.25, 0.42, 10, 24, Math.PI * 1.55), white);
+    curl.rotation.z = Math.PI * 0.2;
+    orn.add(curl);
+    const curl2 = new THREE.Mesh(new THREE.TorusGeometry(0.6, 0.3, 8, 18, Math.PI * 1.6), white);
+    curl2.position.set(0.9, -1.0, 0);
+    orn.add(curl2);
+    const stem = new THREE.Mesh(new THREE.BoxGeometry(0.5, 3.2, 0.5), white);
+    stem.position.set(-0.3, -1.6, 0);
+    orn.add(stem);
+    orn.position.set(Math.cos(a) * r, y, Math.sin(a) * r);
+    orn.rotation.y = -a;
+    orn.traverse((o) => { o.castShadow = true; });
+    group.add(orn);
+  }
+
+  // ── 頂冠上方:圓形多層碟盤 ──
+  const dishPts = [
+    [3.4, 0], [4.2, 0.4], [5.6, 0.9], [7.0, 1.5], [8.2, 2.2], [8.7, 2.8], [8.7, 3.2], [8.2, 3.3], [3.2, 3.3]
+  ].map(([r, y]) => new THREE.Vector2(r, y));
+  const dish = add(new THREE.LatheGeometry(dishPts, 64), steel, 0, CROWN_Y, 0);
+  dish.material = steel;
+  for (const [r, y] of [[5.0, 0.75], [6.4, 1.25], [7.7, 1.9]]) add(new THREE.TorusGeometry(r, 0.09, 6, 64), darkMetal, 0, CROWN_Y + y, 0, false).rotation.x = Math.PI / 2;
+  add(new THREE.CylinderGeometry(3.4, 3.6, 3.3, 8), grey, 0, CROWN_Y + 1.65, 0);
+
+  // ── 塔尖下段:八角錐形,白灰色金屬板 ──
+  const s0 = CROWN_Y + 3.3, sH = 30;
+  const pin = add(new THREE.CylinderGeometry(1.75, 3.0, sH, 8), panel, 0, s0 + sH / 2, 0);
+  pin.material.flatShading = true;
+  // ── 塔尖上段:桅杆 + 環形維修走道 + 爬梯 ──
+  const m0 = s0 + sH, mH = 21.5;
+  add(new THREE.CylinderGeometry(1.45, 1.6, mH, 8), mast, 0, m0 + mH / 2, 0);
+  for (let i = 0; i < 9; i++) {
+    const y = m0 + 1.2 + i * 2.25;
+    add(new THREE.CylinderGeometry(2.25, 2.0, 0.28, 32), steel, 0, y, 0);
+    add(new THREE.TorusGeometry(2.25, 0.05, 6, 40), grey, 0, y + 0.75, 0, false).rotation.x = Math.PI / 2;
+    for (let k = 0; k < 8; k++) {
+      const a = (k / 8) * Math.PI * 2;
+      add(new THREE.CylinderGeometry(0.03, 0.03, 0.75, 4), grey, Math.cos(a) * 2.2, y + 0.4, Math.sin(a) * 2.2, false);
+    }
+    // 航空警示燈(小紅燈)
+    if (i % 3 === 1) for (let k = 0; k < 4; k++) {
+      const a = (k / 4) * Math.PI * 2 + Math.PI / 4;
+      add(new THREE.SphereGeometry(0.1, 8, 6), new THREE.MeshBasicMaterial({ color: 0xff3020 }), Math.cos(a) * 2.15, y + 0.3, Math.sin(a) * 2.15, false);
+    }
+  }
+  // 爬梯(南面,攀爬路線)
+  const ladder = new THREE.Group();
+  for (const x of [-0.28, 0.28]) { const rail = new THREE.Mesh(new THREE.BoxGeometry(0.05, mH, 0.05), grey); rail.position.set(x, mH / 2, 0); ladder.add(rail); }
+  for (let y = 0.3; y < mH; y += 0.35) { const rung = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.03, 0.03), grey); rung.position.set(0, y, 0); ladder.add(rung); }
+  ladder.position.set(0, m0, 1.62);
+  group.add(ladder);
+  // ── 頂部:八角帽 + 不鏽鋼圓頂 + 避雷針 ──
+  const c0 = m0 + mH;
+  add(new THREE.CylinderGeometry(1.25, 1.5, 1.4, 8), mast, 0, c0 + 0.7, 0);
+  add(new THREE.CylinderGeometry(1.55, 1.55, 0.12, 32), steel, 0, c0 + 1.4, 0);
+  const dome = add(new THREE.SphereGeometry(1.2, 32, 16, 0, Math.PI * 2, 0, Math.PI / 2), steel, 0, c0 + 1.45, 0);
+  dome.scale.y = 0.85;
+  add(new THREE.TorusGeometry(1.38, 0.06, 6, 40), steel, 0, c0 + 1.9, 0, false).rotation.x = Math.PI / 2;
+  for (let k = 0; k < 6; k++) { const a = (k / 6) * Math.PI * 2; add(new THREE.CylinderGeometry(0.03, 0.03, 0.5, 4), steel, Math.cos(a) * 1.38, c0 + 1.65, Math.sin(a) * 1.38, false); }
+  add(new THREE.CylinderGeometry(0.03, 0.05, SPIRE_TOP - (c0 + 2.4), 6), steel, 0, (SPIRE_TOP + c0 + 2.4) / 2, 0, false);
+  const beacon = new THREE.Mesh(new THREE.SphereGeometry(0.22, 12, 8), new THREE.MeshBasicMaterial({ color: 0xff2a1a }));
+  beacon.position.y = SPIRE_TOP;
+  group.add(beacon);
+  group.userData.domeTop = c0 + 1.45 + 1.2 * 0.85;
+  return beacon;
 }
 
 /** 購物中心裙樓(北側)+ 廣場。 */

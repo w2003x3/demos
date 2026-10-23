@@ -15,6 +15,7 @@ const SCOPE_TARGETS = [
   { k: 'nanshan', name: '南山廣場', desc: '272 公尺,101 旁的摩天大樓', y: 140, r: 40 },
   { k: 'sunYatSen', name: '國父紀念館', desc: '黃色大屋頂,1972 年落成', y: 20, r: 70 },
   { k: 'dome', name: '台北大巨蛋', desc: '國父紀念館北側的巨蛋', y: 30, r: 150 },
+  { k: 'taozhu', name: '陶朱隱園', desc: '93 公尺的旋轉綠建築', y: 50, r: 35 },
   { k: 'shinkong', name: '新光摩天大樓', desc: '244 公尺,台北車站前', y: 120, r: 60 },
   { k: 'station', name: '台北車站', desc: '台北的交通樞紐', y: 20, r: 120 },
   { k: 'cks', name: '中正紀念堂', desc: '藍色八角屋頂', y: 40, r: 70 },
@@ -524,8 +525,16 @@ export class ExploreMode {
     const names = ['北', '東北', '東', '東南', '南', '西南', '西', '西北'];
     ui.set('sc-dir', `${names[Math.round(deg / 45) % 8]} ${Math.round(deg)}°`);
     ui.set('sc-zoom', `×${(55 / this.scopeFov).toFixed(1)}`);
+    // 信義區的百貨與高樓(來自真實街景資料)也能辨識
+    if (!this.scopeExtra) {
+      this.scopeExtra = [];
+      if (g.xinyi) for (const b of g.xinyi.solids) {
+        if (b[5] === '大樓' || (b[4] < 60 && b[7] !== 'mall') || /購物中心|101/.test(b[5])) continue;
+        this.scopeExtra.push({ name: b[5], desc: b[7] === 'mall' ? `百貨商場 · 約 ${Math.round(b[4])} 公尺` : `高 ${Math.round(b[4])} 公尺`, x: (b[0] + b[2]) / 2, y: b[4] * 0.6, z: (b[1] + b[3]) / 2, r: Math.max(b[2] - b[0], b[3] - b[1]) / 2 });
+      }
+    }
     let best = null, bd = 1e9;
-    for (const L of SCOPE_TARGETS) {
+    for (const L of [...SCOPE_TARGETS, ...this.scopeExtra]) {
       const v = new THREE.Vector3(L.x - cam.position.x, L.y - cam.position.y, L.z - cam.position.z);
       const dist = v.length();
       const ang = v.normalize().angleTo(dir);

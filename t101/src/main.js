@@ -9,7 +9,7 @@ import { buildTower, buildPodium } from './world/tower.js';
 import { buildInteriors } from './world/interiors.js';
 import { buildLandmarks, landmarkZones } from './world/landmarks.js';
 import { loadXinyi, buildXinyi } from './world/xinyi.js';
-import { applyOsmLandmarks, GEO } from './world/geo.js';
+import { applyOsmLandmarks, applyOsmBuildings, GEO } from './world/geo.js';
 import { Fireworks } from './world/fireworks.js';
 import { buildElevatorScene } from './world/elevator.js';
 import { buildStairScene } from './world/stairwell.js';
@@ -83,7 +83,7 @@ class Game {
     await step(10);
     // 101 周邊真實街景(OpenStreetMap)
     const xdata = await loadXinyi();
-    if (xdata) applyOsmLandmarks(xdata.landmarks);
+    if (xdata) { applyOsmLandmarks(xdata.landmarks); applyOsmBuildings(xdata.buildings); }
     buildGround(scene, this.renderer.capabilities.getMaxAnisotropy(), !!xdata);
     buildTerrain(scene);
     await step(25);
@@ -93,7 +93,7 @@ class Game {
     const outerTraffic = buildTraffic(scene, xdata ? xdata.radius + 120 : 0);
     buildLandmarks(scene, { skipNanshan: !!xdata });
     if (xdata) {
-      this.xinyi = buildXinyi(scene, xdata, { exclude: [{ ...GEO.sunYatSen, r: 75 }, { ...GEO.dome, r: 170 }] });
+      this.xinyi = buildXinyi(scene, xdata, { exclude: [{ ...GEO.sunYatSen, r: 70 }, { ...GEO.dome, r: 130 }, { ...GEO.taozhu, r: 40 }] });
       this.updateTraffic = (dt) => { outerTraffic(dt); this.xinyi.updateTraffic(dt); };
     } else this.updateTraffic = outerTraffic;
     await step(60);
@@ -105,6 +105,14 @@ class Game {
     this.interiors = buildInteriors(scene);
     this.interiors.setActive(null);
     this.fireworks = new Fireworks(scene, this.audio);
+    // 煙火反射:立方體攝影機只拍煙火(圖層 1),結果當作玻璃的反射貼圖
+    this.fwCubeRT = new THREE.WebGLCubeRenderTarget(256, { type: THREE.HalfFloatType });
+    this.fwCube = new THREE.CubeCamera(5, 8000, this.fwCubeRT);
+    this.fwCube.position.set(0, 300, 0);
+    this.fwCube.children.forEach((c) => c.layers.set(1));
+    this.fireworks.points.layers.enable(1);
+    this.glassMats = [...this.tower.userData.sections.filter((s) => s.name !== '頂冠').map((s) => s.glass), ...this.city.glassMats, ...(this.xinyi ? this.xinyi.glassMats : [])];
+    this.fwEnvOn = false;
     this.stars = this.makeStars();
     scene.add(this.stars);
     await step(85);
@@ -172,6 +180,24 @@ class Game {
     this.renderer.setSize(innerWidth, innerHeight);
     if (this.composer) { this.composer.setPixelRatio(this.renderer.getPixelRatio()); this.composer.setSize(innerWidth, innerHeight); }
     for (const c of [this.camera, this.elevator?.camera]) if (c) { c.aspect = innerWidth / innerHeight; c.updateProjectionMatrix(); }
+  }
+
+  /** 跨年夜:玻璃改用「煙火立方體貼圖」當反射,沒開燈的窗戶就會映出煙火。 */
+  updateFireworkReflection() {
+    const on = this.fireworks.active && this.night > 0.5;
+    if (on !== this.fwEnvOn) {
+      this.fwEnvOn = on;
+      for (const m of this.glassMats) {
+        if (m.userData.baseEnv == null) m.userData.baseEnv = m.envMapIntensity;
+        m.envMap = on ? this.fwCubeRT.texture : null;
+        m.envMapIntensity = on ? 4 : m.userData.baseEnv;
+        m.needsUpdate = true;
+      }
+    }
+    if (!on) return;
+    const st = this.fireworks.status();
+    this.fwFrame = (this.fwFrame || 0) + 1;
+    if (st.phase === 'show' ? this.fwFrame % 2 === 0 : this.fwFrame % 30 === 0) this.fwCube.update(this.renderer, this.scene);
   }
 
   /** 夜晚且中高畫質時用光暈後製,其他情況直接繪製。 */
@@ -388,6 +414,7 @@ class Game {
     this.interiors.update(this.t, dt);
     this.tower.userData.beacon.visible = Math.sin(this.t * 3) > 0;
     this.towerLights.update(this.t, this.fireworks);
+    this.updateFireworkReflection();
     this.fireworks.update(dt, this.camera.position);
     let scene = this.scene, camera = this.camera;
     if (this.mode) {

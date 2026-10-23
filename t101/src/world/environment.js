@@ -1,7 +1,8 @@
 // 天空、光線、地面、城市、山景、行道樹與車流。座標:北 = -Z、東 = +X,101 位於原點。
 import * as THREE from 'three';
 import { Sky } from 'three/addons/objects/Sky.js';
-import { groundTexture, cityFacadeTextures, roofTexture, stoneTileTexture } from './textures.js';
+import { groundTexture, glassCurtainTexture, roofTexture, stoneTileTexture } from './textures.js';
+import { applyInterior } from './interior.js';
 import { GEO, RIVERS } from './geo.js';
 
 function rng(seed) {
@@ -162,7 +163,8 @@ export function buildCity(scene, zones = [], skipRadius = 0) {
   const side = { pos: [], uv: [], col: [] };
   const top = { pos: [], uv: [], col: [] };
   const color = new THREE.Color();
-  const palette = [0xb9b2a5, 0xa59d90, 0x9a9c9c, 0x868f96, 0xc7bfb0, 0x7a838c, 0xae9f86, 0x6e787f, 0x939c9f, 0xb08f7a, 0x8a7f74, 0x5f6b72];
+  // 玻璃帷幕的色調:藍灰、綠、灰、古銅、藍、銀
+  const palette = [0x8fa9b6, 0x86a89c, 0x9a9ea2, 0xa8927a, 0x7d93ad, 0xb5bcc0, 0x6f8a8f, 0x8c8c94];
   const boxes = [];
   const addBox = (x0, z0, x1, z1, h, c) => {
     boxes.push([x0, z0, x1, z1, h]);
@@ -223,7 +225,7 @@ export function buildCity(scene, zones = [], skipRadius = 0) {
       }
     }
   }
-  const fx = cityFacadeTextures();
+  const facade = glassCurtainTexture(5);
   const mk = (d) => {
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(d.pos, 3));
@@ -233,15 +235,16 @@ export function buildCity(scene, zones = [], skipRadius = 0) {
     return geo;
   };
   const sideMat = new THREE.MeshStandardMaterial({
-    map: fx.map, vertexColors: true, roughness: 0.7, metalness: 0.1,
-    emissive: new THREE.Color(0xffffff), emissiveMap: fx.emissive, emissiveIntensity: 0
+    map: facade, vertexColors: true, roughness: 0.12, metalness: 0.72, envMapIntensity: 1.3,
+    emissive: new THREE.Color(0xffffff), emissiveIntensity: 0
   });
+  applyInterior(sideMat, { cells: [8, 8], win: [0.02, 0.98, 0.17, 0.985], lit: 0.26, seed: 3, depth: 1.1 });
   const sides = new THREE.Mesh(mk(side), sideMat);
   sides.castShadow = sides.receiveShadow = true;
   const roofs = new THREE.Mesh(mk(top), new THREE.MeshStandardMaterial({ map: roofTexture(), vertexColors: true, roughness: 0.9 }));
   roofs.receiveShadow = true;
   scene.add(sides, roofs);
-  return { boxes, setNight: (n) => { sideMat.emissiveIntensity = n * 1.1; } };
+  return { boxes, glassMats: [sideMat], setNight: (n) => { sideMat.emissiveIntensity = n * 0.65; } };
 }
 
 /** 行道樹(101 周邊 900m 內)。 */

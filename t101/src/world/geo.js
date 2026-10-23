@@ -17,7 +17,8 @@ export const GEO = {
   leopard: { name: '豹山', ...ll(25.0318, 121.5818) },
   lion: { name: '獅山', ...ll(25.0290, 121.5800) },
   qixing: { name: '七星山', ...ll(25.1717, 121.5531) },
-  maokong: { name: '貓空', ...ll(24.9680, 121.5880) }
+  maokong: { name: '貓空', ...ll(24.9680, 121.5880) },
+  taozhu: { name: '陶朱隱園', ...ll(25.0386, 121.5701) }
 };
 
 /** 用 OpenStreetMap 下載到的地標座標覆蓋(名稱對得上才換)。 */
@@ -30,6 +31,19 @@ export function applyOsmLandmarks(list) {
   for (const [k, re] of Object.entries(map)) {
     const hit = list.find((l) => re.test(l.name));
     if (hit) { GEO[k].x = Math.round(hit.xz[0]); GEO[k].z = Math.round(hit.xz[1]); }
+  }
+}
+
+/** 用街景資料中的建築外框中心校正地標位置(比單點座標準確)。 */
+export function applyOsmBuildings(buildings) {
+  if (!buildings) return;
+  const map = { sunYatSen: /^國父紀念館$/, dome: /^臺北大巨蛋$/, taozhu: /^陶朱隱園$/ };
+  for (const [k, re] of Object.entries(map)) {
+    const b = buildings.find((bb) => bb.n && re.test(bb.n));
+    if (!b) continue;
+    let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+    for (const [x, z] of b.p) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
+    GEO[k].x = Math.round((x0 + x1) / 2); GEO[k].z = Math.round((z0 + z1) / 2);
   }
 }
 

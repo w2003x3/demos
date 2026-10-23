@@ -119,7 +119,7 @@ export function buildGlider(d) {
   const th = d.theme;
   if (th === 'boba') {
     const cup = new THREE.Group();
-    cup.add(new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.34, 1.0, 20), new THREE.MeshPhysicalMaterial({ color: 0xd9b48a, roughness: 0.2, transmission: 0.3, transparent: true, opacity: 0.85 })));
+    cup.add(new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.34, 1.0, 20), new THREE.MeshPhysicalMaterial({ color: 0xd9b48a, roughness: 0.2, transparent: true, opacity: 0.85 })));
     for (let i = 0; i < 14; i++) { const b = new THREE.Mesh(new THREE.SphereGeometry(0.07, 8, 6), new THREE.MeshStandardMaterial({ color: 0x1a120c, roughness: 0.2 })); b.position.set((Math.random() - 0.5) * 0.5, -0.38 + Math.random() * 0.12, (Math.random() - 0.5) * 0.5); cup.add(b); }
     const lid = new THREE.Mesh(new THREE.SphereGeometry(0.43, 20, 8, 0, Math.PI * 2, 0, Math.PI / 2), new THREE.MeshStandardMaterial({ color: 0xffffff, transparent: true, opacity: 0.6 }));
     lid.position.y = 0.5; lid.scale.y = 0.3; cup.add(lid);

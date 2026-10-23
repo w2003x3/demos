@@ -19,7 +19,7 @@ export function buildHelicopter() {
   const white = new THREE.MeshStandardMaterial({ color: 0xf4f4f2, roughness: 0.35, metalness: 0.2 });
   const dark = new THREE.MeshStandardMaterial({ color: 0x26292e, roughness: 0.5, metalness: 0.6 });
   const red = new THREE.MeshStandardMaterial({ color: 0xc62828, roughness: 0.4 });
-  const glass = new THREE.MeshPhysicalMaterial({ color: 0x9fc4d8, roughness: 0.05, metalness: 0.1, transmission: 0.6, transparent: true, opacity: 0.25, side: THREE.DoubleSide, depthWrite: false });
+  const glass = new THREE.MeshPhysicalMaterial({ color: 0x9fc4d8, roughness: 0.05, metalness: 0.1, transparent: true, opacity: 0.25, side: THREE.DoubleSide, depthWrite: false });
   const add = (geo, mat, x = 0, y = 0, z = 0) => { const m = new THREE.Mesh(geo, mat); m.position.set(x, y, z); m.castShadow = true; g.add(m); return m; };
 
   // 機身(拉長的膠囊)

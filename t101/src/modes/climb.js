@@ -19,7 +19,7 @@ const clamp = THREE.MathUtils.clamp;
 
 function sections() {
   const s = towerSections();
-  s.push({ name: '塔尖', y0: CROWN_Y, y1: SPIRE_TOP, hw0: 3.6, hw1: 0.6, floors: [101, 101] });
+  s.push({ name: '塔尖', y0: CROWN_Y, y1: SPIRE_TOP, hw0: 3.1, hw1: 1.5, floors: [101, 101] });
   return s;
 }
 
@@ -49,6 +49,7 @@ export class ClimbMode {
     const t = clamp((y - S.y0) / (S.y1 - S.y0), 0, 1);
     return S.hw0 + (S.hw1 - S.hw0) * t;
   }
+  domeTop() { return this.g.tower.userData.domeTop || SPIRE_TOP - 2.5; }
   lean(s) { const S = this.secs[s]; return Math.atan((S.hw1 - S.hw0) / (S.y1 - S.y0)); }
   latLimit(s, y) { return Math.max(0.35, this.faceZ(s, y) * (s === this.secs.length - 1 ? 0.5 : 0.62)); }
 
@@ -274,7 +275,7 @@ export class ClimbMode {
     }
     if (g.camera.position.y < 1.5) g.camera.position.y = 1.5;
     g.focusShadow(target);
-    const hgt = THREE.MathUtils.clamp(target.y, 0, 508);
+    const hgt = this.state === 'summit' ? 508 : THREE.MathUtils.clamp(target.y, 0, 508);
     g.audio.setWind(clamp(0.1 + hgt / 600 + (this.gust.phase === 'blow' ? 0.4 : 0), 0, 1));
 
     // HUD
@@ -348,7 +349,7 @@ export class ClimbMode {
       else if (!want && !l.held) { l.held = true; this.grip -= 0.4; g.audio.grab(); }
       if (!l.held) {
         // 伸展
-        const top = s === this.secs.length - 1 ? SPIRE_TOP + 0.3 : S.y1;
+        const top = s === this.secs.length - 1 ? this.domeTop() + 0.3 : S.y1;
         l.y += (down ? -REACH * 0.6 : REACH) * dt;
         l.x += lat * 1.6 * dt;
         const rel = l.y - this.by;
@@ -402,7 +403,7 @@ export class ClimbMode {
     this.char.root.position.set(this.bx, this.by - 0.95, fz + 0.4);
     this.char.root.rotation.set(-lean, Math.PI, 0);
     this.poseLimbs(brace);
-    if (s === this.secs.length - 1 && this.by > SPIRE_TOP - 2.6) { this.summit(); return; }
+    if (s === this.secs.length - 1 && this.by > this.domeTop() - 1.3) { this.summit(); return; }
     // 翻上平台
     const handsTop = this.limbs.filter((l) => l.hand && l.held && l.y >= S.y1 - 0.05).length === 2;
     if (handsTop && this.by > S.y1 - 1.6 && s < this.secs.length - 1) {
@@ -442,8 +443,9 @@ export class ClimbMode {
     const g = this.g;
     this.state = 'summit';
     this.limbs = null;
-    this.body = new THREE.Vector3(this.bx, SPIRE_TOP - 0.2, 0.5);
-    this.char.root.position.set(0, SPIRE_TOP + 0.1, 0);
+    g.ui.prompt('');
+    this.body = new THREE.Vector3(0, this.domeTop() - 0.95, 0);
+    this.char.root.position.set(0, this.domeTop(), 0);
     this.char.root.rotation.set(0, Math.PI, 0);
     g.audio.say('climb_top');
     g.audio.cheer();

@@ -1,7 +1,8 @@
 // 信義區真實街景:依 OpenStreetMap 資料(assets/data/xinyi.json)建出 101 周邊建築、道路、綠地、行道樹與車流。
 // 資料授權:© OpenStreetMap contributors(ODbL)。
 import * as THREE from 'three';
-import { cityFacadeTextures, roofTexture, interiorLights, canvasTex } from './textures.js';
+import { glassCurtainTexture, roofTexture, canvasTex } from './textures.js';
+import { applyInterior } from './interior.js';
 
 function rng(seed) {
   let s = seed >>> 0;
@@ -32,13 +33,11 @@ function glassFacade() {
     const r = rng(5);
     for (let y = 0; y < 8; y++) {
       for (let x = 0; x < 8; x++) {
-        const l = 26 + r() * 10;
-        g.fillStyle = `hsl(205, 18%, ${l}%)`;
+        const l = 46 + r() * 12;
+        g.fillStyle = `hsl(205, 8%, ${l}%)`;
         g.fillRect(x * 32, y * 32, 32, 32);
       }
     }
-    g.fillStyle = 'rgba(255,255,255,0.08)';
-    for (let i = 0; i < 6; i++) { g.beginPath(); g.moveTo(i * 60, H); g.lineTo(i * 60 + 80, 0); g.lineTo(i * 60 + 100, 0); g.lineTo(i * 60 + 20, H); g.fill(); }
     g.fillStyle = '#8a959c';
     for (let y = 0; y <= 8; y++) g.fillRect(0, y * 32 - 1, W, 3);
     for (let x = 0; x <= 8; x++) g.fillRect(x * 32 - 1, 0, 2, H);
@@ -50,7 +49,7 @@ export function buildXinyi(scene, data, { exclude = [] } = {}) {
   const root = new THREE.Group();
   root.name = 'xinyi';
   const r = rng(101);
-  const palette = [0xb9b2a5, 0xa59d90, 0x9a9c9c, 0x868f96, 0xc7bfb0, 0x7a838c, 0xae9f86, 0x6e787f, 0x939c9f, 0xb08f7a, 0x8a7f74, 0xd0c8b8];
+  const palette = [0x8fa9b6, 0x86a89c, 0x9a9ea2, 0xa8927a, 0x7d93ad, 0xb5bcc0, 0x6f8a8f, 0x8c8c94, 0x9fb3a8];
   const groups = { mid: { pos: [], uv: [], col: [] }, glass: { pos: [], uv: [], col: [] }, mall: { pos: [], uv: [], col: [] }, roof: { pos: [], uv: [], col: [] } };
   const c = new THREE.Color();
   const solids = [];
@@ -62,10 +61,10 @@ export function buildXinyi(scene, data, { exclude = [] } = {}) {
     const cx = pts.reduce((s, q) => s + q[0], 0) / pts.length, cz = pts.reduce((s, q) => s + q[1], 0) / pts.length;
     if (exclude.some((e) => Math.hypot(cx - e.x, cz - e.z) < e.r)) continue;
     const tall = h > 90;
-    const mall = /101/.test(b.n || '');
+    const mall = b.k === 'mall' || /101/.test(b.n || '');
     const G = mall ? groups.mall : tall ? groups.glass : groups.mid;
-    c.setHex(tall ? 0xffffff : palette[Math.floor(r() * palette.length)]);
-    if (!tall) c.multiplyScalar(0.9 + r() * 0.15);
+    c.setHex(mall ? 0xffffff : palette[Math.floor(r() * palette.length)]);
+    if (!mall) c.multiplyScalar(0.9 + r() * 0.15);
     // 牆面
     let u = r() * 24;
     const vScale = 8 * 3.4, uScale = 24;
@@ -101,7 +100,7 @@ export function buildXinyi(scene, data, { exclude = [] } = {}) {
     // 碰撞資料:外框 + 多邊形
     let x0 = Infinity, z0 = Infinity, x1 = -Infinity, z1 = -Infinity;
     for (const [x, z] of pts) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
-    solids.push([x0, z0, x1, z1, h, b.n || '大樓', pts]);
+    solids.push([x0, z0, x1, z1, h, b.n || '大樓', pts, b.k || '']);
   }
 
   const mk = (d) => {
@@ -112,19 +111,26 @@ export function buildXinyi(scene, data, { exclude = [] } = {}) {
     geo.computeVertexNormals();
     return geo;
   };
-  const fx = cityFacadeTextures();
-  const midMat = new THREE.MeshStandardMaterial({ map: fx.map, vertexColors: true, roughness: 0.75, metalness: 0.05, emissive: 0xffffff, emissiveMap: fx.emissive, emissiveIntensity: 0 });
-  const gEm = interiorLights(8, 8, 0.08, 31, 0.45);
-  const glassMat = new THREE.MeshStandardMaterial({ map: glassFacade(), vertexColors: true, roughness: 0.12, metalness: 0.65, envMapIntensity: 1.3, emissive: 0xffffff, emissiveMap: gEm, emissiveIntensity: 0 });
+  // 全部為玻璃帷幕:室內有燈就透出、沒燈就反射外界
+  const midMat = new THREE.MeshStandardMaterial({ map: glassCurtainTexture(9), vertexColors: true, roughness: 0.12, metalness: 0.72, envMapIntensity: 1.3, emissive: 0xffffff, emissiveIntensity: 0 });
+  applyInterior(midMat, { cells: [8, 8], win: [0.02, 0.98, 0.17, 0.985], lit: 0.3, seed: 7, depth: 1.1 });
+  const glassMat = new THREE.MeshStandardMaterial({ map: glassFacade(), vertexColors: true, roughness: 0.08, metalness: 0.8, envMapIntensity: 1.5, emissive: 0xffffff, emissiveIntensity: 0 });
+  applyInterior(glassMat, { cells: [8, 8], win: [0.01, 0.99, 0.04, 0.99], lit: 0.36, seed: 31, depth: 1.3 });
   const roofMat = new THREE.MeshStandardMaterial({ map: roofTexture(), vertexColors: true, roughness: 0.9 });
-  // 101 購物中心:石材 + 玻璃帶,與 101 塔身一致
-  const mallTex = canvasTex(256, 256, (g2, W2, H2) => {
-    g2.fillStyle = '#d2ccc0'; g2.fillRect(0, 0, W2, H2);
-    for (let i = 0; i < 2; i++) { g2.fillStyle = '#35585c'; g2.fillRect(0, i * 128 + 40, W2, 60); g2.fillStyle = 'rgba(255,255,255,.12)'; g2.fillRect(0, i * 128 + 40, W2, 6); }
-    g2.fillStyle = 'rgba(0,0,0,.18)'; for (let x = 0; x < W2; x += 32) g2.fillRect(x, 0, 2, H2);
+  // 百貨商場(含 101 購物中心):每層下方 70% 為玻璃櫥窗、上方為石材飾帶,夜間店面全亮
+  const mallTex = canvasTex(512, 512, (g2, W2, H2) => {
+    const rh = H2 / 6, cw = W2 / 6;
+    g2.fillStyle = '#d6d0c4'; g2.fillRect(0, 0, W2, H2);
+    for (let i = 0; i < 6; i++) {
+      const grd = g2.createLinearGradient(0, i * rh + rh * 0.3, 0, (i + 1) * rh);
+      grd.addColorStop(0, '#5f7c80'); grd.addColorStop(1, '#3d585c');
+      g2.fillStyle = grd; g2.fillRect(0, i * rh + rh * 0.3, W2, rh * 0.7);
+      g2.fillStyle = '#b9b2a4'; g2.fillRect(0, i * rh + rh * 0.3 - 3, W2, 3);
+    }
+    g2.fillStyle = '#c8c2b6'; for (let x = 0; x <= 6; x++) g2.fillRect(x * cw - 3, 0, 6, H2);
   });
-  const mallEm = canvasTex(256, 256, (g2, W2, H2) => { g2.fillStyle = '#000'; g2.fillRect(0, 0, W2, H2); for (let i = 0; i < 2; i++) { g2.fillStyle = '#ffd9a0'; g2.fillRect(0, i * 128 + 44, W2, 52); } });
-  const mallMat = new THREE.MeshStandardMaterial({ map: mallTex, roughness: 0.4, metalness: 0.2, emissive: 0xffffff, emissiveMap: mallEm, emissiveIntensity: 0 });
+  const mallMat = new THREE.MeshStandardMaterial({ map: mallTex, roughness: 0.18, metalness: 0.45, envMapIntensity: 1.2, emissive: 0xffffff, emissiveIntensity: 0 });
+  applyInterior(mallMat, { cells: [6, 6], win: [0.02, 0.98, 0.0, 0.69], store: true, seed: 5, depth: 1.4 });
   for (const [d, mat] of [[groups.mid, midMat], [groups.glass, glassMat], [groups.mall, mallMat], [groups.roof, roofMat]]) {
     if (!d.pos.length) continue;
     const mesh = new THREE.Mesh(mk(d), mat);
@@ -295,10 +301,11 @@ export function buildXinyi(scene, data, { exclude = [] } = {}) {
   scene.add(root);
   return {
     root, solids, updateTraffic,
+    glassMats: [midMat, glassMat, mallMat],
     setNight(nf) {
-      midMat.emissiveIntensity = nf * 0.95;
-      glassMat.emissiveIntensity = nf * 0.6;
-      mallMat.emissiveIntensity = nf * 0.8;
+      midMat.emissiveIntensity = nf * 0.7;
+      glassMat.emissiveIntensity = nf * 0.7;
+      mallMat.emissiveIntensity = nf * 1.0;
       tail.visible = head.visible = nf > 0.2;
     }
   };

@@ -22,7 +22,7 @@ export class TowerLights {
     // 預設:室內燈光 + 玉綠色燈帶緩慢呼吸
     for (const s of this.secs) {
       s.glass.emissive.copy(WARM);
-      s.glass.emissiveIntensity = n * 0.75;
+      s.glass.emissiveIntensity = n * 0.3;
     }
     this.segs.forEach((s, i) => {
       s.band.emissive.copy(this.nye ? GOLD : JADE);
@@ -57,23 +57,9 @@ export class TowerLights {
         for (const s of this.secs) if (!s.seg) s.glass.emissiveIntensity = 0.15;
       }
     } else if (st.phase === 'show') {
-      const flash = Math.min(1, (fw.flash.intensity || 0) / 1500);
-      if (st.t < 2.5) {
-        // 零時:整棟閃白金光
-        const k = Math.abs(Math.sin(st.t * 9));
-        for (const s of this.secs) { s.glass.emissive.setRGB(1, 0.95, 0.8); s.glass.emissiveIntensity = 1.2 + k * 1.8; }
-        for (const s of this.segs) { s.band.emissive.setRGB(1, 1, 1); s.band.emissiveIntensity = 6 * k + 2; }
-      } else {
-        // 煙火秀:各節輪流變色,隨爆炸閃光跳動
-        this.segs.forEach((s, i) => {
-          const h = (Math.floor(st.t * 1.5) * 0.17 + i * 0.125) % 1;
-          tmp.setHSL(h, 0.9, 0.6);
-          s.band.emissive.copy(tmp);
-          s.band.emissiveIntensity = 3.5 + flash * 3;
-          s.glass.emissive.copy(tmp).lerp(WARM, 0.5);
-          s.glass.emissiveIntensity = 0.8 + flash * 0.8;
-        });
-      }
+      // 煙火施放時 101 本身不亮燈,只反射煙火的光
+      for (const s of this.secs) s.glass.emissiveIntensity = 0;
+      for (const s of this.segs) s.band.emissiveIntensity = 0;
     }
   }
 }

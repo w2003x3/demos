@@ -51,7 +51,7 @@ export class GlideMode {
 
   tutorial(force) {
     this.g.tutorial.pages('glide', [
-      { title: '創意滑翔賽', html: '自己打造一架滑翔翼,從 <b>101 頂樓(434 公尺)的起飛台</b>出發,<b>滑翔距離就是成績</b>。前方有大樓時<b>強風會把你吹開</b>;但飛太低<b>擦過樓頂</b>會重心不穩墜落,墜落時要在 <b>10 秒內答對心算</b>才能打開降落傘。' },
+      { title: '創意滑翔賽', html: '自己打造一架滑翔翼,從 <b>101 頂樓(434 公尺)的起飛台</b>出發,<b>滑翔距離就是成績</b>。飛行中會遇到<b>強風</b>把你吹偏;但飛太低<b>擦過樓頂</b>會重心不穩墜落,墜落時要在 <b>10 秒內答對心算</b>才能打開降落傘。' },
       { title: '打造滑翔翼', html: '<ul><li><b>翼型</b>:直翼平衡、後掠翼快、三角翼穩、雙翼慢速飄</li><li><b>翼展</b>:越長滑翔比越好,但越重越難轉彎</li><li><b>材質</b>:碳纖維最輕</li><li><b>尾翼</b>:沒有尾翼阻力小但會晃</li><li><b>造型主題</b>:珍奶號、鳳梨酥號…創意分高,但阻力較大</li></ul>右側會即時顯示<b>滑翔比、速度、穩定度與預估距離</b>。' },
       { title: '飛行操作', visual: VIS.glide, html: '保持在<b>最佳空速</b>附近滑得最遠(HUD 會提示)。拉太多會<b>失速</b>往下掉;按住 <kbd>Space</kbd> 時間加速。飛太低時小心<b>擦過樓頂</b>,保持高度、降落在空地或道路上。' }
     ], { finishLabel: force ? '繼續' : '開始打造' });
@@ -236,7 +236,7 @@ export class GlideMode {
         if (this.windMsgT <= 0) {
           this.windMsgT = 3;
           g.audio.whoosh();
-          g.ui.banner('強風把你吹離大樓!', false, 1.6);
+          g.ui.banner('強風來襲!', false, 1.6);
           if (!this.windSaid) { this.windSaid = true; g.audio.say('glide_wind'); }
         }
       }
