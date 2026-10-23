@@ -45,40 +45,71 @@
   controls.minDistance = 4;
   controls.maxDistance = 40;
 
-  // ---------- 鏡頭模式:free(自由環繞)/ follow(第三人稱跟隨)/ fps(第一人稱) ----------
+  // ---------- 鏡頭模式:free(全景/俯視,可拖曳環繞)/ follow(第三人稱跟隨)/ fps(第一人稱) ----------
   let camMode = 'free';
-  let followLock = false; // 跟隨模式:鏡頭固定方向(不隨人物轉動)
-  let smoothYaw = 0; // 平滑後的面向角(避免 4 方向切換時鏡頭猛轉)
+  let followLock = false; // 跟隨:鏡頭固定朝北(和地圖同方向,不隨人物轉動)
+  let fpsWide = false;    // 第一人稱:廣角(FOV 100°,方便看兩側來的貢丸)
+  let smoothYaw = 0;      // 平滑後的面向角(避免 4 方向切換時鏡頭猛轉)
+  let camView = 'overview';
   function setCamMode(m) {
     camMode = m;
     controls.enabled = (m === 'free'); // 跟隨/第一人稱時停用滑鼠環繞
-    document.querySelectorAll('.view-btns button').forEach((b) => {
-      if (b.classList) b.classList.toggle('active',
-        (m === 'follow' && b.id === 'view-follow') ||
-        (m === 'fps' && b.id === 'view-fps') ||
-        (b.id === 'view-lock' && followLock));
-    });
   }
-  function viewIso() { setCamMode('free'); camera.position.set(CX, 12, CZ + 10.5); controls.target.set(CX, 0, CZ); }
+  function viewOverview() { setCamMode('free'); camera.position.set(CX, 12, CZ + 10.5); controls.target.set(CX, 0, CZ); }
   function viewTop() { setCamMode('free'); camera.position.set(CX, 17, CZ + 0.01); controls.target.set(CX, 0, CZ); }
-  function viewSide() { setCamMode('free'); camera.position.set(CX, 4.2, CZ + 13.5); controls.target.set(CX, 1, CZ); }
-  viewIso();
-  for (const [id, fn] of [
-    ['view-iso', viewIso], ['view-top', viewTop], ['view-side', viewSide],
-    ['view-follow', () => setCamMode('follow')],
-    ['view-fps', () => setCamMode('fps')],
-  ]) {
-    const el = document.getElementById(id);
-    if (el) el.addEventListener('click', fn);
+
+  // 視角選單:4 種視角卡片 + 只在該視角出現的選項 + 方向鍵說明
+  const CAM_NAMES = { overview: '全景', top: '俯視', follow: '跟隨', fps: '第一人稱' };
+  const camPanel = document.getElementById('cam-panel');
+  const camBtn = document.getElementById('cam-btn');
+  function refreshCamUi() {
+    const nameEl = document.getElementById('cam-name');
+    if (nameEl) nameEl.textContent = CAM_NAMES[camView] + (camView === 'fps' && fpsWide ? '・廣角' : camView === 'follow' && followLock ? '・固定' : '');
+    if (!camPanel) return;
+    camPanel.querySelectorAll('[data-cam]').forEach((b) => b.classList.toggle('active', b.dataset.cam === camView));
+    camPanel.querySelectorAll('.cam-opt').forEach((o) => o.classList.toggle('hidden', o.dataset.for !== camView));
+    camPanel.querySelectorAll('[data-lock]').forEach((b) => b.classList.toggle('active', (b.dataset.lock === '1') === followLock));
+    camPanel.querySelectorAll('[data-wide]').forEach((b) => b.classList.toggle('active', (b.dataset.wide === '1') === fpsWide));
+    const note = document.getElementById('cam-note');
+    if (note) note.textContent = (camView === 'fps' || (camView === 'follow' && !followLock))
+      ? '方向鍵以鏡頭前方為準:↑ 往前走' : '方向鍵 = 地圖上的上下左右' + (camView === 'overview' || camView === 'top' ? ';拖曳旋轉、滾輪縮放' : '');
+  }
+  function setCamView(v, save) {
+    camView = CAM_NAMES[v] ? v : 'overview';
+    if (camView === 'overview') viewOverview();
+    else if (camView === 'top') viewTop();
+    else setCamMode(camView);
+    refreshCamUi();
+    if (save) { try { localStorage.setItem('bbw.cam', JSON.stringify({ v: camView, lock: followLock, wide: fpsWide })); } catch (e) { /* 無痕模式 */ } }
+  }
+  try {
+    const c = JSON.parse(localStorage.getItem('bbw.cam') || 'null');
+    if (c) { followLock = !!c.lock; fpsWide = !!c.wide; camView = c.v || 'overview'; }
+  } catch (e) { /* 忽略 */ }
+  setCamView(camView, false);
+  if (camBtn && camPanel) {
+    const open = (on) => { camPanel.classList.toggle('hidden', !on); camBtn.setAttribute('aria-expanded', on ? 'true' : 'false'); };
+    camBtn.addEventListener('click', (e) => { e.stopPropagation(); open(camPanel.classList.contains('hidden')); camBtn.blur(); });
+    camPanel.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const b = e.target.closest && e.target.closest('button');
+      if (!b) return;
+      if (b.dataset.cam) setCamView(b.dataset.cam, true);
+      if (b.dataset.lock) { followLock = b.dataset.lock === '1'; setCamView('follow', true); }
+      if (b.dataset.wide) { fpsWide = b.dataset.wide === '1'; setCamView('fps', true); }
+      b.blur();
+    });
+    document.addEventListener('click', () => open(false));            // 點其他地方收起
+    window.addEventListener('keydown', (e) => { if (e.key === 'Escape') open(false); });
   }
 
   // 角度差(取最短旋轉方向)
   const angleDelta = (from, to) => ((to - from + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
 
-  // 跟隨/第一人稱:方向鍵改以「鏡頭前方」為基準(game.js 會呼叫此轉換)
+  // 跟隨(會轉)/第一人稱:方向鍵改以「鏡頭前方」為基準(game.js 只在 3D 模式呼叫)
   // 用平滑後的鏡頭角量化到 90°,鏡頭轉到位前仍以舊基準,天然防止原地打轉
   window.moveTransform = (v) => {
-    if (camMode === 'free' || !player) return v;
+    if (camMode === 'free' || !player || (camMode === 'follow' && followLock)) return v;
     const k = ((Math.round(smoothYaw / (Math.PI / 2)) % 4) + 4) % 4;
     const F = [[0, 1], [1, 0], [0, -1], [-1, 0]][k]; // 鏡頭前方(遊戲座標)
     const R = [-F[1], F[0]];                          // 畫面右方
@@ -88,25 +119,6 @@
     if (camMode === 'fps' && my === 1) out.keepFacing = true;
     return out;
   };
-
-  // 跟隨模式選項按鈕:鏡頭固定方向(不隨人物轉動,只平移跟隨)
-  const lockBtn = document.getElementById('view-lock');
-  if (lockBtn) {
-    lockBtn.addEventListener('click', () => {
-      followLock = !followLock;
-      if (lockBtn.classList) lockBtn.classList.toggle('active', followLock);
-    });
-  }
-
-  // 第一人稱選項:廣角(FOV 100°,視野更寬,方便看兩側來的貢丸)
-  let fpsWide = false;
-  const wideBtn = document.getElementById('view-wide');
-  if (wideBtn) {
-    wideBtn.addEventListener('click', () => {
-      fpsWide = !fpsWide;
-      if (wideBtn.classList) wideBtn.classList.toggle('active', fpsWide);
-    });
-  }
 
   // 依模式驅動鏡頭(每幀)
   const camTmp = new THREE.Vector3();
@@ -120,9 +132,8 @@
     if (camMode === 'free' || !player) { controls.update(); return; }
     const tYaw = Math.atan2(player.dir.x, player.dir.y);
     // 固定方向開啟時,跟隨模式的鏡頭角不再追人物面向(第一人稱不受影響)
-    if (camMode === 'fps' || !followLock) {
-      smoothYaw += angleDelta(smoothYaw, tYaw) * 0.14;
-    }
+    const goal = camMode === 'follow' && followLock ? Math.PI : tYaw; // 固定不轉:鏡頭朝北,和地圖同方向
+    smoothYaw += angleDelta(smoothYaw, goal) * 0.14;
     const px = W2(player.x), pz = W2(player.y);
     if (camMode === 'follow') {
       // 第三人稱近距離:在玩家背後斜上方,平滑追蹤

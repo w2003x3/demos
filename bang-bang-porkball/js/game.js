@@ -87,16 +87,14 @@ const toRow = (y) => Math.floor(y / TS);
 let grid = []; // grid[r][c] = TILE.*
 
 // 兩隊出生點(col,row):藍隊在左、紅隊在右。第一個是人類玩家。
+// 出生點:前 n 個藍隊(左側)、後 n 個紅隊(右側);n = 每隊人數(對戰設定)
 function teamSpawns() {
   const mid = Math.floor(ROWS / 2);
-  return [
-    { col: 1, row: 1, team: 'blue', human: true },
-    { col: 1, row: ROWS - 2, team: 'blue' },
-    { col: 1, row: mid, team: 'blue' },
-    { col: COLS - 2, row: 1, team: 'red' },
-    { col: COLS - 2, row: ROWS - 2, team: 'red' },
-    { col: COLS - 2, row: mid, team: 'red' },
-  ];
+  const n = (typeof MATCH !== 'undefined' && MATCH.size) || 3;
+  const blue = [[1, 1], [1, ROWS - 2], [1, mid]].slice(0, n);
+  const red = (n === 1 ? [[COLS - 2, ROWS - 2]] : [[COLS - 2, 1], [COLS - 2, ROWS - 2], [COLS - 2, mid]]).slice(0, n);
+  return blue.map(([col, row], i) => ({ col, row, team: 'blue', human: i === 0 }))
+    .concat(red.map(([col, row]) => ({ col, row, team: 'red' })));
 }
 
 function generateMap() {
@@ -172,7 +170,7 @@ function updateWeather(dt) {
   env.t += dt;
   env.left -= dt;
   if (env.left <= 0) {
-    setWeather(pickWeather(env.weather));
+    setWeather(pickWeather(env.weather, MATCH.wx === 'safe'));   // 對戰設定:不含災害
     announceWeather();
   }
   const w = weatherDef();
@@ -1117,11 +1115,12 @@ function activateShield(p) {
 function applyCharacter(p, id, bot) {
   const c = charDef(id);
   p.char = CHARACTERS[id] ? id : 'aman';
-  p.maxHp = p.hp = bot ? Math.max(1, c.hp - 1) : c.hp;
+  const d = bot ? AI_DIFF[MATCH.ai] || AI_DIFF.normal : null;   // 電腦難度
+  p.maxHp = p.hp = d ? Math.max(1, c.hp + d.hp) : c.hp;
   p.maxMp = p.mp = c.mp;
-  p.speed = bot ? Math.round(c.speed * 0.65) : c.speed;
+  p.speed = d ? Math.round(c.speed * d.sp) : c.speed;
   p.power = c.power;
-  p.maxBombs = bot ? Math.max(1, c.bombs - 1) : c.bombs;
+  p.maxBombs = d ? Math.max(1, c.bombs + d.bombs) : c.bombs;
   p.skillCd = 0; p.dashT = 0; p.boostNext = false;
 }
 const randomChar = () => CHAR_IDS[rand(CHAR_IDS.length)];
@@ -1343,12 +1342,16 @@ window.addEventListener('keydown', (ev) => {
   if (['arrowup', 'arrowdown', 'arrowleft', 'arrowright', ' '].includes(k)) {
     ev.preventDefault();
   }
-  if (k === 'escape' && gameState !== 'playing' && gameState !== 'menu') { backToMainMenu(); return; } // 結算畫面 Esc 回主選單
-  if (k === 'r' || (k === 'enter' && gameState !== 'playing')) {
-    // 重新開始:教學中=重來這一步;連線中只有房主能重開
-    if (k === 'r' && window.tutorial && tutorial.active) tutorial.retry();
-    else if (NET.online) { if (NET.role === 'host') NET.restartMatch(); }
-    else startMatch();
+  const onResultScreen = gameState !== 'playing' && gameState !== 'menu';
+  if (k === 'escape' && onResultScreen && !NET.online) { backToMainMenu(); return; } // 結算畫面 Esc 回主選單
+  if (k === 'enter' && onResultScreen) {                // 結算畫面 Enter:下一局 / 再來一輪
+    if (!NET.online || NET.role === 'host') { if (SERIES.over) startSeries(); else { SERIES.nextAt = 0; startRound(); } }
+    return;
+  }
+  if (k === 'r') {
+    // 重新開始:教學中=重來這一步;單機=整場重來;連線中不提供(避免誤觸)
+    if (window.tutorial && tutorial.active) tutorial.retry();
+    else if (!NET.online && gameState === 'playing') startSeries();
     return;
   }
   if (gameState !== 'playing') return;
@@ -1567,7 +1570,7 @@ function aiPlaceBomb(e) {
   if (charDef(e.char).skill === 'boost' && e.skillCd <= 0) useSkill(e); // 加料後再放
   e.selected = AI_BOMB_TYPES[rand(AI_BOMB_TYPES.length)];
   placeMeatball(e);
-  e.aiBombCd = 1.2 + Math.random() * 1.6;
+  e.aiBombCd = (1.2 + Math.random() * 1.6) * (AI_DIFF[MATCH.ai] || AI_DIFF.normal).cd;
   danger = computeDanger();                     // 立即更新危險圖
   e.path = aiPath(e, (c, r) => danger[r][c] === Infinity, 14); // 放完就跑
 }
@@ -2131,21 +2134,18 @@ function showOverlay(id, show) {
   if (el && el.classList) el.classList[show ? 'remove' : 'add']('hidden');
 }
 function showResult() {
-  const title = $el('result-title'), sub = $el('result-sub');
   const winner = gameState === 'win' ? 'blue' : gameState === 'lose' ? 'red' : null;
-  if (title) title.textContent = !winner ? '🤝 平手!' :
-    winner === player.team ? '你的隊伍獲勝!' : '你的隊伍輸了';
-  if (sub) sub.textContent = (winner ? TEAM_NAME[winner] + '勝利 · ' : '') +
-    `存活 🔵 ${teamAlive('blue')} vs 🔴 ${teamAlive('red')}`;
-  showOverlay('result-overlay', true);
   sfx(winner && winner === player.team ? 'win' : 'lose');
   if (NET.online) NET.onResult();
+  onRoundEnd();
 }
 // 結算後回主選單(單機);連線中改用房間內的按鈕
 function backToMainMenu() {
   if (NET.online) return;
   if (window.tutorial && tutorial.active) tutorial.stop();
   showOverlay('result-overlay', false);
+  setupUI.hide();
+  SERIES.nextAt = 0; SERIES.over = false;
   restart();
   gameState = 'menu';
   showOverlay('menu-overlay', true);
@@ -2458,7 +2458,7 @@ function refreshSelector() {
 const CHAR_MAX = { hp: 5, mp: 150, speed: 185, power: 3, bombs: 3 };
 function buildCharPick() {
   const box = $el('char-pick');
-  if (!box) return;
+  if (!box) { pickChar(myChar); return; }   // 選角移到對戰設定畫面;這裡只更新主選單的立繪
   box.innerHTML = CHAR_IDS.map((id) =>
     `<button type="button" class="charbtn" data-char="${id}" aria-label="${CHARACTERS[id].name}">` +
     `<img src="assets/portraits/${id}.webp" alt=""><span>${CHARACTERS[id].name}</span></button>`).join('');
@@ -2499,8 +2499,9 @@ function restart() {
   if (window.tutorial) tutorial.stop(); // 任何重新開局都會結束教學
   generateMap();
   randomizeWeather();
+  if (MATCH.wx === 'calm') { setWeather('cool'); env.left = 1e9; }   // 對戰設定:固定涼爽
   meatballs = []; explosions = []; items = []; particles = [];
-  matchTime = MATCH_TIME;
+  matchTime = MATCH.time || MATCH_TIME;
   usedBush = new Set(); wildCritters = [];
 
   const spawns = teamSpawns();
@@ -2561,9 +2562,8 @@ loadAssets().then(() => {
   gameState = 'menu';
   showOverlay('menu-overlay', true);
   if (new URLSearchParams(location.search).get('room')) lobbyUI.show(); // 邀請連結:直接打開連線大廳
-  const bs = $el('btn-start'), ba = $el('btn-again');
-  if (bs) bs.addEventListener('click', startMatch);
-  if (ba) ba.addEventListener('click', startMatch);
+  const bs = $el('btn-start');
+  if (bs) bs.addEventListener('click', () => setupUI.open());   // 先到對戰設定畫面
   const bm = $el('btn-menu');
   if (bm) bm.addEventListener('click', backToMainMenu);
   buildCharPick();

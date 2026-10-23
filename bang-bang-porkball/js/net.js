@@ -29,7 +29,8 @@ const NET = {
   name: '',
   code: '',
   players: [],       // 房間名單 [{id, name, host}]
-  picks: {},         // 房主:連線玩家選的角色 {id: 角色}
+  picks: {},         // 每位玩家選的角色 {id: 角色}(攤主收集後廣播)
+  ready: {},         // 每位玩家是否按了「準備」{id: true}
   cfg: { map: 'park', teams: 'split' },
   fx: [],            // 房主:待送出的飄字
   sq: [],            // 房主:待送出的音效
@@ -71,7 +72,7 @@ const NET = {
   },
   reset() {
     this.online = false; this.role = null; this.id = null; this.players = [];
-    this.fx = []; this.sq = []; this.lastMove = ''; this.resultShown = false; this.picks = {};
+    this.fx = []; this.sq = []; this.lastMove = ''; this.resultShown = false; this.picks = {}; this.ready = {};
     guest.clear();
     restoreResultButtons();
   },
@@ -92,14 +93,21 @@ const NET = {
         this.players = msg.players;
         lobbyUI.lastError = '';
         lobbyUI.msg = ''; lobbyUI.msgErr = false;
+        this.picks = { [this.id]: myChar }; this.ready = {};
         if (this.role === 'guest') this.raw({ t: 'pick', c: myChar }); // 告訴攤主我選的角色
         history.replaceState(null, '', '?room=' + this.code + (new URLSearchParams(location.search).get('server') ? '&server=' + new URLSearchParams(location.search).get('server') : ''));
         lobbyUI.render();
         return;
       case 'lobby':
         this.players = msg.players;
-        if (this.role === 'host') this.raw({ t: 'cfg', map: this.cfg.map, teams: this.cfg.teams });
-        lobbyUI.render();
+        if (this.role === 'host') {
+          const ids = new Set(this.players.map((p) => p.id));
+          for (const id of Object.keys(this.ready)) if (!ids.has(id)) delete this.ready[id];
+          if (MATCH.size < setupUI.minSize()) { MATCH.size = setupUI.minSize(); saveMatch(); }
+          this.sendCfg(); this.sendPicks();
+        }
+        if (gameState === 'playing' || document.getElementById('result-overlay').className.indexOf('hidden') < 0) refreshRoomUi();
+        else lobbyUI.render();
         return;
       case 'host-left':
         this.ws = null;
@@ -113,10 +121,17 @@ const NET = {
 
   // ---------- 分隊:出生點序號 → 真人玩家 ----------
   // 出生點 0~2 藍隊、3~5 紅隊;房主固定在 0
+  // 出生點 0..n-1 藍隊、n..2n-1 紅隊(n = 每隊人數);分兩隊時真人藍紅輪流排
+  slotOrder() {
+    const n = MATCH.size, order = [];
+    if (MATCH.teams === 'coop') for (let i = 0; i < 2 * n; i++) order.push(i);
+    else for (let i = 0; i < n; i++) order.push(i, i + n);
+    return order;
+  },
   slotPlan() {
-    const order = this.cfg.teams === 'coop' ? [0, 1, 2, 3, 4, 5] : [0, 3, 1, 4, 2, 5];
+    const order = this.slotOrder();
     const plan = {};
-    this.roster().slice(0, 6).forEach((p, i) => { plan[order[i]] = p; });
+    this.roster().slice(0, order.length).forEach((p, i) => { plan[order[i]] = p; });
     return plan;
   },
   // 房主排第一,其餘照伺服器給的加入順序
@@ -124,45 +139,58 @@ const NET = {
     return this.players.filter((p) => p.host).concat(this.players.filter((p) => !p.host));
   },
   teamOf(index) {
-    const order = this.cfg.teams === 'coop' ? [0, 1, 2, 3, 4, 5] : [0, 3, 1, 4, 2, 5];
-    return order[index] < 3 ? 'blue' : 'red';
+    return this.slotOrder()[index] < MATCH.size ? 'blue' : 'red';
   },
 
   // ====================== 房主 ======================
-  startOnline() {
-    if (this.role !== 'host') return;
-    currentMapId = this.cfg.map;
-    this.restartMatch();
-  },
-  restartMatch() {
+  startOnline() { if (this.role === 'host') startSeries(); },
+  restartMatch() { if (this.role === 'host') startSeries(); },
+  // 攤主開一局:自己先開,再通知大家(帶上規則、第幾局、比分)
+  startRound() {
     if (this.role !== 'host') return;
     this.resultShown = false;
-    restart();
-    sfx('start');
-    announceWeather();
-    showOverlay('menu-overlay', false);
-    showOverlay('result-overlay', false);
+    this.picks[this.id] = myChar;
+    beginRound();
     lobbyUI.hide();
     this.fx = [];
-    this.raw({ t: 'start', map: currentMapId });
+    this.raw({ t: 'start', map: currentMapId, cfg: { ...MATCH }, round: SERIES.round, wins: SERIES.wins });
     this.snapT = SNAP_INTERVAL; // 立刻送第一份快照
     this.hostTick(0);
   },
+  // 回到對戰設定(大家可以換角色、攤主改規則)
   backToLobby() {
     if (this.role !== 'host') return;
     gameState = 'menu';
+    this.ready = {};
     this.raw({ t: 'open' });
     showOverlay('result-overlay', false);
-    lobbyUI.show();
+    setupUI.open();
+    this.sendPicks();
+  },
+  sendCfg() { if (this.role === 'host') this.raw({ t: 'cfg', cfg: { ...MATCH } }); },
+  sendPicks() {
+    if (this.role !== 'host') return;
+    this.picks[this.id] = myChar;
+    this.raw({ t: 'picks', picks: this.picks, ready: this.ready });
+    refreshRoomUi();
+  },
+  sendSeries() {
+    this.raw({ t: 'series', s: { round: SERIES.round, wins: SERIES.wins, last: SERIES.last, over: SERIES.over, next: SERIES.over ? 0 : ROUND_GAP } });
+  },
+  setReady(v) {
+    this.ready[this.id] = !!v;
+    if (this.role === 'guest') this.raw({ t: 'ready', v: !!v });
   },
   hostMessage(msg) {
     if (msg.t === 'peer-left') {
       // 對戰中有人離開:改由電腦接手
       const f = bots.find((b) => b.netId === msg.id);
       if (f) { f.remote = false; f.netWant = null; f.label += '(電腦)'; buildRoster(); }
+      delete this.ready[msg.id]; delete this.picks[msg.id];
       return;
     }
-    if (msg.t === 'pick') { if (CHARACTERS[msg.c]) this.picks[msg.from] = msg.c; return; }
+    if (msg.t === 'pick') { if (CHARACTERS[msg.c]) { this.picks[msg.from] = msg.c; this.sendPicks(); } return; }
+    if (msg.t === 'ready') { this.ready[msg.from] = !!msg.v; this.sendPicks(); return; }
     if (msg.t !== 'in' || gameState !== 'playing') return;
     const f = bots.find((b) => b.remote && b.netId === msg.from);
     if (!f) return;
@@ -183,13 +211,24 @@ const NET = {
   },
   onResult() {
     if (this.role === 'host') this.hostTick(SNAP_INTERVAL); // 把結算狀態送出去
-    lobbyUI.resultButtons();
   },
 
   // ====================== 一般玩家 ======================
   guestMessage(msg) {
-    if (msg.t === 'cfg') { this.cfg.map = msg.map; this.cfg.teams = msg.teams; lobbyUI.render(); return; }
+    if (msg.t === 'cfg') { applyCfg(msg.cfg); refreshRoomUi(); return; }
+    if (msg.t === 'picks') { this.picks = msg.picks || {}; this.ready = msg.ready || {}; refreshRoomUi(); return; }
+    if (msg.t === 'series') {
+      const s = msg.s || {};
+      SERIES.round = s.round; SERIES.wins = s.wins || { blue: 0, red: 0 }; SERIES.last = s.last; SERIES.over = !!s.over;
+      SERIES.nextAt = s.next ? performance.now() + s.next * 1000 : 0;
+      if (gameState !== 'playing') resultUI.render();
+      return;
+    }
     if (msg.t === 'start') {
+      applyCfg(msg.cfg);
+      SERIES.round = msg.round || 1; SERIES.wins = msg.wins || { blue: 0, red: 0 }; SERIES.over = false; SERIES.nextAt = 0;
+      this.ready = {};
+      setupUI.hide();
       currentMapId = msg.map;
       this.resultShown = false;
       guest.clear();
@@ -201,7 +240,7 @@ const NET = {
       lobbyUI.hide();
       return;
     }
-    if (msg.t === 'open') { gameState = 'menu'; showOverlay('result-overlay', false); lobbyUI.show(); return; }
+    if (msg.t === 'open') { gameState = 'menu'; this.ready = {}; showOverlay('result-overlay', false); setupUI.open(); return; }
     if (msg.t === 'snap') guest.apply(msg);
   },
   sendKey(k) {
@@ -430,6 +469,19 @@ function backToMenu(reason) {
   lobbyUI.status(reason, true);
 }
 
+// 攤主送來的規則(只接受合法值)
+function applyCfg(cfg) {
+  if (!cfg) return;
+  for (const k of Object.keys(MATCH)) if (MATCH_OPTS[k].opts.some(([v]) => v === cfg[k])) MATCH[k] = cfg[k];
+  updateMenuInfo();
+}
+// 設定畫面 / 結算畫面有開著就重畫(名單、準備狀態、規則變了)
+function refreshRoomUi() {
+  if (setupUI.visible()) setupUI.render();
+  const r = document.getElementById('result-overlay');
+  if (r && r.className.indexOf('hidden') < 0 && SERIES.over) resultUI.render();
+}
+
 // ====================================================================
 //  連線大廳介面
 // ====================================================================
@@ -475,6 +527,7 @@ const lobbyUI = {
   render() {
     const el = this.ensure();
     if (!el) return;
+    if (NET.online) { this.hide(); setupUI.open(); return; } // 進了攤位:改用對戰設定畫面
     const panel = el.querySelector('.online-panel');
     const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     if (!NET.online) {

@@ -6,7 +6,7 @@
 //  網址 ?view=3d 可直接以 3D 開啟;選擇會記在瀏覽器。
 // ====================================================================
 const VIEW = (() => {
-  const V = '20261024e';
+  const V = '20261025b';
   // 3D 需要的腳本(依序執行);size 是大約大小,用來估算進度
   const SCRIPTS_3D = [
     ['assets/atlas.js', 350e3],
@@ -120,3 +120,5 @@ const VIEW = (() => {
   if (want === '3d') V3.set('3d');
   return V3;
 })();
+// 其他檔案用 window.VIEW 判斷目前是 2D 還是 3D(const 不會自動掛到 window 上)
+window.VIEW = VIEW;
