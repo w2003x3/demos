@@ -2,6 +2,7 @@
 import * as THREE from 'three';
 import { Sky } from 'three/addons/objects/Sky.js';
 import { groundTexture, cityFacadeTextures, roofTexture, stoneTileTexture } from './textures.js';
+import { GEO, RIVERS } from './geo.js';
 
 function rng(seed) {
   let s = seed >>> 0;
@@ -30,7 +31,8 @@ function fbm(x, z, oct = 5) {
 export function terrainHeight(x, z) {
   let h = 0;
   // 象山、虎山、豹山、獅山
-  const hills = [[1150, 380, 420, 183], [1500, -150, 450, 140], [1750, 600, 520, 150], [2100, 150, 600, 165], [1400, 1100, 700, 200]];
+  const G = GEO;
+  const hills = [[G.elephant.x, G.elephant.z, 420, 183], [G.tiger.x, G.tiger.z, 450, 140], [G.leopard.x, G.leopard.z, 420, 140], [G.lion.x, G.lion.z, 420, 150], [G.elephant.x + 500, G.elephant.z + 700, 800, 260]];
   for (const [hx, hz, r, hh] of hills) {
     const d = Math.hypot(x - hx, z - hz) / r;
     if (d < 1.6) h = Math.max(h, hh * Math.exp(-d * d * 2.2) * (0.75 + 0.5 * fbm(x / 300, z / 300, 3)));
@@ -46,7 +48,7 @@ export function terrainHeight(x, z) {
     h = Math.max(h, peak * Math.pow(t, 0.8) * (0.55 + 0.9 * fbm(x / 2200, z / 2200, 5)));
   }
   // 淡水河谷(西側)
-  if (x < -4200 && x > -5600 && r < 9000) h *= 0.2;
+  if (Math.abs(x - RIVERS.tamsuiX) < 700 && r < 9000) h *= 0.2;
   return h;
 }
 
@@ -82,7 +84,7 @@ export function createLights(scene) {
   return { hemi, sun };
 }
 
-export function buildGround(scene, maxAniso) {
+export function buildGround(scene, maxAniso, real = false) {
   const g = new THREE.Group();
   const tex = groundTexture();
   const SIZE = 14400;
@@ -105,17 +107,17 @@ export function buildGround(scene, maxAniso) {
   plaza.rotation.x = -Math.PI / 2;
   plaza.position.set(0, 0.04, -24);
   plaza.receiveShadow = true;
-  g.add(plaza);
+  if (!real) g.add(plaza);
 
   // 淡水河
   const water = new THREE.Mesh(new THREE.PlaneGeometry(700, 30000), new THREE.MeshStandardMaterial({ color: 0x3d5a63, metalness: 0.2, roughness: 0.08, envMapIntensity: 1.4 }));
   water.rotation.x = -Math.PI / 2;
-  water.position.set(-4900, 0.3, -4000);
+  water.position.set(RIVERS.tamsuiX, 0.3, -4000);
   g.add(water);
   // 基隆河(北側,東西向)
   const water2 = new THREE.Mesh(new THREE.PlaneGeometry(14000, 260), water.material);
   water2.rotation.x = -Math.PI / 2;
-  water2.position.set(1000, 0.3, -3600);
+  water2.position.set(1000, 0.3, RIVERS.keelungZ);
   g.add(water2);
   scene.add(g);
   return g;
@@ -146,7 +148,7 @@ export function buildTerrain(scene) {
     scene.add(m);
     return m;
   };
-  make(3200, 160, 1700, 400); // 四獸山
+  make(3600, 180, GEO.elephant.x + 500, GEO.elephant.z); // 四獸山
   make(56000, 220, 0, 0); // 盆地群山
 }
 
@@ -154,7 +156,7 @@ export function buildTerrain(scene) {
  * 城市:依街廓產生大樓,合併成兩個網格(外牆、屋頂)。
  * 信義區(101 周圍)較高,越遠越低。回傳 { mesh, setNight }。
  */
-export function buildCity(scene, zones = []) {
+export function buildCity(scene, zones = [], skipRadius = 0) {
   const r = rng(2024);
   const BLOCK = 120, RANGE = 6600;
   const side = { pos: [], uv: [], col: [] };
@@ -194,7 +196,8 @@ export function buildCity(scene, zones = []) {
       if (cx > -110 && cx < 110 && cz > -150 && cz < 90) continue; // 101 廣場與裙樓
       if (terrainHeight(cx, cz) > 3) continue;
       if (zones.some(([x0, z0, x1, z1]) => bx + BLOCK > x0 && bx < x1 && bz + BLOCK > z0 && bz < z1)) continue;
-      if (Math.abs(cx + 4900) < 420 || Math.abs(cz + 3600) < 200) continue; // 河道
+      if (Math.abs(cx - RIVERS.tamsuiX) < 420 || Math.abs(cz - RIVERS.keelungZ) < 200) continue; // 河道
+      if (Math.hypot(cx, cz) < skipRadius) continue; // 真實街景範圍
       if (r() < 0.06) continue; // 公園/空地
       const xinyi = cx > -700 && cx < 900 && cz > -700 && cz < 500;
       const subdiv = dist < 1600 ? 2 : 1;
@@ -287,7 +290,7 @@ export function buildTrees(scene) {
 }
 
 /** 車流:沿棋盤道路行駛的小車(101 周邊)。回傳 update(dt)。 */
-export function buildTraffic(scene) {
+export function buildTraffic(scene, skipRadius = 0) {
   const r = rng(99);
   const N = 420;
   const body = new THREE.BoxGeometry(1.8, 0.8, 4.3);
@@ -311,7 +314,7 @@ export function buildTraffic(scene) {
   }
   mesh.castShadow = true;
   scene.add(mesh);
-  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1), Y = new THREE.Vector3(0, 1, 0);
+  const m = new THREE.Matrix4(), q = new THREE.Quaternion(), p = new THREE.Vector3(), one = new THREE.Vector3(1, 1, 1), zero = new THREE.Vector3(0, 0, 0), Y = new THREE.Vector3(0, 1, 0);
   return (dt) => {
     cars.forEach((car, i) => {
       car.t += car.v * car.dir * dt;
@@ -319,7 +322,7 @@ export function buildTraffic(scene) {
       if (car.t < -1800) car.t += 3600;
       if (car.axis === 'x') { p.set(car.t, 0, car.line); q.setFromAxisAngle(Y, car.dir > 0 ? Math.PI / 2 : -Math.PI / 2); }
       else { p.set(car.line, 0, car.t); q.setFromAxisAngle(Y, car.dir > 0 ? 0 : Math.PI); }
-      m.compose(p, q, one);
+      m.compose(p, q, p.lengthSq() < skipRadius * skipRadius ? zero : one);
       mesh.setMatrixAt(i, m);
     });
     mesh.instanceMatrix.needsUpdate = true;

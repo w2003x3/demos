@@ -16,7 +16,7 @@ export class GlideMode {
   constructor(game) {
     this.g = game;
     this.ramp = buildRamp();
-    this.collider = makeCollider(game.city.boxes);
+    this.collider = makeCollider(game.city.boxes, game.xinyi ? game.xinyi.solids : []);
     this.chute = buildParachute();
     this.cam = new OrbitCam(game.camera, { dist: 12, min: 4, max: 200, pitch: 0.25, pitchMin: -0.6, pitchMax: 1.4 });
     this.views = [{ name: '追蹤' }, { name: '側面' }, { name: '第一人稱' }, { name: '遠景' }];

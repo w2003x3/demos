@@ -5,25 +5,26 @@ import { createCharacter, poseIdle, poseWalk, poseLean } from '../world/characte
 import { makeRide } from '../world/elevator.js';
 import { OrbitCam } from './common.js';
 import { VIS } from '../ui/tutorial.js';
+import { GEO, RIVERS } from '../world/geo.js';
 
 const clamp = THREE.MathUtils.clamp;
 // 望遠鏡可辨識的地標(座標以 101 為原點,北 = -Z、東 = +X)
 const SCOPE_TARGETS = [
-  { name: '象山', desc: '海拔 183 公尺,台北夜景步道', x: 1150, y: 150, z: 380, r: 260 },
-  { name: '四獸山 · 虎山', desc: '信義區東側的山系', x: 1500, y: 110, z: -150, r: 260 },
-  { name: '南山廣場', desc: '272 公尺,101 旁的摩天大樓', x: -200, y: 140, z: -265, r: 40 },
-  { name: '國父紀念館', desc: '黃色大屋頂,1972 年落成', x: -1250, y: 20, z: -250, r: 70 },
-  { name: '台北大巨蛋', desc: '國父紀念館北側的巨蛋', x: -1250, y: 30, z: -710, r: 150 },
-  { name: '新光摩天大樓', desc: '244 公尺,台北車站前', x: -6200, y: 120, z: -900, r: 60 },
-  { name: '台北車站', desc: '北門與西門町一帶', x: -6200, y: 20, z: -600, r: 120 },
-  { name: '中正紀念堂', desc: '藍色八角屋頂', x: -4800, y: 40, z: 650, r: 70 },
-  { name: '圓山大飯店', desc: '紅柱黃瓦的宮殿式建築', x: -3900, y: 70, z: -6100, r: 120 },
-  { name: '松山機場', desc: '市區內的國內線機場', x: -2650, y: 5, z: -3200, r: 600 },
-  { name: '陽明山 · 七星山', desc: '海拔 1120 公尺', x: -1500, y: 900, z: -12500, r: 2500 },
-  { name: '淡水河', desc: '台北盆地西側的大河', x: -4900, y: 0, z: -2000, r: 500 },
-  { name: '基隆河', desc: '流經松山、內湖', x: 1000, y: 0, z: -3600, r: 400 },
-  { name: '貓空 · 指南宮', desc: '南方的茶園山區', x: 1200, y: 300, z: 6500, r: 1500 }
-];
+  { k: 'elephant', name: '象山', desc: '海拔 183 公尺,台北夜景步道', y: 150, r: 260 },
+  { k: 'tiger', name: '四獸山 · 虎山', desc: '信義區東側的山系', y: 110, r: 260 },
+  { k: 'nanshan', name: '南山廣場', desc: '272 公尺,101 旁的摩天大樓', y: 140, r: 40 },
+  { k: 'sunYatSen', name: '國父紀念館', desc: '黃色大屋頂,1972 年落成', y: 20, r: 70 },
+  { k: 'dome', name: '台北大巨蛋', desc: '國父紀念館北側的巨蛋', y: 30, r: 150 },
+  { k: 'shinkong', name: '新光摩天大樓', desc: '244 公尺,台北車站前', y: 120, r: 60 },
+  { k: 'station', name: '台北車站', desc: '台北的交通樞紐', y: 20, r: 120 },
+  { k: 'cks', name: '中正紀念堂', desc: '藍色八角屋頂', y: 40, r: 70 },
+  { k: 'grandHotel', name: '圓山大飯店', desc: '紅柱黃瓦的宮殿式建築', y: 70, r: 120 },
+  { k: 'airport', name: '松山機場', desc: '市區內的國內線機場', y: 5, r: 600 },
+  { k: 'qixing', name: '陽明山 · 七星山', desc: '海拔 1120 公尺', y: 900, r: 2500 },
+  { k: 'maokong', name: '貓空 · 指南宮', desc: '南方的茶園山區', y: 300, r: 1500 },
+  { name: '淡水河', desc: '台北盆地西側的大河', x: RIVERS.tamsuiX, y: 0, z: -2000, r: 500 },
+  { name: '基隆河', desc: '流經松山、內湖', x: 1000, y: 0, z: RIVERS.keelungZ, r: 400 }
+].map((t) => (t.k ? { ...t, get x() { return GEO[t.k].x; }, get z() { return GEO[t.k].z; } } : t));
 const ARRIVE = { 5: 'arrive_5', 35: 'arrive_35', 88: 'arrive_88', 89: 'arrive_89' };
 
 export class ExploreMode {

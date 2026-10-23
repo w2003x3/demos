@@ -122,9 +122,12 @@ export function buildTower(envMap) {
   };
 
   const secs = towerSections();
+  const sections = [];
   for (const s of secs) {
     const notch = s.name === '頂冠' ? 0.08 : 0.11;
-    add(frustumGeometry(s.y0, s.hw0, s.y1, s.hw1, { notch }), glass);
+    const m = glass.clone();
+    add(frustumGeometry(s.y0, s.hw0, s.y1, s.hw1, { notch }), m);
+    sections.push({ name: s.name, seg: s.seg || 0, glass: m, band: null });
   }
 
   // 各段交界的平台(上方水平面)與挑出底面
@@ -138,8 +141,10 @@ export function buildTower(envMap) {
     add(ringGeometry(yTop - 1.1, SEG_HW1 + 0.35, SEG_HW1 - 0.2, false), darkMetal);
     // 頂部飾帶(斗拱意象的挑簷)
     add(frustumGeometry(yTop - 1.1, SEG_HW1 + 0.35, yTop, SEG_HW1 + 0.35, { uvScale: [4, 1.1] }), metal);
-    // 夜間燈帶
-    add(frustumGeometry(yTop - 1.6, SEG_HW1 + 0.05, yTop - 1.1, SEG_HW1 + 0.25, { uvScale: [4, 1] }), lightBand);
+    // 夜間燈帶(每節獨立,跨年倒數用)
+    const band = lightBand.clone();
+    add(frustumGeometry(yTop - 1.6, SEG_HW1 + 0.05, yTop - 1.1, SEG_HW1 + 0.25, { uvScale: [4, 1] }), band);
+    sections[k + 1].band = band;
     // 每節底部的窗台線
     add(frustumGeometry(yBot, SEG_HW0 + 0.25, yBot + 0.5, SEG_HW0 + 0.3, { uvScale: [4, 1] }), darkMetal);
     // 轉角的龍形飾物(簡化成捲雲)
@@ -222,7 +227,7 @@ export function buildTower(envMap) {
     fin.rotation.y = a;
   }
 
-  group.userData = { mats, beacon };
+  group.userData = { mats, beacon, sections };
   return group;
 }
 

@@ -2,27 +2,31 @@
 import * as THREE from 'three';
 import { terrainHeight } from './environment.js';
 
-// 城市產生器要避開的範圍 [x0, z0, x1, z1]
-export const LANDMARK_ZONES = [
-  [-1500, -500, -1000, 0], // 國父紀念館
-  [-1500, -900, -1000, -520], // 大巨蛋
-  [-300, -380, -100, -150], // 南山廣場
-  [-6400, -1100, -6000, -700], // 新光摩天大樓
-  [-5150, 350, -4450, 1000], // 中正紀念堂
-  [-4300, -3400, -1000, -3000] // 松山機場
-];
+import { GEO } from './geo.js';
 
+const box = (c, w, d, h, name) => [c.x - w / 2, c.z - d / 2, c.x + w / 2, c.z + d / 2, h, name];
+// 城市產生器要避開的範圍 [x0, z0, x1, z1]
+export function landmarkZones() {
+  const G = GEO;
+  return [
+    box(G.sunYatSen, 460, 520, 0), box(G.dome, 340, 300, 0), box(G.nanshan, 120, 100, 0),
+    box(G.shinkong, 240, 200, 0), box(G.station, 260, 200, 0), box(G.cks, 650, 700, 0),
+    [G.airport.x - 1700, G.airport.z - 260, G.airport.x + 1700, G.airport.z + 260]
+  ].map((b) => b.slice(0, 4));
+}
 // 碰撞用的大致外形 [x0, z0, x1, z1, 高度, 名稱]
-export const LANDMARK_SOLIDS = [
-  [-1312, -312, -1188, -188, 42, '國父紀念館'],
-  [-1400, -838, -1100, -582, 46, '台北大巨蛋'],
-  [-228, -288, -172, -242, 272, '南山廣場'],
-  [-6250, -920, -6150, -880, 244, '新光摩天大樓'],
-  [-6295, -665, -6105, -535, 44, '台北車站'],
-  [-4838, 612, -4762, 688, 77, '中正紀念堂'],
-  [-3985, -6125, -3815, -6075, 100, '圓山大飯店'],
-  [-75, -110, 75, -30, 32, '台北101 購物中心']
-];
+export function landmarkSolids() {
+  const G = GEO;
+  return [
+    box(G.sunYatSen, 124, 124, 42, '國父紀念館'),
+    box(G.dome, 300, 256, 46, '台北大巨蛋'),
+    box(G.nanshan, 56, 46, 272, '南山廣場'),
+    box(G.shinkong, 100, 40, 244, '新光摩天大樓'),
+    box(G.station, 190, 130, 44, '台北車站'),
+    box(G.cks, 76, 76, 77, '中正紀念堂'),
+    box(G.grandHotel, 170, 50, 100, '圓山大飯店')
+  ];
+}
 
 const std = (color, roughness = 0.7, metalness = 0) => new THREE.MeshStandardMaterial({ color, roughness, metalness });
 
@@ -43,7 +47,7 @@ function hipRoof(w, d, h, mat) {
   return m;
 }
 
-export function buildLandmarks(scene) {
+export function buildLandmarks(scene, { skipNanshan = false } = {}) {
   const root = new THREE.Group();
   root.name = 'landmarks';
   const place = (obj, x, z) => { obj.position.set(x, terrainHeight(x, z), z); root.add(obj); return obj; };
@@ -72,7 +76,7 @@ export function buildLandmarks(scene) {
     lawn.rotation.x = -Math.PI / 2;
     lawn.position.set(0, 0.08, 150);
     g.add(lawn);
-    place(g, -1250, -250);
+    place(g, GEO.sunYatSen.x, GEO.sunYatSen.z);
   }
   // 台北大巨蛋
   {
@@ -85,10 +89,10 @@ export function buildLandmarks(scene) {
     ring.scale.z = 0.85;
     ring.position.y = 11;
     g.add(ring);
-    place(g, -1250, -710);
+    place(g, GEO.dome.x, GEO.dome.z);
   }
-  // 南山廣場(272m,錯落的「雙手」造型簡化為退縮塔)
-  {
+  // 南山廣場(272m,錯落的「雙手」造型簡化為退縮塔);有真實街景資料時由資料建出
+  if (!skipNanshan) {
     const g = new THREE.Group();
     const glass = new THREE.MeshPhysicalMaterial({ color: 0x8aa6b8, metalness: 0.7, roughness: 0.12, envMapIntensity: 1.3 });
     const fins = std(0xd7d9da, 0.4, 0.5);
@@ -104,7 +108,7 @@ export function buildLandmarks(scene) {
       g.add(f);
     }
     g.traverse((m) => { m.castShadow = true; });
-    place(g, -200, -265);
+    place(g, GEO.nanshan.x, GEO.nanshan.z);
   }
   // 新光摩天大樓(244m,台北車站前)
   {
@@ -124,12 +128,12 @@ export function buildLandmarks(scene) {
     g.add(ant);
     // 台北車站(大屋頂)
     const st = new THREE.Mesh(new THREE.BoxGeometry(190, 26, 130), std(0xd8cfbd, 0.8));
-    st.position.set(0, 13, 300);
+    st.position.set(GEO.station.x - GEO.shinkong.x, 13, GEO.station.z - GEO.shinkong.z);
     g.add(st);
     const roof = hipRoof(206, 146, 18, std(0x6b7d5a, 0.6));
-    roof.position.set(0, 26, 300);
+    roof.position.set(GEO.station.x - GEO.shinkong.x, 26, GEO.station.z - GEO.shinkong.z);
     g.add(roof);
-    place(g, -6200, -900);
+    place(g, GEO.shinkong.x, GEO.shinkong.z);
   }
   // 中正紀念堂:白牆、藍色八角屋頂
   {
@@ -154,7 +158,7 @@ export function buildLandmarks(scene) {
     plaza.rotation.x = -Math.PI / 2;
     plaza.position.set(-100, 0.06, 0);
     g.add(plaza);
-    place(g, -4800, 650);
+    place(g, GEO.cks.x, GEO.cks.z);
   }
   // 圓山大飯店:山坡上的紅柱黃瓦宮殿
   {
@@ -167,7 +171,7 @@ export function buildLandmarks(scene) {
       roof.position.y = 40 + i * 12;
       g.add(roof);
     }
-    const x = -3900, z = -6100;
+    const x = GEO.grandHotel.x, z = GEO.grandHotel.z;
     place(g, x, z).position.y = Math.max(40, terrainHeight(x, z));
     const hill = new THREE.Mesh(new THREE.SphereGeometry(380, 24, 12, 0, Math.PI * 2, 0, Math.PI / 2), std(0x2f4a2a, 1));
     hill.scale.y = 0.12;
@@ -194,7 +198,8 @@ export function buildLandmarks(scene) {
     const term = new THREE.Mesh(new THREE.BoxGeometry(300, 24, 60), std(0xd7d7d2, 0.6));
     term.position.set(-600, 12, 150);
     g.add(term);
-    place(g, -2650, -3200);
+    g.rotation.y = -0.17; // 跑道約 100°/280°
+    place(g, GEO.airport.x, GEO.airport.z);
   }
   scene.add(root);
   return root;

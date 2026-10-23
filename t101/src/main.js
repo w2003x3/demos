@@ -7,7 +7,9 @@ import { setAnisotropy } from './world/textures.js';
 import { createSky, createLights, buildGround, buildTerrain, buildCity, buildTrees, buildTraffic, applyTime, TIMES } from './world/environment.js';
 import { buildTower, buildPodium } from './world/tower.js';
 import { buildInteriors } from './world/interiors.js';
-import { buildLandmarks, LANDMARK_ZONES } from './world/landmarks.js';
+import { buildLandmarks, landmarkZones } from './world/landmarks.js';
+import { loadXinyi, buildXinyi } from './world/xinyi.js';
+import { applyOsmLandmarks, GEO } from './world/geo.js';
 import { Fireworks } from './world/fireworks.js';
 import { buildElevatorScene } from './world/elevator.js';
 import { buildStairScene } from './world/stairwell.js';
@@ -18,6 +20,11 @@ import { HeliMode } from './modes/heli.js';
 import { GlideMode } from './modes/glide.js';
 import { RACES } from './config.js';
 import { Tutorial } from './ui/tutorial.js';
+import { TowerLights } from './world/towerLights.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 const store = {
   get(k, d) { try { const v = localStorage.getItem('t101.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
@@ -74,18 +81,26 @@ class Game {
     this.sky.renderOrder = -1000;
     this.lights = createLights(scene);
     await step(10);
-    buildGround(scene, this.renderer.capabilities.getMaxAnisotropy());
+    // 101 周邊真實街景(OpenStreetMap)
+    const xdata = await loadXinyi();
+    if (xdata) applyOsmLandmarks(xdata.landmarks);
+    buildGround(scene, this.renderer.capabilities.getMaxAnisotropy(), !!xdata);
     buildTerrain(scene);
     await step(25);
-    this.city = buildCity(scene, LANDMARK_ZONES);
+    this.city = buildCity(scene, landmarkZones(), xdata ? xdata.radius + 60 : 0);
     await step(45);
-    buildTrees(scene);
-    this.updateTraffic = buildTraffic(scene);
-    buildLandmarks(scene);
+    if (!xdata) buildTrees(scene);
+    const outerTraffic = buildTraffic(scene, xdata ? xdata.radius + 120 : 0);
+    buildLandmarks(scene, { skipNanshan: !!xdata });
+    if (xdata) {
+      this.xinyi = buildXinyi(scene, xdata, { exclude: [{ ...GEO.sunYatSen, r: 75 }, { ...GEO.dome, r: 170 }] });
+      this.updateTraffic = (dt) => { outerTraffic(dt); this.xinyi.updateTraffic(dt); };
+    } else this.updateTraffic = outerTraffic;
     await step(60);
     this.tower = buildTower();
     scene.add(this.tower);
-    scene.add(buildPodium());
+    this.towerLights = new TowerLights(this.tower);
+    if (!xdata) scene.add(buildPodium());
     await step(72);
     this.interiors = buildInteriors(scene);
     this.interiors.setActive(null);
@@ -96,6 +111,14 @@ class Game {
     this.elevator = buildElevatorScene(this.renderer);
     this.stair = buildStairScene();
     this.pmrem = new THREE.PMREMGenerator(this.renderer);
+    // 夜間光暈:讓窗戶與燈帶的光自然暈開
+    const rt = new THREE.WebGLRenderTarget(innerWidth, innerHeight, { type: THREE.HalfFloatType, samples: 4 });
+    this.composer = new EffectComposer(this.renderer, rt);
+    this.renderPass = new RenderPass(this.scene, this.camera);
+    this.bloom = new UnrealBloomPass(new THREE.Vector2(innerWidth, innerHeight), 0.55, 0.45, 0.82);
+    this.composer.addPass(this.renderPass);
+    this.composer.addPass(this.bloom);
+    this.composer.addPass(new OutputPass());
     this.setTime(this.timeKey);
     this.applyQuality(this.settings.quality);
     await step(100);
@@ -139,17 +162,26 @@ class Game {
     this.scene.environment = this.envRT.texture;
     this.scene.environmentIntensity = base === 'night' ? 0.25 : base === 'dusk' ? 0.7 : 1;
     this.stars.visible = base === 'night';
-    const m = this.tower.userData.mats;
-    m.glass.emissiveIntensity = t.night * 0.35;
-    m.lightBand.emissiveIntensity = t.night * 2.5;
-    m.lightBand.emissive.setHex(key === 'nye' ? 0xffd27a : 0x66ffd9);
+    this.towerLights.setNight(t.night, key === 'nye');
     this.city.setNight(t.night);
+    if (this.xinyi) this.xinyi.setNight(t.night);
     this.fireworks.setActive(key === 'nye');
   }
 
   resize() {
     this.renderer.setSize(innerWidth, innerHeight);
+    if (this.composer) { this.composer.setPixelRatio(this.renderer.getPixelRatio()); this.composer.setSize(innerWidth, innerHeight); }
     for (const c of [this.camera, this.elevator?.camera]) if (c) { c.aspect = innerWidth / innerHeight; c.updateProjectionMatrix(); }
+  }
+
+  /** 夜晚且中高畫質時用光暈後製,其他情況直接繪製。 */
+  draw(scene, camera) {
+    if (scene === this.scene && this.night > 0.3 && this.settings.quality !== 'low') {
+      this.renderPass.scene = scene;
+      this.renderPass.camera = camera;
+      this.bloom.strength = 0.35 + this.night * 0.3;
+      this.composer.render();
+    } else this.renderer.render(scene, camera);
   }
 
   /** 讓陰影範圍跟著焦點移動。 */
@@ -199,6 +231,7 @@ class Game {
             最佳紀錄 · 全程 <b>${best.full ? fmtTime(best.full) : '--'}</b> · 短程 <b>${best.sprint ? fmtTime(best.sprint) : '--'}</b>
             · 攀爬登頂 <b>${climbBest ? fmtTime(climbBest) : '--'}</b> · 紀念章 <b>${stamps}</b>
           </div>
+          <div class="small" style="opacity:.7">地圖資料 © OpenStreetMap contributors</div>
           <div class="help desk-only">拖曳滑鼠轉視角 · 滾輪縮放 · <kbd>V</kbd> 切換視角 · <kbd>Esc</kbd> 設定與返回選單</div>
         </div>
       </div>`;
@@ -312,6 +345,7 @@ class Game {
     const r = this.renderer, dpr = devicePixelRatio || 1;
     r.setPixelRatio({ low: Math.min(dpr, 1) * 0.75, mid: Math.min(dpr, 1.25), high: Math.min(dpr, 2) }[q]);
     r.setSize(innerWidth, innerHeight);
+    if (this.composer) { this.composer.setPixelRatio(r.getPixelRatio()); this.composer.setSize(innerWidth, innerHeight); }
     const shadows = q !== 'low';
     const type = q === 'high' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
     const size = q === 'high' ? 2048 : 1024;
@@ -337,7 +371,7 @@ class Game {
       else if (this.mode) this.openSettings();
     }
     if (this.paused) {
-      this.renderer.render(this.lastScene || this.scene, this.lastCamera || this.camera);
+      this.draw(this.lastScene || this.scene, this.lastCamera || this.camera);
       input.endFrame();
       return;
     }
@@ -353,6 +387,7 @@ class Game {
     this.updateTraffic(dt);
     this.interiors.update(this.t, dt);
     this.tower.userData.beacon.visible = Math.sin(this.t * 3) > 0;
+    this.towerLights.update(this.t, this.fireworks);
     this.fireworks.update(dt, this.camera.position);
     let scene = this.scene, camera = this.camera;
     if (this.mode) {
@@ -373,7 +408,7 @@ class Game {
     }
     this.ui.update(rawDt);
     this.lastScene = scene; this.lastCamera = camera;
-    this.renderer.render(scene, camera);
+    this.draw(scene, camera);
     input.endFrame();
   }
 }

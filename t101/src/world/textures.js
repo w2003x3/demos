@@ -92,21 +92,69 @@ export function facadeTextures() {
     g.fillStyle = '#5a5a5a';
     for (let c = 0; c <= 4; c++) g.fillRect(c * colPx - 4, 0, 8, H);
   }, { srgb: false });
-  const emissive = canvasTex(W, H, (g) => {
+  const emissive = interiorLights(16, 8, 0.14, 7, 0.62);
+  emissive.repeat.set(6 / 24, 8.6 / 34.4);
+  return { map, rough, emissive };
+}
+
+/**
+ * 夜間室內燈光(發光貼圖):cols × rows 格窗,依「房間」決定亮或暗,
+ * 每格由天花板往下漸暗(燈從室內照出),偶爾有窗簾或人影。
+ * band = 每層頂部窗間牆比例;lit = 整體亮燈比例;inset = 窗框內縮(城市大樓用)。
+ */
+export function interiorLights(cols, rows, band, seed, lit, inset = false) {
+  const W = 1024, H = 1024;
+  const cw = W / cols, rh = H / rows;
+  return canvasTex(W, H, (g) => {
+    const r = rng(seed);
     g.fillStyle = '#000';
     g.fillRect(0, 0, W, H);
-    const rr = rng(7);
-    for (let f = 0; f < 2; f++) {
-      for (let c = 0; c < 4; c++) {
-        if (rr() < 0.55) {
-          const v = 120 + rr() * 110;
-          g.fillStyle = `rgb(${v},${v * 0.92},${v * 0.75})`;
-          g.fillRect(c * colPx + 6, f * floorPx + floorPx * 0.14 + 4, colPx - 12, floorPx * 0.86 - 8);
+    const palettes = [[255, 226, 170], [255, 214, 150], [235, 240, 255], [255, 236, 200], [210, 228, 255]];
+    for (let y = 0; y < rows; y++) {
+      // 每層樓:有些整層辦公室亮燈,有些只亮幾間
+      const floorMode = r();
+      const floorLit = floorMode < 0.25 ? 0.92 : floorMode < 0.4 ? 0.08 : lit;
+      const floorCol = palettes[Math.floor(r() * palettes.length)];
+      let room = 0, roomOn = false, roomCol = floorCol, roomK = 1;
+      for (let x = 0; x < cols; x++) {
+        if (room <= 0) { // 新房間(1~4 格)
+          room = 1 + Math.floor(r() * 4);
+          roomOn = r() < floorLit;
+          roomCol = r() < 0.7 ? floorCol : palettes[Math.floor(r() * palettes.length)];
+          roomK = 0.55 + r() * 0.45;
+        }
+        room--;
+        if (!roomOn) {
+          // 暗房間也有一點點反射光
+          g.fillStyle = 'rgba(40,50,70,0.25)';
+          g.fillRect(x * cw, y * rh + rh * band, cw, rh * (1 - band));
+          continue;
+        }
+        const x0 = x * cw + (inset ? cw * 0.12 : 2), x1 = (x + 1) * cw - (inset ? cw * 0.12 : 2);
+        const y0 = y * rh + rh * band + (inset ? rh * 0.12 : 2), y1 = (y + 1) * rh - (inset ? rh * 0.1 : 2);
+        const grd = g.createLinearGradient(0, y0, 0, y1);
+        const [cr, cg, cb] = roomCol;
+        grd.addColorStop(0, `rgba(${cr},${cg},${cb},${roomK})`);
+        grd.addColorStop(0.35, `rgba(${cr * 0.85},${cg * 0.82},${cb * 0.78},${roomK * 0.85})`);
+        grd.addColorStop(1, `rgba(${cr * 0.45},${cg * 0.4},${cb * 0.38},${roomK * 0.55})`);
+        g.fillStyle = grd;
+        g.fillRect(x0, y0, x1 - x0, y1 - y0);
+        // 天花板燈管的亮點
+        g.fillStyle = `rgba(255,255,250,${0.35 * roomK})`;
+        g.fillRect(x0 + (x1 - x0) * 0.2, y0 + 2, (x1 - x0) * 0.6, Math.max(2, rh * 0.03));
+        // 窗簾 / 百葉窗
+        const k = r();
+        if (k < 0.15) { g.fillStyle = 'rgba(0,0,0,0.55)'; g.fillRect(x0, y0, x1 - x0, (y1 - y0) * (0.3 + r() * 0.5)); }
+        else if (k < 0.25) { g.fillStyle = 'rgba(0,0,0,0.35)'; for (let s = y0; s < y1; s += 6) g.fillRect(x0, s, x1 - x0, 2); }
+        else if (k < 0.32) { // 人影或家具
+          g.fillStyle = 'rgba(0,0,0,0.45)';
+          const px = x0 + r() * (x1 - x0 - 12);
+          g.fillRect(px, y1 - (y1 - y0) * 0.55, 10, (y1 - y0) * 0.55);
+          g.beginPath(); g.arc(px + 5, y1 - (y1 - y0) * 0.62, 6, 0, 7); g.fill();
         }
       }
     }
   });
-  return { map, rough, emissive };
 }
 
 /** 城市大樓外牆:灰階窗格(顏色由 instance color 決定)。一張 = 寬 24m × 高 8 層。 */
@@ -128,21 +176,7 @@ export function cityFacadeTextures() {
       }
     }
   });
-  const emissive = canvasTex(W, H, (g) => {
-    g.fillStyle = '#000';
-    g.fillRect(0, 0, W, H);
-    const cw = W / cols, rh = H / rows;
-    const r = rng(12);
-    for (let y = 0; y < rows; y++) {
-      for (let x = 0; x < cols; x++) {
-        if (r() < 0.38) {
-          const warm = r() < 0.7;
-          g.fillStyle = warm ? `rgb(255,${200 + r() * 30},${130 + r() * 40})` : 'rgb(190,215,255)';
-          g.fillRect(x * cw + 4, y * rh + 6, cw - 8, rh - 12);
-        }
-      }
-    }
-  });
+  const emissive = interiorLights(cols, rows, 0.1, 12, 0.42, true);
   return { map, emissive };
 }
 
