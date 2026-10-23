@@ -1732,6 +1732,7 @@ function update(dt) {
           spawnText(f.x, f.y - TS * 0.5, f.tools[it.key] > 0 ? def.name + '已擁有' : '永久卡 ' + def.emoji + def.name, '#a5d6a7');
           f.tools[it.key] = 1;
         } else {
+          (f.cardNew || (f.cardNew = {}))[it.key] = elapsed;    // 手牌上閃一下 NEW
           f.tools[it.key] = (f.tools[it.key] || 0) + 1;         // 一次性卡 +1 張
           spawnText(f.x, f.y - TS * 0.5, '+' + def.emoji + def.name + '卡', '#80d8ff');
         }
@@ -2208,36 +2209,100 @@ function setHtml(id, html) {
   const el = document.getElementById(id);
   if (el) el.innerHTML = html;
 }
+// 數值條(五項共用):深色 = 現在、淺色 = 自己目前的上限、整條 = 遊戲上限
+function statBar(label, tag, value, cap, cur, own, color, soft) {
+  const pct = (v) => Math.round(clamp(v / cap, 0, 1) * 100);
+  return `<div class="stat-row"><span>${label}</span>${tag ? `<em class="stat-tag">${tag}</em>` : ''}<b>${value}</b><small>/ ${cap}</small></div>` +
+    `<div class="bar3"><i style="width:${pct(own)}%;background:${soft}"></i><i style="width:${pct(cur)}%;background:${color}"></i></div>`;
+}
+const CHIP_CLS = { good: 'chip-good', limit: 'chip-limit', bad: 'chip-bad', fuse: 'chip-fuse' };
+const weatherChips = (withFuse) =>
+  (WEATHER_CHIPS[env.weather] || []).map(([k, t]) => `<span class="chip ${CHIP_CLS[k]}">${t}</span>`).join('') +
+  (withFuse ? `<span class="chip chip-fuse">引信 ${computeFuse().toFixed(1)} 秒</span>` : '');
+const isPhone = () => !!(window.matchMedia && window.matchMedia('(max-width: 560px)').matches);
+const DIR_ARROW = { '1,0': '→', '-1,0': '←', '0,1': '↓', '0,-1': '↑' };
+let hudSel = -1;
+
 function updateHud() {
-  // 數值條:標籤 + 數字 + 條(HP / MP / 威力 / 速度 / 溫度 / 濕度 共用)
-  const meter = (label, text, ratio, color) =>
-    `<div class="stat-row"><span>${label}</span><b>${text}</b></div>` +
-    `<div class="bar"><div class="fill" style="width:${Math.round(clamp(ratio, 0, 1) * 100)}%;background:${color}"></div></div>`;
-  const cd = charDef(player.char), sk = skillOf(player);
-  setHtml('stat-char', `<span class="ch-face"><img src="assets/portraits/${player.char || 'aman'}.webp" alt=""></span><b>${cd.name}</b><span>${cd.role}型</span>`);
-  setHtml('skill-btn', `<span class="sk-name">${sk.name}</span>` +
-    `<span class="sk-cd">${player.skillCd > 0 ? '冷卻 ' + Math.ceil(player.skillCd) + ' 秒' : (player.boostNext ? '已加料' : '可使用')}</span>`);
+  const p = player, w = weatherDef();
+  const cd = charDef(p.char), sk = skillOf(p);
+  setHtml('stat-char', `<span class="ch-face"><img src="assets/portraits/${p.char || 'aman'}.webp" alt=""></span><b>${cd.name}</b><span>${cd.role}型</span>`);
+
+  // ---- 五項數值
+  const rain = w.speedBonus || 0;
+  const spNow = w.snow ? Math.min(p.speed, SNOW_SPEED) : p.speed + rain + (p.dashT > 0 ? SKILLS.dash.bonus : 0);
+  const spTag = w.snow ? '下雪限速' : p.dashT > 0 ? '衝刺中' : rain ? '豪雨 +' + rain : '';
+  const left = Math.max(0, p.maxBombs - p.bombsPlaced());
+  const bars = [
+    ['HP', '', `${p.hp} / ${p.maxHp}`, CAPS.hp, p.hp, p.maxHp, '#d9483b', '#f2b8b1', `${p.hp}/${p.maxHp}`],
+    ['MP', '', `${Math.floor(p.mp)} / ${p.maxMp}`, CAPS.mp, p.mp, p.maxMp, '#3a8ee6', '#b9d6f6', Math.floor(p.mp)],
+    ['威力', '', p.power, CAPS.power, p.power, p.power, '#f08a24', '#f08a24', p.power],
+    ['速度', spTag, Math.round(spNow), CAPS.speed, spNow, p.speed, '#2fa36b', '#b5dfc8', Math.round(spNow)],
+    ['貢丸數', '', `剩 ${left} / ${p.maxBombs}`, CAPS.bombs, left, p.maxBombs, '#b07a45', '#e3cbb2', `${left}/${p.maxBombs}`],
+  ];
+  ['stat-hp', 'stat-mp', 'stat-power', 'stat-speed', 'stat-bombs'].forEach((id, i) => setHtml(id, statBar(...bars[i].slice(0, 8))));
+
+  // ---- 天氣卡:效果標籤化
+  setHtml('stat-weather',
+    `<div class="wx-head"><span>${isDisaster(w) ? '災害' : '現在天氣'}・${theme().name}</span><span>${Math.max(0, Math.ceil(env.left))} 秒後變天</span></div>` +
+    `<div class="wx-now"><span class="wx-icon">${w.icon}</span><b>${w.name}</b></div>` +
+    `<div class="wx-chips">${weatherChips(true)}</div>` +
+    `<div class="bar thin"><div class="fill" style="width:${Math.round(clamp(env.left / WEATHER_MAX, 0, 1) * 100)}%;background:#8a8f95"></div></div>`);
+
+  // ---- 動作區:放貢丸 / 技能(冷卻圓環)/ 防護盾 / 現在能做什麼
+  setHtml('place-sub', p.held ? '空白鍵・放下夾著的貢丸' : `空白鍵・剩 ${left} 顆`);
+  if (hudSel !== p.selected) {
+    hudSel = p.selected;
+    const src = `assets/meatballs/${MB_SPRITE[p.selected - 1] || 'mb_1'}.webp`;
+    ['place-img', 'm-place-img'].forEach((id) => { const im = $el(id); if (im) im.src = src; });
+    document.querySelectorAll('.m-ball-grid button').forEach((b) => b.classList.toggle('sel', b.dataset.key === String(p.selected)));
+    const def = meatballById(p.selected);
+    setHtml('m-ball-name', def ? `${p.selected <= 9 ? p.selected + ' ' : ''}${def.name}<span>・${def.desc}</span>` : '');
+  }
+  const cdPct = p.skillCd > 0 ? Math.round(p.skillCd / sk.cd * 20) * 5 : 0;
+  const cdNum = p.skillCd > 0 ? Math.ceil(p.skillCd) : '';
+  setHtml('skill-btn', `<span class="ring" style="--p:${cdPct}%"><span>${cdNum || 'T'}</span></span>` +
+    `<span class="act-main"><b>${sk.name}</b><small>${p.skillCd > 0 ? '冷卻 ' + cdNum + ' 秒' : p.boostNext ? '已加料' : 'T・可使用'}</small></span>`);
   const skb = $el('skill-btn');
   if (skb && skb.parentNode) skb.parentNode.title = `${sk.name}:${sk.desc}(冷卻 ${sk.cd} 秒)`;
-  setHtml('stat-hp', meter('HP', `${player.hp} / ${player.maxHp}`, player.hp / player.maxHp, '#d9483b'));
-  setHtml('stat-mp', meter('MP', `${Math.floor(player.mp)} / ${player.maxMp}`, player.mp / player.maxMp, '#3a8ee6'));
-  setHtml('stat-power', meter('威力', `${player.power} / ${CAPS.power}`, player.power / CAPS.power, '#f08a24'));
-  const rainBonus = weatherDef().speedBonus || 0;  // 豪雨的加成只在豪雨期間
-  const snowSp = weatherDef().snow ? Math.min(player.speed, SNOW_SPEED) : 0;  // 下雪:降到最低
-  setHtml('stat-speed', meter('速度',
-    snowSp ? `${snowSp} <span class="rain-plus">下雪</span>` :
-    rainBonus ? `${Math.round(player.speed)} <span class="rain-plus">+${rainBonus}</span>` : `${Math.round(player.speed)} / ${CAPS.speed}`,
-    (snowSp || player.speed + rainBonus) / CAPS.speed, '#2fa36b'));
-  // 天氣:溫度 8~40°C、濕度 25~98%,並直接寫出影響(貢丸引信、道具發霉)
-  setHtml('stat-weather',
-    `<div class="wx-map">${theme().icon} ${theme().name}</div>` +
-    `<div class="wx-now"><span class="wx-icon">${weatherDef().icon}</span><b>${weatherDef().name}</b></div>` +
-    `<p class="wx-desc">${weatherDef().desc}</p>` +
-    `<div class="stat-row"><span>貢丸引信</span><b>${computeFuse().toFixed(1)} 秒</b></div>` +
-    meter('下次變天', `${Math.max(0, Math.ceil(env.left))} 秒`, env.left / WEATHER_MAX, '#8a8f95'));
-  const left = Math.max(0, player.maxBombs - player.bombsPlaced());
-  setHtml('stat-bombs', meter('貢丸數', `${left} / ${player.maxBombs}`, left / player.maxBombs, '#b07a45'));
-  renderCards();
+  setHtml('shield-sub', p.shieldT > 0 ? `作用中 ${Math.ceil(p.shieldT)} 秒` : `G・MP ${SHIELD_MP_COST}`);
+  const kickWhy = p.tools.shoes > 0 ? '有鋼頭鞋' : w.freeKick ? '豪雨中' : '';
+  const throwWhy = p.tools.glove > 0 ? '有隔熱手套' : w.freeThrow ? '下雪中' : '';
+  const line = (ok, text) => `<div class="cd-line${ok ? ' ok' : ''}"><i></i>${text}</div>`;
+  setHtml('can-do', '<div class="cd-title">現在能做什麼</div>' +
+    line(!!kickWhy, '踢貢丸:' + (kickWhy || '需豪雨或鋼頭鞋')) +
+    line(!!throwWhy, '丟貢丸:' + (throwWhy || '需下雪或隔熱手套')) +
+    (p.tools.tongs > 0 || p.tools.slingshot > 0 ? line(false, '食物夾、彈弓:要先面向貢丸') : ''));
+
+  // ---- 情境提示:面向貢丸時告訴玩家能做什麼
+  const facing = p.alive && gameState === 'playing' ? facingMeatball(p) : null;
+  let tip = '';
+  if (p.alive && p.held) tip = '<kbd>空白</kbd>放下貢丸';
+  else if (facing && canMoveBall(facing)) {
+    const phone = isPhone(), parts = [];
+    if (canKick(p)) parts.push(phone ? '點貢丸 = 踢' : `<kbd>${DIR_ARROW[p.dir.x + ',' + p.dir.y] || '→'}</kbd>再推 = 踢`);
+    if (canThrow(p)) parts.push(phone ? '放貢丸 ×2 = 丟' : '<kbd>空白 ×2</kbd>丟');
+    tip = parts.join('<i></i>');
+  }
+  setHtml('ctx-hint', tip);
+  const ch = $el('ctx-hint');
+  if (ch && ch.classList) ch.classList.toggle('hidden', !tip);
+
+  // ---- 手機:天氣 + 五項迷你條、底部操作列
+  if (isPhone()) {
+    setHtml('m-status',
+      `<div class="ms-wx"><span class="wx-icon">${w.icon}</span><b>${w.name}</b>${weatherChips(false)}<span class="ms-left">${Math.max(0, Math.ceil(env.left))}s 後變天</span></div>` +
+      '<div class="ms-stats">' + bars.map((b) => {
+        const pct = (v) => Math.round(clamp(v / b[3], 0, 1) * 100);
+        return `<div class="ms"><div class="ms-row"><span>${b[0] === '貢丸數' ? '貢丸' : b[0]}</span><b>${b[8]}</b></div>` +
+          `<div class="bar3 mini"><i style="width:${pct(b[5])}%;background:${b[7]}"></i><i style="width:${pct(b[4])}%;background:${b[6]}"></i></div></div>`;
+      }).join('') + '</div>');
+    setHtml('m-place-sub', p.held ? '放下' : `剩 ${left}${canThrow(p) ? '・連點丟' : ''}`);
+    setHtml('m-skill-cd', cdNum ? String(cdNum) : '');
+    const ring = $el('m-skill-ring');
+    if (ring && ring.style) ring.style.setProperty('--p', cdPct + '%');
+  }
+
   const mm = Math.floor(Math.max(0, matchTime) / 60);
   const ss = Math.floor(Math.max(0, matchTime) % 60);
   setHtml('stat-enemies',
@@ -2245,6 +2310,7 @@ function updateHud() {
     `<span class="sc-time">${mm}:${ss.toString().padStart(2, '0')}</span>` +
     `<span class="sc-red">紅 ${teamAlive('red')}</span>`);
 
+  renderCards();
   // 戰隊名單:更新每個人的存活/HP 顯示
   updateRoster();
   // 貢丸選擇列:只更新選取狀態(按鈕由 buildSelector 建立一次,不重建)
@@ -2258,7 +2324,7 @@ let actionBtns = null;
 function refreshActionButtons() {
   if (!actionBtns) {
     if (!document.querySelectorAll) return;
-    const list = document.querySelectorAll('.actions button');
+    const list = document.querySelectorAll('.actions button, .side-right > .act, .m-bar button[data-key]');
     actionBtns = list && list.length ? Array.from(list) : [];
   }
   if (!actionBtns.length) return;
@@ -2283,6 +2349,16 @@ function refreshActionButtons() {
 // ---------- 卡牌區(畫面下方):一次性工具、寵物、永久卡 ----------
 const CARD_TAG = { once: '一次性', perm: '永久', pet: '寵物' };
 const PET_DESC = '按下就放出,自動啃掉貢丸(無法收回)';
+function cardNote(p, key) {
+  if (PETS[key]) return '點一下放出';
+  const playing = gameState === 'playing' && p.alive;
+  if (!playing) return '';
+  if (key === 'vacuum') { const n = vacuumTargets(p).length; return n ? `可吸 ${n} 顆` : '四周沒有貢丸'; }
+  if (key === 'garbage') { const n = garbageTargets(p).length; return n ? `前方 ${n} 顆` : '前方沒有貢丸'; }
+  if (key === 'tongs') return p.held ? '夾著中' : facingMeatball(p) ? '可夾起' : '要面向貢丸';
+  if (key === 'slingshot') return (p.held || facingMeatball(p)) ? (firstCharacterAhead(p) ? '可射向前方的人' : '射到最遠處') : '要面向貢丸';
+  return '';
+}
 function renderCards() {
   const p = player;
   const inMatch = gameState === 'playing' && !!p;
@@ -2292,22 +2368,28 @@ function renderCards() {
       if (PETS[key]) {
         const s = p.petState[key];
         if (s && s.status === 'stored') cards.push({ key, n: 1, kind: 'pet', def: PETS[key], img: 'pets/' + key, hot: key === 'rat' ? 'K' : 'L' });
-      } else if (p.tools[key] > 0) {
+      } else if (p.tools[key] > 0 && TOOLS[key].type === 'once') {
         const def = TOOLS[key];
-        cards.push({ key, n: p.tools[key], kind: def.type, def, img: 'items/' + key, hot: (def.useKey || '').toUpperCase() });
+        cards.push({ key, n: p.tools[key], kind: 'once', def, img: 'items/' + key, hot: (def.useKey || '').toUpperCase() });
       }
     }
   }
   const html = cards.map((c) => {
-    const ok = c.kind === 'perm' || (inMatch && cardUsable(p, c.key));
+    const ok = inMatch && cardUsable(p, c.key);
+    const fresh = p.cardNew && elapsed - (p.cardNew[c.key] || -9) < 1.5;
     const desc = c.kind === 'pet' ? PET_DESC : c.def.desc;
-    return `<button type="button" class="tcard ${c.kind}${ok ? '' : ' off'}" data-card="${c.key}" title="${c.def.name}:${desc}">` +
+    return `<button type="button" class="tcard ${c.kind}${ok ? '' : ' off'}${fresh ? ' new' : ''}" data-card="${c.key}" title="${c.def.name}:${desc}">` +
       `<span class="tc-tag">${CARD_TAG[c.kind]}</span>${c.hot ? `<kbd>${c.hot}</kbd>` : ''}` +
-      `<img src="assets/${c.img}.webp" alt=""><b>${c.def.name}</b>` +
       (c.n > 1 ? `<span class="tc-n">×${c.n}</span>` : '') +
-      (c.kind === 'perm' ? '<span class="tc-auto">自動</span>' : '') + '</button>';
+      `<img src="assets/${c.img}.webp" alt=""><span class="tc-txt"><b>${c.def.name}</b><small>${fresh ? 'NEW' : cardNote(p, c.key)}</small></span></button>`;
   }).join('') || '<p class="cards-empty">木箱炸開撿到的工具會變成卡牌</p>';
   setHtml('card-bar', html);
+  // 永久能力:固定兩格(沒取得也留虛線框,知道還缺什麼)
+  setHtml('perm-slots', p ? ['shoes', 'glove'].map((k) => {
+    const own = p.tools[k] > 0, d = TOOLS[k];
+    return `<div class="perm${own ? ' own' : ''}" title="${d.name}:${d.desc}"><img src="assets/items/${k}.webp" alt="">` +
+      `<span><b>${d.name}</b><small>${own ? (k === 'shoes' ? '隨時可踢' : '隨時可丟') : '尚未取得'}</small></span></div>`;
+  }).join('') : '');
 }
 // 按下卡牌:立刻使用(連線玩家改送按鍵給攤主)
 function onCardClick(ev) {

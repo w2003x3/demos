@@ -317,6 +317,20 @@ const WEATHERS = {
   alien:   { name: '外星人來襲', icon: '🛸', fuse: 3.0, decay: 12, weight: 1, alien: true,
              desc: '隨機抓走一位玩家' },
 };
+// 天氣卡的效果標籤:good 可以做的事、limit 限制、bad 危險、fuse 引信快慢
+const WEATHER_CHIPS = {
+  rain:    [['good', '可以踢貢丸'], ['good', '速度 +10']],
+  snow:    [['good', '可以丟貢丸'], ['limit', '速度降到最低']],
+  cold:    [['fuse', '貢丸很慢才爆']],
+  cool:    [['fuse', '貢丸較慢爆']],
+  muggy:   [['fuse', '貢丸較快爆']],
+  hot:     [['bad', '貢丸很快就爆']],
+  typhoon: [['limit', '每 4 秒吹走貢丸']],
+  quake:   [['limit', '貢丸隨機移位']],
+  volcano: [['bad', '畫面變暗'], ['fuse', '貢丸較快爆']],
+  alien:   [['bad', '隨機抓走一人']],
+};
+const isDisaster = (w) => !!(w.gust || w.shake || w.ash || w.alien);
 const SNOW_SPEED = 90;        // 下雪時所有人的移動速度(最低)
 const ALIEN_BEAM = 2.2;       // 外星人光束照射幾秒後抓走
 const WEATHER_MIN = 5, WEATHER_MAX = 20;    // 每種天氣維持的秒數範圍(隨機)

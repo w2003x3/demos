@@ -7,7 +7,7 @@
   }
 
   // 動作按鈕:單擊觸發
-  document.querySelectorAll('.actions button').forEach((btn) => {
+  document.querySelectorAll('.actions button, .side-right > .act, .m-bar button[data-key]').forEach((btn) => {
     btn.addEventListener('click', (e) => {
       e.preventDefault();
       fire('keydown', btn.dataset.key);

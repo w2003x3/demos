@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261024b" />
+  <link rel="stylesheet" href="css/style.css?v=20261024d" />
 </head>
 <body>
 <div id="app">
@@ -74,12 +74,28 @@
 
     <!-- 中:遊戲畫面(2D 畫布 / 3D 畫面二選一) -->
     <section class="stage-wrap">
+      <!-- 手機:天氣 + 五項數值(一行) -->
+      <div id="m-status" class="m-status only-phone"></div>
       <div class="stage">
         <canvas id="game"></canvas>
         <div id="game3d"></div>
         <div id="ink-overlay"></div>
+        <div id="ctx-hint" class="ctx-hint hidden" aria-live="polite"></div>
       </div>
-      <div id="card-bar" class="card-bar" aria-label="卡牌區"></div>
+      <!-- 手牌:一次性 / 寵物卡 + 右側固定兩格永久能力 -->
+      <div class="hand">
+        <div class="hand-head">
+          <b>手牌</b>
+          <span class="lg lg-once">一次性:用完消失</span>
+          <span class="lg lg-pet">寵物:放出收不回</span>
+          <span class="lg lg-perm">永久:自動生效</span>
+          <span class="hand-tip">・點卡牌立刻使用</span>
+        </div>
+        <div class="hand-row">
+          <div id="card-bar" class="card-bar" aria-label="卡牌區"></div>
+          <div id="perm-slots" class="perm-slots"></div>
+        </div>
+      </div>
     </section>
 
     <!-- 右:貢丸 + 動作 -->
@@ -89,13 +105,37 @@
       <div id="mb-desc" class="mb-desc"></div>
       <h3 class="ribbon right">動作</h3>
       <div class="actions">
-        <button type="button" class="act primary" data-key=" "><img class="act-img" src="assets/meatballs/mb_1.webp" alt=""><span>放貢丸</span><kbd>空白</kbd></button>
-        <button type="button" class="act skill" data-key="t"><span id="skill-btn" class="skill-in"></span><kbd>T</kbd></button>
-        <button type="button" class="act" data-key="g">🛡️<span>防護盾</span><kbd>G</kbd></button>
-        <button type="button" class="act restart" data-key="r">🔄<span>重來</span><kbd>R</kbd></button>
+        <button type="button" class="act primary" data-key=" "><img id="place-img" class="act-img" src="assets/meatballs/mb_1.webp" alt=""><span class="act-main"><b>放貢丸</b><small id="place-sub">空白鍵</small></span></button>
+        <button type="button" class="act skill" data-key="t"><span id="skill-btn" class="skill-in"></span></button>
+        <button type="button" class="act shield" data-key="g"><svg width="34" height="34" viewBox="0 0 24 24" fill="#e8f2fd" stroke="#1f5e9e" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"></path></svg><span class="act-main"><b>防護盾</b><small id="shield-sub">G・MP 30</small></span></button>
       </div>
+      <div id="can-do" class="card can-do"></div>
+      <button type="button" class="act restart wide" data-key="r">重新開始(R)</button>
     </aside>
   </main>
+</div>
+
+<!-- ===== 手機底部操作列:左手 9 種貢丸、右手放貢丸大圓鈕 + 技能 / 盾 ===== -->
+<div id="m-bar" class="m-bar only-phone">
+  <div class="m-balls">
+    <div id="m-ball-name" class="m-ball-name"></div>
+    <div class="m-ball-grid">
+      <button type="button" data-key="1" aria-label="1 號貢丸"><i>1</i><img src="assets/meatballs/mb_1.webp" alt=""></button>
+      <button type="button" data-key="2" aria-label="2 號貢丸"><i>2</i><img src="assets/meatballs/mb_2.webp" alt=""></button>
+      <button type="button" data-key="3" aria-label="3 號貢丸"><i>3</i><img src="assets/meatballs/mb_3.webp" alt=""></button>
+      <button type="button" data-key="4" aria-label="4 號貢丸"><i>4</i><img src="assets/meatballs/mb_4.webp" alt=""></button>
+      <button type="button" data-key="5" aria-label="5 號貢丸"><i>5</i><img src="assets/meatballs/mb_5.webp" alt=""></button>
+      <button type="button" data-key="6" aria-label="6 號貢丸"><i>6</i><img src="assets/meatballs/mb_6.webp" alt=""></button>
+      <button type="button" data-key="7" aria-label="7 號貢丸"><i>7</i><img src="assets/meatballs/mb_7.webp" alt=""></button>
+      <button type="button" data-key="8" aria-label="8 號貢丸"><i>8</i><img src="assets/meatballs/mb_8.webp" alt=""></button>
+      <button type="button" data-key="9" aria-label="9 號貢丸"><i>9</i><img src="assets/meatballs/mb_9.webp" alt=""></button>
+    </div>
+  </div>
+  <div class="m-acts">
+    <button type="button" class="m-skill" data-key="t"><span id="m-skill-ring" class="ring"><span id="m-skill-cd"></span></span><small>技能</small></button>
+    <button type="button" class="m-shield" data-key="g"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#e3e6e9" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M12 3l7 3v5c0 4.5-3 8-7 10-4-2-7-5.5-7-10V6z"></path></svg><small>盾 30</small></button>
+    <button type="button" class="m-place" data-key=" "><img id="m-place-img" src="assets/meatballs/mb_1.webp" alt=""><b>放貢丸</b><small id="m-place-sub">剩 3・連點丟</small></button>
+  </div>
 </div>
 
 <!-- ===== 主選單(全螢幕) ===== -->
@@ -206,13 +246,13 @@
   </div>
 </div>
 
-<script src="js/config.js?v=20261024b"></script>
-<script src="js/audio.js?v=20261024b"></script>
-<script src="js/net.js?v=20261024b"></script>
-<script src="js/game.js?v=20261024b"></script>
-<script src="js/controls.js?v=20261024b"></script>
-<script src="js/guide.js?v=20261024b"></script>
-<script src="js/tutorial.js?v=20261024b"></script>
-<script src="js/view.js?v=20261024b"></script>
+<script src="js/config.js?v=20261024d"></script>
+<script src="js/audio.js?v=20261024d"></script>
+<script src="js/net.js?v=20261024d"></script>
+<script src="js/game.js?v=20261024d"></script>
+<script src="js/controls.js?v=20261024d"></script>
+<script src="js/guide.js?v=20261024d"></script>
+<script src="js/tutorial.js?v=20261024d"></script>
+<script src="js/view.js?v=20261024d"></script>
 </body>
 </html>
