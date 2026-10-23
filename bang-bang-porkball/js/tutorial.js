@@ -78,7 +78,7 @@
     },
     {
       title: '吃東西變強',
-      text: '🗑️ 垃圾桶裡多半是<b>食物</b>。炸開下面的垃圾桶,撿起 🌶️ <b>辣椒</b>,<br>你的「威力」(火焰長度)會 +1。',
+      text: '🗑️ 垃圾桶裡多半是<b>食物</b>。炸開下面的垃圾桶,撿起 🌶️ <b>辣椒</b>,<br>你的「威力」(火焰長度)會 +1,左邊的威力條會變長(手機在畫面上方)。',
       setup(s) { grid[7][9] = TILE.TRASH; s.power = player.power; },
       update(s) {
         if (!s.dropped && grid[7][9] !== TILE.TRASH) { s.dropped = true; replaceDrop(9, 7, 'chili'); }
@@ -87,18 +87,18 @@
     },
     {
       title: '換貢丸',
-      text: '共有 9 種貢丸,個性都不一樣。按 <kbd>2</kbd>(或點右側的 2 號)<br>換成「撒尿牛丸」:踢出去會在牆和人之間反彈。',
+      text: '共有 9 種貢丸,個性都不一樣。按 <kbd>2</kbd>(或點右側的 2 號,手機點下方貢丸格的 2)<br>換成「撒尿牛丸」:踢出去會在牆和人之間反彈。',
       done() { return player.selected === 2; },
     },
     {
       title: '⛈️ 豪雨時踢貢丸',
-      text: '下豪雨了!地面濕滑時人人都<b>踢得動貢丸</b>。放下一顆貢丸,退開一格後<b>面向它</b>,<br><b>再往貢丸的方向推</b>(繼續按方向鍵)就會踢出去,一路滑到撞到障礙物。',
+      text: '下豪雨了!地面濕滑時人人都<b>踢得動貢丸</b>。放下一顆貢丸,退開一格後<b>面向它</b>,<br><b>再往貢丸的方向推</b>(繼續按方向鍵)就會踢出去,一路滑到撞到障礙物。<br>面向貢丸時地圖下方會提示能怎麼做。手機:點旁邊的貢丸轉身,再點一次就踢出。',
       setup() { T.wx = 'rain'; env.weather = 'rain'; announceWeather(); },
       done() { return meatballs.some((m) => m.owner === player && m.moving); },
     },
     {
       title: '🌨️ 下雪時丟貢丸',
-      text: '下雪了!大家都走得很慢,但人人都<b>丟得動貢丸</b>。放下一顆貢丸,退開一格後<b>面向它</b>,<br><b>快速連按兩下空白鍵</b>,貢丸會飛過障礙物落到前方。(只按一下還是照常放貢丸)',
+      text: '下雪了!大家都走得很慢,但人人都<b>丟得動貢丸</b>。放下一顆貢丸,退開一格後<b>面向它</b>,<br><b>快速連按兩下空白鍵</b>(手機:連點兩下放貢丸大圓鈕),貢丸會飛過障礙物落到前方。只按一下還是照常放貢丸。',
       setup() { T.wx = 'snow'; env.weather = 'snow'; announceWeather(); },
       done() { return meatballs.some((m) => m.owner === player && m.thrown); },
     },
@@ -112,7 +112,7 @@
     },
     {
       title: '角色技能',
-      text: '每位角色都有<b>專屬技能</b>,按 <kbd>T</kbd> 使用,用完要等冷卻(右側動作欄看秒數)。<br>阿丸的技能是 🌶️<b>加料</b>:下一顆貢丸威力 +2。按 <kbd>T</kbd> 試試看!',
+      text: '每位角色都有<b>專屬技能</b>,按 <kbd>T</kbd> 使用,用完要等冷卻(看技能鈕上的圓環和秒數)。<br>阿丸的技能是 🌶️<b>加料</b>:下一顆貢丸威力 +2。按 <kbd>T</kbd> 試試看!',
       setup() { player.skillCd = 0; player.boostNext = false; },
       done() { if (player.boostNext) { player.boostNext = false; return true; } return false; },
     },
@@ -188,7 +188,7 @@
     // ---------- 工具 ----------
     {
       title: '🧹 吸塵器卡',
-      text: '右邊擺了一顆貢丸。站到跟它同一排(中間沒有障礙物),點下方的 🧹 <b>吸塵器卡牌</b>(或 <kbd>Q</kbd>):<br><b>上下左右</b>各吸掉第一顆貢丸。一次性卡牌,用完就消失;灰色=現在用不了。',
+      text: '右邊擺了一顆貢丸。站到跟它同一排(中間沒有障礙物),點下方的 🧹 <b>吸塵器卡牌</b>(或 <kbd>Q</kbd>):<br><b>上下左右</b>各吸掉第一顆貢丸。一次性卡牌,用完就消失;卡牌下方會寫現在能不能用、為什麼。',
       setup(s) { clearLong(); s.ball = longBall(11, 5); tool('vacuum'); },
       done(s) { return s.ball.eaten; },
     },
@@ -207,13 +207,13 @@
     },
     {
       title: '🧤 隔熱手套(永久卡)',
-      text: '撿起 🧤 <b>隔熱手套</b>:永久卡,撿到就一直有效,<b>任何天氣都能丟貢丸</b>。<br>然後走到上面那顆貢丸下方、面向它,<b>快速連按兩下空白鍵</b>丟出去。',
+      text: '撿起 🧤 <b>隔熱手套</b>:永久卡,撿到就一直有效,<b>任何天氣都能丟貢丸</b>,手牌右邊的永久能力格會變綠。<br>然後走到上面那顆貢丸下方、面向它,<b>快速連按兩下空白鍵</b>丟出去。',
       setup(s) { clearLong(); player.tools.glove = 0; s.item = put(5, 5, 'glove'); s.ball = longBall(5, 3); },
       done(s) { return player.tools.glove > 0 && s.ball.thrown; },
     },
     {
       title: '🥾 鋼頭鞋(永久卡)',
-      text: '撿起 🥾 <b>鋼頭鞋</b>:永久卡,<b>不下雨也能踢貢丸</b>。<br>走到上面那顆貢丸下方、面向它,再<b>往上推</b>把它踢出去。(🌭 香腸類不能踢也不能丟)',
+      text: '撿起 🥾 <b>鋼頭鞋</b>:永久卡,<b>不下雨也能踢貢丸</b>(右側「現在能做什麼」也會顯示)。<br>走到上面那顆貢丸下方、面向它,再<b>往上推</b>把它踢出去。(🌭 香腸類不能踢也不能丟)',
       setup(s) { clearLong(); player.tools.shoes = 0; s.item = put(9, 5, 'shoes'); s.ball = longBall(9, 3); },
       done(s) { return player.tools.shoes > 0 && s.ball.moving; },
     },
