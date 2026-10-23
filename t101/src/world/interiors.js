@@ -271,7 +271,7 @@ function build35F() {
   // 背牆:菜單與招牌
   const menu = [
     ['濃縮咖啡', '大杯 $95'], ['美式咖啡', '大杯 $120'], ['那堤', '大杯 $135'], ['卡布奇諾', '大杯 $135'],
-    ['焦糖瑪奇朵', '大杯 $160'], ['抹茶那堤', '大杯 $150'], ['冷萃咖啡', '大杯 $150']
+    ['焦糖瑪奇朵', '大杯 $160'], ['抹茶那堤', '大杯 $150'], ['冷萃咖啡', '大杯 $150'], ['去冰補奶', '+$25']
   ];
   const m1 = F.menuBoard(2.6, 1.3, '咖啡 COFFEE', menu.slice(0, 4), { bg: '#1e2b25' });
   m1.position.set(8.02, 2.2, -2.2); m1.rotation.y = Math.PI / 2;
@@ -378,20 +378,20 @@ function build88F(damper) {
   const bar = F.coffeeCounter(7.5, { front: F.MAT.woodDark, top: F.MAT.darkStone, brand: 0x3a2a1e });
   f.add(bar, 15.5, 0, -Math.PI / 2);
   f.box(15.5, 0, 0.9, 7.8);
-  const backWall = new THREE.Mesh(new THREE.BoxGeometry(0.3, 3, 9), MATS.coreWood);
-  backWall.position.set(17.6, 1.5, 0);
+  const backWall = new THREE.Mesh(new THREE.BoxGeometry(0.3, f.ceil, 9), MATS.coreWood);
+  backWall.position.set(17.6, f.ceil / 2, 0);
   backWall.castShadow = true;
   f.group.add(backWall);
   f.box(17.6, 0, 0.6, 9);
   const kafSign = F.signPlane(5, 0.9, '心缽咖啡 XIN BO KAFFA', { bg: '#14110f', fg: '#e9d6b0', font: '700 120px "Noto Sans TC", sans-serif', glow: 0.8 });
-  kafSign.position.set(17.44, 2.5, 0); kafSign.rotation.y = -Math.PI / 2;
+  kafSign.position.set(17.44, 3.3, 0); kafSign.rotation.y = -Math.PI / 2;
   f.group.add(kafSign);
-  const km = F.menuBoard(2.4, 1.0, '手沖 POUR OVER', [['招牌綜合', '$280'], ['衣索比亞', '$320'], ['101 拿鐵', '$300']], { bg: '#1a1714', accent: '#d9b25a' });
-  km.position.set(17.44, 1.55, -2.8); km.rotation.y = -Math.PI / 2;
+  const km = F.menuBoard(2.4, 1.25, '手沖 POUR OVER', [['招牌綜合', '$280'], ['衣索比亞', '$320'], ['101 拿鐵', '$300'], ['去冰補奶', '免費']], { bg: '#1a1714', accent: '#d9b25a' });
+  km.position.set(17.44, 2.2, -2.8); km.rotation.y = -Math.PI / 2;
   f.group.add(km);
   f.add(F.pastryCase(1.8), 15.5, -5.0, -Math.PI / 2);
   f.box(15.5, -5, 0.8, 1.9);
-  for (let z = -3; z <= 3; z += 1.5) f.add(F.pendant(f.ceil, 1.4), 14.6, z);
+  for (const z of [-3.4, -2.9, 2.9, 3.4]) f.add(F.pendant(f.ceil, 1.4), 14.6, z);
   f.npc({ shirt: 0x1b1b1b, pants: 0x1b1b1b, apron: 0x5a3e2b, hair: 0x0f0f10 }, 16.5, -1.5, -Math.PI / 2);
   f.npc({ shirt: 0xf2efe8, pants: 0x1b1b1b, apron: 0x5a3e2b, hair: 0x2a1d14, hairLong: true }, 16.5, 1.8, -Math.PI / 2);
   // 座位(南、西靠窗)
