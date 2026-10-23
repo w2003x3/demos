@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261023f" />
+  <link rel="stylesheet" href="css/style.css?v=20261024b" />
 </head>
 <body>
 <div id="app">
@@ -66,10 +66,6 @@
         <div id="stat-speed" class="stat"></div>
         <div id="stat-bombs" class="stat"></div>
       </div>
-      <div class="pill-grid">
-        <div id="stat-pet" class="pill wide"></div>
-        <div id="stat-tools" class="pill wide"></div>
-      </div>
       <h3 class="ribbon">戰隊</h3>
       <div id="roster" class="roster"></div>
       <p class="ctl-hint only-2d">點地圖一下:走過去・點兩下:放貢丸<br>WASD / ↑↓←→ 移動</p>
@@ -83,6 +79,7 @@
         <div id="game3d"></div>
         <div id="ink-overlay"></div>
       </div>
+      <div id="card-bar" class="card-bar" aria-label="卡牌區"></div>
     </section>
 
     <!-- 右:貢丸 + 動作 -->
@@ -94,16 +91,7 @@
       <div class="actions">
         <button type="button" class="act primary" data-key=" "><img class="act-img" src="assets/meatballs/mb_1.webp" alt=""><span>放貢丸</span><kbd>空白</kbd></button>
         <button type="button" class="act skill" data-key="t"><span id="skill-btn" class="skill-in"></span><kbd>T</kbd></button>
-        <button type="button" class="act" data-key="e">👟<span>踢/騎</span><kbd>E</kbd></button>
         <button type="button" class="act" data-key="g">🛡️<span>防護盾</span><kbd>G</kbd></button>
-        <button type="button" class="act" data-key="z"><img class="act-img" src="assets/items/tongs.webp" alt=""><span>食物夾</span><kbd>Z</kbd></button>
-        <button type="button" class="act" data-key="x"><img class="act-img" src="assets/items/glove.webp" alt=""><span>手套丟</span><kbd>X</kbd></button>
-        <button type="button" class="act" data-key="c"><img class="act-img" src="assets/items/slingshot.webp" alt=""><span>彈弓</span><kbd>C</kbd></button>
-        <button type="button" class="act" data-key="q"><img class="act-img" src="assets/items/vacuum.webp" alt=""><span>吸塵器</span><kbd>Q</kbd></button>
-        <button type="button" class="act" data-key="f"><img class="act-img" src="assets/items/garbage.webp" alt=""><span>垃圾車</span><kbd>F</kbd></button>
-        <button type="button" class="act" data-key="v"><img class="act-img" src="assets/items/slippers.webp" alt=""><span>藍白拖</span><kbd>V</kbd></button>
-        <button type="button" class="act" data-key="k"><img class="act-img" src="assets/pets/rat.webp" alt=""><span>老鼠</span><kbd>K</kbd></button>
-        <button type="button" class="act" data-key="l"><img class="act-img" src="assets/pets/roach.webp" alt=""><span>蟑螂</span><kbd>L</kbd></button>
         <button type="button" class="act restart" data-key="r">🔄<span>重來</span><kbd>R</kbd></button>
       </div>
     </aside>
@@ -203,11 +191,11 @@
       <li>點地圖一下=自動走過去・點兩下=放貢丸(滑鼠/觸控皆可)</li>
       <li><kbd>↑↓←→</kbd> / <kbd>WASD</kbd> 移動(一步一格)</li>
       <li><kbd>空白鍵</kbd> 放置貢丸・<kbd>1</kbd>~<kbd>9</kbd> 切換貢丸(夜市 <kbd>O</kbd> 香腸、<kbd>P</kbd> 米腸)</li>
-      <li><kbd>E</kbd>/<kbd>J</kbd> 踢前方貢丸(只有豪雨時)・<kbd>G</kbd> 防護盾(耗 MP,維持 3 秒,擋一次爆炸)</li>
+      <li><b>踢</b>:面向貢丸再往它的方向推(豪雨或 🥾鋼頭鞋)・<b>丟</b>:面向貢丸連按兩下空白鍵(下雪或 🧤隔熱手套)</li>
+      <li><kbd>G</kbd> 防護盾(耗 MP,維持 3 秒,擋一次爆炸)</li>
       <li><kbd>T</kbd> 角色技能(每位角色不同,用完要冷卻)</li>
-      <li><kbd>Q</kbd> 吸塵器・<kbd>F</kbd> 垃圾車(清前方貢丸)</li>
-      <li><kbd>Z</kbd> 食物夾(夾起/放下)・<kbd>X</kbd> 隔熱手套(丟)・<kbd>C</kbd> 彈弓・<kbd>V</kbd> 藍白拖</li>
-      <li><kbd>K</kbd> 放出/收起 老鼠・<kbd>L</kbd> 蟑螂・<kbd>R</kbd> 重新開始</li>
+      <li><b>卡牌</b>(畫面下方,點一下立刻使用):<kbd>Q</kbd> 吸塵器・<kbd>F</kbd> 垃圾車・<kbd>Z</kbd> 食物夾・<kbd>C</kbd> 彈弓・<kbd>K</kbd> 老鼠・<kbd>L</kbd> 蟑螂</li>
+      <li><kbd>R</kbd> 重新開始</li>
       <li><kbd>`</kbd>(Esc 下方)切換 2D / 3D 畫面</li>
     </ul>
     <h2 class="only-3d">3D 視角操作</h2>
@@ -218,13 +206,13 @@
   </div>
 </div>
 
-<script src="js/config.js?v=20261023f"></script>
-<script src="js/audio.js?v=20261023f"></script>
-<script src="js/net.js?v=20261023f"></script>
-<script src="js/game.js?v=20261023f"></script>
-<script src="js/controls.js?v=20261023f"></script>
-<script src="js/guide.js?v=20261023f"></script>
-<script src="js/tutorial.js?v=20261023f"></script>
-<script src="js/view.js?v=20261023f"></script>
+<script src="js/config.js?v=20261024b"></script>
+<script src="js/audio.js?v=20261024b"></script>
+<script src="js/net.js?v=20261024b"></script>
+<script src="js/game.js?v=20261024b"></script>
+<script src="js/controls.js?v=20261024b"></script>
+<script src="js/guide.js?v=20261024b"></script>
+<script src="js/tutorial.js?v=20261024b"></script>
+<script src="js/view.js?v=20261024b"></script>
 </body>
 </html>

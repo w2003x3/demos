@@ -1,7 +1,7 @@
 // ====================================================================
 //  新手教學關卡(2D / 3D 共用)
 //  固定的小練習場,一步一步完成任務才進下一步;不計時、被炸到會原地重來
-//  內容:基本操作 → 貢丸 → 食物/小吃 → 6 種工具 → 2 隻寵物 → 實戰
+//  內容:基本操作 → 踢/丟 → 貢丸 → 食物/小吃 → 工具卡牌 → 寵物卡牌 → 實戰
 //  game.js 的 update() 在教學中改呼叫 tutorial.update(),restart() 會結束教學
 // ====================================================================
 (function () {
@@ -41,6 +41,12 @@
     return d;
   }
   const tool = (k, n = 1) => { player.tools[k] = Math.max(player.tools[k] || 0, n); };
+  // 寵物卡回到手上(收回場上的、救回昏倒的),讓教學一定能練習
+  function resetPet(id) {
+    const st = player.petState[id];
+    if (st.status === 'out') recallPet(player, id);
+    st.status = 'stored';
+  }
   // 自己剛放、還沒處理過的某種貢丸
   function watchBalls(s, ids) {
     s.seen = s.seen || new Set();
@@ -66,7 +72,7 @@
     },
     {
       title: '撿工具',
-      text: '📦 木箱炸開常掉<b>工具</b>和食物。去撿 🥢 <b>食物夾</b>:<br>工具會收進左側面板,用完就沒了(後面會教每種工具怎麼用)。',
+      text: '📦 木箱炸開常掉<b>工具</b>和食物。去撿 🥢 <b>食物夾</b>:<br>工具會變成畫面下方的<b>卡牌</b>,點一下就立刻使用(後面會教每一張)。',
       setup(s) { s.item = replaceDrop(9, 5, 'tongs'); },
       done(s) { return !has(s.item); },
     },
@@ -86,9 +92,15 @@
     },
     {
       title: '⛈️ 豪雨時踢貢丸',
-      text: '下豪雨了!地面濕滑時才<b>踢得動貢丸</b>(平常踢不了)。放下一顆貢丸,退開一格後<b>轉身面向它</b>,按 <kbd>E</kbd> 把它踢出去。<br>豪雨時所有人速度也 +10。貢丸碰到人會停下(撒尿牛丸會彈回)。',
+      text: '下豪雨了!地面濕滑時人人都<b>踢得動貢丸</b>。放下一顆貢丸,退開一格後<b>面向它</b>,<br><b>再往貢丸的方向推</b>(繼續按方向鍵)就會踢出去,一路滑到撞到障礙物。',
       setup() { T.wx = 'rain'; env.weather = 'rain'; announceWeather(); },
       done() { return meatballs.some((m) => m.owner === player && m.moving); },
+    },
+    {
+      title: '🌨️ 下雪時丟貢丸',
+      text: '下雪了!大家都走得很慢,但人人都<b>丟得動貢丸</b>。放下一顆貢丸,退開一格後<b>面向它</b>,<br><b>快速連按兩下空白鍵</b>,貢丸會飛過障礙物落到前方。(只按一下還是照常放貢丸)',
+      setup() { T.wx = 'snow'; env.weather = 'snow'; announceWeather(); },
+      done() { return meatballs.some((m) => m.owner === player && m.thrown); },
     },
     {
       title: '防護盾',
@@ -160,8 +172,8 @@
     // ---------- 食物、小吃、防護 ----------
     {
       title: '其他食物',
-      text: '下面擺了 4 種食物,全部撿起來:<br>🍢 竹籤:可同時放的貢丸 +1 · 🥬 白蘿蔔:免疫力+(中毒、黑畫面變短)<br>🧂 胡椒粉:手套丟更遠 · 🍄‍🟫 金針菇:自己的貢丸晚一點爆(倒下時會噴出來)',
-      setup(s) { s.list = [put(5, 9, 'skewer'), put(7, 9, 'radish'), put(9, 9, 'pepper'), put(11, 9, 'enoki')]; },
+      text: '下面擺了 3 種食物,全部撿起來:<br>🍢 竹籤:可同時放的貢丸 +1 · 🥬 白蘿蔔:免疫力+(中毒、黑畫面變短)<br>🍄‍🟫 金針菇:自己的貢丸晚一點爆(倒下時會噴出來)',
+      setup(s) { s.list = [put(5, 9, 'skewer'), put(7, 9, 'radish'), put(9, 9, 'enoki')]; },
       done(s) { return gone(s.list); },
     },
     {
@@ -175,56 +187,62 @@
 
     // ---------- 工具 ----------
     {
-      title: '🧹 吸塵器',
-      text: '右邊擺了一顆貢丸。站到同一排、<b>面向它</b>,按 <kbd>Q</kbd> 用吸塵器吸掉。<br>被逼到角落時,工具能救命。',
+      title: '🧹 吸塵器卡',
+      text: '右邊擺了一顆貢丸。站到跟它同一排(中間沒有障礙物),點下方的 🧹 <b>吸塵器卡牌</b>(或 <kbd>Q</kbd>):<br><b>上下左右</b>各吸掉第一顆貢丸。一次性卡牌,用完就消失;灰色=現在用不了。',
       setup(s) { clearLong(); s.ball = longBall(11, 5); tool('vacuum'); },
       done(s) { return s.ball.eaten; },
     },
     {
-      title: '🚛 垃圾車',
-      text: '右邊一排有兩顆貢丸。站到同一排、面向它們,按 <kbd>F</kbd>:<br>垃圾車會把<b>前方整排</b>貢丸一次清光。',
+      title: '🚛 垃圾車卡',
+      text: '右邊一排有兩顆貢丸。站到同一排、<b>面向它們</b>,點 🚛 <b>垃圾車卡牌</b>(或 <kbd>F</kbd>):<br>把<b>前方整排</b>貢丸一次清光,遇到障礙物就停。',
       setup(s) { clearLong(); s.balls = [longBall(9, 7), longBall(11, 7)]; tool('garbage'); },
       done(s) { return s.balls.every((m) => m.eaten); },
     },
     {
-      title: '🥢 食物夾',
-      text: '走到上面那顆貢丸旁、面向它,按 <kbd>Z</kbd> 夾起來帶著走,<br>走到別的地方再按一次 <kbd>Z</kbd> 放下。',
+      title: '🥢 食物夾卡',
+      text: '走到上面那顆貢丸旁、<b>面向它</b>,點 🥢 <b>食物夾卡牌</b>(或 <kbd>Z</kbd>)夾起來帶著走,<br>走到別的地方按 <kbd>空白鍵</kbd> 放下。',
       setup(s) { clearLong(); s.ball = longBall(7, 3); tool('tongs'); },
       update(s) { if (s.ball.held) s.picked = true; },
       done(s) { return s.picked && !s.ball.held; },
     },
     {
-      title: '🧤 隔熱手套',
-      text: '面向上面那顆貢丸(或站在貢丸上),按 <kbd>X</kbd> 把它<b>往前丟</b>出去,<br>可以丟過箱子和牆。🧂 胡椒粉能讓你丟更遠。',
-      setup(s) { clearLong(); s.ball = longBall(5, 3); tool('glove'); s.n = player.tools.glove; },
-      done(s) { return player.tools.glove < s.n; },
+      title: '🧤 隔熱手套(永久卡)',
+      text: '撿起 🧤 <b>隔熱手套</b>:永久卡,撿到就一直有效,<b>任何天氣都能丟貢丸</b>。<br>然後走到上面那顆貢丸下方、面向它,<b>快速連按兩下空白鍵</b>丟出去。',
+      setup(s) { clearLong(); player.tools.glove = 0; s.item = put(5, 5, 'glove'); s.ball = longBall(5, 3); },
+      done(s) { return player.tools.glove > 0 && s.ball.thrown; },
     },
     {
-      title: '🏹 彈弓',
-      text: '右下角出現一個 🔴 稻草人。站到跟它同一排或同一列、面向它,<br>按 <kbd>C</kbd>:彈弓會把貢丸射向前方第一個人,<b>命中立刻爆炸</b>。',
-      setup(s) { clearLong(); s.dummy = dummy(11, 11); tool('slingshot'); },
+      title: '🥾 鋼頭鞋(永久卡)',
+      text: '撿起 🥾 <b>鋼頭鞋</b>:永久卡,<b>不下雨也能踢貢丸</b>。<br>走到上面那顆貢丸下方、面向它,再<b>往上推</b>把它踢出去。(🌭 香腸類不能踢也不能丟)',
+      setup(s) { clearLong(); player.tools.shoes = 0; s.item = put(9, 5, 'shoes'); s.ball = longBall(9, 3); },
+      done(s) { return player.tools.shoes > 0 && s.ball.moving; },
+    },
+    {
+      title: '🏹 彈弓卡',
+      text: '右下角有個 🔴 稻草人,上面那顆貢丸跟它在同一列。站到貢丸<b>上方</b>、面向它(往下),<br>點 🏹 <b>彈弓卡牌</b>(或 <kbd>C</kbd>):貢丸會射向前方第一個人,<b>命中立刻爆炸</b>。',
+      setup(s) { clearLong(); s.dummy = dummy(11, 11); s.ball = longBall(11, 7); tool('slingshot'); },
       done(s) { return !s.dummy.alive; },
     },
 
     // ---------- 寵物 ----------
     {
-      title: '🐭 放出老鼠',
-      text: '右邊有一顆貢丸。按 <kbd>K</kbd> 放出老鼠,牠會自己跑去把貢丸<b>啃掉,不會爆炸</b>。<br>老鼠啃得快但跑得慢;牠也會啃你自己的貢丸。',
+      title: '🐭 老鼠卡',
+      text: '右邊有一顆貢丸。點 🐭 <b>老鼠卡牌</b>(或 <kbd>K</kbd>)放出老鼠,牠會自己跑去把貢丸<b>啃掉,不會爆炸</b>。<br>放出後<b>收不回來</b>;老鼠啃得快但跑得慢,也會啃你自己的貢丸。',
       setup(s) {
         bots = []; buildRoster();
         clearLong();
         s.ball = longBall(11, 9);
-        if (player.petState.rat.status === 'dead') revivePet(player);
+        resetPet('rat');
       },
       done(s) { return s.ball.eaten; },
     },
     {
-      title: '🪳 放出蟑螂',
-      text: '左下角又有一顆貢丸。按 <kbd>L</kbd> 放出蟑螂:<b>跑得快但啃得慢</b>。<br>兩隻寵物可以同時放出,一起幫你拆彈。🩴 藍白拖 <kbd>V</kbd> 可以踩附近的寵物。',
+      title: '🪳 蟑螂卡',
+      text: '左下角又有一顆貢丸。點 🪳 <b>蟑螂卡牌</b>(或 <kbd>L</kbd>)放出蟑螂:<b>跑得快但啃得慢</b>。<br>兩隻寵物可以同時在場上,一起幫你拆彈;被炸倒就沒了。',
       setup(s) {
         clearLong();
         s.ball = longBall(3, 9);
-        if (player.petState.roach.status === 'dead') revivePet(player);
+        resetPet('roach');
       },
       done(s) { return s.ball.eaten && player.petState.roach.status === 'out'; },
     },
@@ -234,7 +252,7 @@
       title: '實戰:炸倒敵人',
       text: '下面出現了一個 🔴 <b>稻草人敵人</b>(不會動也不會反擊)。<br>用貢丸把它炸倒!小心別炸到自己。',
       setup(s) {
-        // 寵物會啃掉炸稻草人的貢丸:先收回
+        // 寵物會啃掉炸稻草人的貢丸:先請牠們離場
         for (const id of ['rat', 'roach']) if (player.petState[id].status === 'out') recallPet(player, id);
                 clearLong();
         s.dummy = dummy(7, 9);

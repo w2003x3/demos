@@ -1773,6 +1773,92 @@
     }
   }
 
+  // ---------- 下雪(雪花 + 地面雪跡)、火山灰、外星人飛碟 ----------
+  const FLAKE_N = 500;
+  const flakePos = new Float32Array(FLAKE_N * 3);
+  const flakeGeo = new THREE.BufferGeometry();
+  flakeGeo.setAttribute('position', new THREE.BufferAttribute(flakePos, 3));
+  const flakeTex = glowTexture([[0, 'rgba(255,255,255,1)'], [0.5, 'rgba(255,255,255,0.8)'], [1, 'rgba(255,255,255,0)']]);
+  const flakeMat = new THREE.PointsMaterial({ size: 0.09, map: flakeTex, transparent: true, depthWrite: false, color: 0xffffff });
+  const flakes = new THREE.Points(flakeGeo, flakeMat);
+  flakes.frustumCulled = false; flakes.visible = false;
+  scene.add(flakes);
+  const flakeV = [];
+  for (let i = 0; i < FLAKE_N; i++) {
+    flakePos.set([Math.random() * (COLS + 4) - 2, Math.random() * 6, Math.random() * (ROWS + 4) - 2], i * 3);
+    flakeV.push(0.6 + Math.random() * 0.7);
+  }
+  // 地面雪跡:一張半透明的白斑貼圖蓋在地面上,越下越白
+  const snowCv = document.createElement('canvas'); snowCv.width = COLS * 32; snowCv.height = ROWS * 32;
+  (function paintSnow() {
+    const g = snowCv.getContext('2d');
+    let seed = 11;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (let i = 0; i < COLS * ROWS * 6; i++) {
+      const x = rnd() * snowCv.width, y = rnd() * snowCv.height, r = 4 + rnd() * 12;
+      const gr = g.createRadialGradient(x, y, 0, x, y, r);
+      gr.addColorStop(0, 'rgba(250,252,255,0.95)'); gr.addColorStop(1, 'rgba(250,252,255,0)');
+      g.fillStyle = gr; g.beginPath(); g.ellipse(x, y, r * 1.4, r, rnd() * 3, 0, Math.PI * 2); g.fill();
+    }
+  })();
+  const snowGround = new THREE.Mesh(new THREE.PlaneGeometry(COLS, ROWS),
+    new THREE.MeshBasicMaterial({ map: new THREE.CanvasTexture(snowCv), transparent: true, opacity: 0, depthWrite: false }));
+  snowGround.rotation.x = -Math.PI / 2;
+  snowGround.position.set(COLS / 2, 0.012, ROWS / 2);
+  snowGround.visible = false;
+  scene.add(snowGround);
+  // 飛碟 + 光束
+  const ufo = new THREE.Group();
+  const disc = new THREE.Mesh(new THREE.SphereGeometry(0.6, 28, 12), new THREE.MeshStandardMaterial({ color: 0xa7b0b8, metalness: 0.8, roughness: 0.3 }));
+  disc.scale.set(1, 0.24, 1);
+  const dome = new THREE.Mesh(new THREE.SphereGeometry(0.27, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2),
+    new THREE.MeshStandardMaterial({ color: 0x8be6ff, transparent: true, opacity: 0.8, roughness: 0.1 }));
+  dome.position.y = 0.08;
+  ufo.add(disc, dome);
+  const ufoLights = [];
+  for (let i = 0; i < 8; i++) {
+    const l = new THREE.Mesh(new THREE.SphereGeometry(0.045, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffeb3b }));
+    l.position.set(Math.cos(i / 8 * Math.PI * 2) * 0.55, -0.02, Math.sin(i / 8 * Math.PI * 2) * 0.55);
+    ufo.add(l); ufoLights.push(l);
+  }
+  const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.22, 0.62, 1, 24, 1, true),
+    new THREE.MeshBasicMaterial({ color: 0xbaff8c, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
+  ufo.visible = false; beam.visible = false;
+  scene.add(ufo, beam);
+  const wxClock = new THREE.Clock();
+  function updateWeatherFx() {
+    const dt = Math.min(0.05, wxClock.getDelta());
+    const w = typeof weatherDef === 'function' ? weatherDef() : {};
+    const fall = !!(w.snow || w.ash);
+    flakes.visible = fall;
+    if (fall) {
+      flakeMat.color.set(w.ash ? 0x3d3530 : 0xffffff);
+      flakeMat.size = w.ash ? 0.07 : 0.09;
+      const t = performance.now() / 1000;
+      for (let i = 0; i < FLAKE_N; i++) {
+        let y = flakePos[i * 3 + 1] - flakeV[i] * dt;
+        let x = flakePos[i * 3] + Math.sin(t + i) * 0.15 * dt;
+        if (y < 0) { y = 5 + Math.random(); x = Math.random() * (COLS + 4) - 2; flakePos[i * 3 + 2] = Math.random() * (ROWS + 4) - 2; }
+        flakePos[i * 3] = x; flakePos[i * 3 + 1] = y;
+      }
+      flakeGeo.attributes.position.needsUpdate = true;
+    }
+    snowGround.visible = !!w.snow;
+    if (w.snow) snowGround.material.opacity = Math.min(0.85, 0.15 + env.t / 6);
+    const a = typeof env !== 'undefined' && env.abduct;
+    ufo.visible = beam.visible = !!(a && a.f);
+    if (ufo.visible) {
+      const f = a.f, k = Math.min(1, a.t / ALIEN_BEAM);
+      const x = f.x / TS, z = f.y / TS, top = 2.6 + Math.sin(performance.now() / 300) * 0.08;
+      ufo.position.set(x, top, z);
+      ufo.rotation.y += dt * 2;
+      ufoLights.forEach((l, i) => l.material.color.set((Math.floor(performance.now() / 120) + i) % 2 ? 0xffeb3b : 0xff5252));
+      beam.position.set(x, top / 2, z);
+      beam.scale.set(1, top, 1);
+      beam.material.opacity = 0.25 + k * 0.35;
+    }
+  }
+
   // ---------- 渲染迴圈 ----------
   function frame() {
     requestAnimationFrame(frame);
@@ -1801,11 +1887,8 @@
     syncFx();
     syncDuck();
     updateRain();
-    if (inkEl) {
-      const base = Math.max(0.25, 0.92 - player.inkEaten * 0.15);
-      const fade = Math.max(0, Math.min(1, player.blindT / 0.6));
-      inkEl.style.opacity = player.alive && player.blindT > 0 ? (base * fade) : 0;
-    }
+    updateWeatherFx();
+    if (inkEl) inkEl.style.opacity = blindAlpha(); // 墨魚黑畫面 / 火山灰
     updateCamera();
     updateOcclusion();
     renderer.render(scene, camera);

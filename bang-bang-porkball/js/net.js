@@ -233,7 +233,8 @@ function buildSnapshot() {
     t: 'snap',
     gs: gameState,
     tm: r1(matchTime),
-    env: [env.weather, r1(env.left)],
+    env: [env.weather, r1(env.left), r1(env.t)],
+    ab: env.abduct ? [nid(env.abduct.f), r1(env.abduct.t)] : 0,   // 外星人光束鎖定的人
     g: grid.map((row) => row.join('')).join(''),
     f: all.map((f) => ({
       i: nid(f), n: f.netId || (f === player ? NET.id : null),
@@ -304,7 +305,7 @@ const guest = {
       }
     }
     const prevWx = env.weather;
-    env.weather = s.env[0]; env.left = s.env[1];
+    env.weather = s.env[0]; env.left = s.env[1]; env.t = s.env[2] || 0;
     if (this.ready && prevWx !== env.weather) announceWeather();
     if (s.wq) shakeStage();
     matchTime = s.tm;
@@ -328,6 +329,8 @@ const guest = {
       f.deathT = d.dt;
     });
     this.fighters = fs.map;
+    env.abduct = s.ab ? { f: fs.map.get(s.ab[0]), t: s.ab[1] } : null;
+    if (env.abduct && !env.abduct.f) env.abduct = null;
     const me = fs.list.find((f) => f.netId === NET.id);
     const firstFrame = !this.ready;
     // 找不到自己(名單還沒同步)就先用第一個角色當鏡頭,不讓畫面壞掉

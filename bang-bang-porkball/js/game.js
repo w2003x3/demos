@@ -31,7 +31,7 @@ const ASSET_LIST = {
   fx: ['fire', 'poison', 'ink'].flatMap((k) => Array.from({ length: FX_VARIANTS }, (_, i) => k + (i + 1))),
   items: ['mushroom', 'taro', 'cilantro', 'chili', 'skewer', 'radish', 'pepper', 'enoki',
           'squid', 'blastsuit', 'mask', 'ratbait', 'roachbait', 'vacuum', 'garbage',
-          'slippers', 'tongs', 'glove', 'slingshot',
+          'slippers', 'tongs', 'glove', 'slingshot', 'shoes',
           'luckybag', 'chicken', 'bloodcake', 'milktea', 'boba', 'tofu', 'blackpork'],
   pets: ['rat', 'roach'],
   characters: CHAR_IDS.flatMap((c) => [c + '_blue', c + '_red']),
@@ -176,6 +176,7 @@ function updateWeather(dt) {
     announceWeather();
   }
   const w = weatherDef();
+  if (w.alien) updateAlien(dt);
   if (!w.gust && !w.shake) return;
   env.fx -= dt;
   if (env.fx > 0) return;
@@ -198,6 +199,43 @@ function updateWeather(dt) {
     sfx('boom');
   }
 }
+// 外星人來襲:隨機鎖定一位還活著的玩家(含電腦),光束照射 ALIEN_BEAM 秒後抓走(直接死亡)
+function updateAlien(dt) {
+  if (env.abductDone) return;
+  if (!env.abduct) {
+    if (env.t < 0.8) return;
+    const pool = fighters().filter((f) => f.alive);
+    if (!pool.length) { env.abductDone = true; return; }
+    const f = pool[rand(pool.length)];
+    env.abduct = { f, t: 0 };
+    sfx('whoosh', f.x, f.y);
+    spawnText(f.x, f.y - TS * 0.7, '🛸光束鎖定!', '#b2ff59');
+    return;
+  }
+  const a = env.abduct;
+  a.t += dt;
+  if (!a.f.alive) { env.abduct = null; env.abductDone = true; return; }
+  if (a.t >= ALIEN_BEAM) {
+    const f = a.f;
+    spawnText(f.x, f.y - TS * 0.6, '被外星人抓走了!', '#b2ff59');
+    f.shieldT = 0; f.hp = 0; f.abducted = true;
+    f.die();
+    env.abduct = null; env.abductDone = true;
+    if (f === player) updateHud();
+  }
+}
+// 畫面變黑的程度:被墨魚貢丸炸到、火山灰(等同吃了一隻墨魚的透明度)取較黑的
+function blindAlpha() {
+  if (!player) return 0;
+  let a = 0;
+  if (player.alive && player.blindT > 0) a = Math.max(0.25, 0.92 - player.inkEaten * 0.15) * clamp(player.blindT / 0.6, 0, 1);
+  if (weatherDef().ash) {
+    const k = clamp(env.t / 1.2, 0, 1) * clamp(env.left / 0.8, 0, 1);    // 噴發時漸暗、快結束時漸亮
+    a = Math.max(a, Math.max(0.15, 0.92 - (player.inkEaten + 1) * 0.15) * k);
+  }
+  return a;
+}
+
 // 變天提示:地圖中央大字(2D/3D 都看得到)
 function announceWeather() {
   const stage = document.querySelector('.stage');
@@ -275,7 +313,6 @@ class Player {
     this.poisonTick = 0;        // 黴毒每秒結算用
     this.shieldT = 0;           // 防護盾剩餘秒數(期間擋一次爆炸)
     this.immunity = 1;          // 免疫力:越高,負面狀態時效越短(白蘿蔔提升)
-    this.throwBonus = 0;        // 丟擲距離加成(胡椒粉)
     this.enokiEaten = 0;        // 吃過的金針菇數(死亡會噴出等量)
     this.fuseBonus = 0;         // 自己貢丸的額外時效(金針菇)
     this.inkEaten = 0;          // 吃過的墨魚數(減輕黑畫面)
@@ -297,9 +334,10 @@ class Player {
         this.petState[id] = { def: PETS[id], status: 'stored', pet: null };
       }
     }
-    this.tools = isHuman
-      ? { vacuum: 1, garbage: 1, slippers: 1, tongs: 2, glove: 2, slingshot: 1 }
-      : { vacuum: 0, garbage: 0, slippers: 0, tongs: 0, glove: 0, slingshot: 0 };
+    // 工具卡牌:一次性工具記張數;永久卡(鋼頭鞋、隔熱手套)> 0 代表擁有
+    this.tools = isHuman ? { ...START_TOOLS } : {};
+    this.spaceT = 0;            // 空白鍵連按判定(丟貢丸)
+    this.pushT = 0;             // 往貢丸方向推的時間(踢貢丸)
   }
 
   get col() { return toCol(this.x); }
@@ -690,7 +728,7 @@ function explodeMeatball(m) {
       grid[cell.r][cell.c] = TILE.EMPTY;
       // 可破壞物(木箱/蔬菜箱/摺疊桌):55% 工具、25% 食物、8% 台灣小吃、2% 福袋、10% 空
       const rr = Math.random();
-      if (rr < 0.55) spawnItem(cell.c, cell.r, pick(Object.keys(TOOLS)));
+      if (rr < 0.55) spawnItem(cell.c, cell.r, toolDrop());
       else if (rr < 0.80) spawnItem(cell.c, cell.r, pick(FOOD_DROP_KEYS));
       else if (rr < 0.88) spawnItem(cell.c, cell.r, snackDrop());
       else if (rr < 0.90) spawnItem(cell.c, cell.r, 'luckybag');
@@ -747,6 +785,13 @@ function spawnItem(c, r, key) {
 function itemDef(key) { return ITEMS[key] || TOOLS[key]; }
 
 const pick = (arr) => arr[rand(arr.length)];
+
+// 木箱掉的工具(永久卡較稀有)
+function toolDrop() {
+  const pool = [];
+  for (const [k, w] of Object.entries(TOOL_DROP)) for (let i = 0; i < w; i++) pool.push(k);
+  return pick(pool);
+}
 
 // 依目前地圖的加權表抽一種台灣小吃(該地圖名產較常見)
 function snackDrop() {
@@ -838,24 +883,36 @@ function checkClusters() {
 }
 
 // ====================================================================
-//  踢動 / 騎乘貢丸(消耗 MP)
+//  踢 / 丟貢丸
+//  踢:面向貢丸時繼續往貢丸方向推 → 一路滑到碰到障礙物(豪雨或鋼頭鞋才能踢)
+//  丟:面向貢丸快速連按兩下空白鍵 → 越過障礙物丟到前方(下雪或隔熱手套才能丟)
+//  香腸、米腸、大腸包小腸不能踢也不能丟
 // ====================================================================
+const canKick = (p) => !!weatherDef().freeKick || (p.tools && p.tools.shoes > 0);
+const canThrow = (p) => !!weatherDef().freeThrow || (p.tools && p.tools.glove > 0);
+const liveBall = (m) => !m.exploded && !m.eaten && !m.held && !m.fly;
+const ballAt = (c, r) => meatballs.find((m) => liveBall(m) && m.col === c && m.row === r);
+// 面向的那一格(相鄰)上的貢丸
+function facingMeatball(p) {
+  return ballAt(p.col + p.dir.x, p.row + p.dir.y) || null;
+}
+// 提示字不要每幀洗版:同一個人 1.2 秒內只講一次
+function hint(p, text, color = '#bdbdbd') {
+  if (p !== player || (p.hintT || 0) > elapsed) return;
+  p.hintT = elapsed + 1.2;
+  spawnText(p.x, p.y - TS * 0.5, text, color);
+}
+
 function kickMeatball(p) {
-  // 找面向方向最近且相鄰的貢丸
-  const tc = p.col + p.dir.x;
-  const tr = p.row + p.dir.y;
-  const m = meatballs.find(
-    (mb) => mb.col === tc && mb.row === tr && !mb.moving && !mb.exploded
-  );
-  if (!m) return;
-  if (!weatherDef().freeKick) {            // 只有豪雨時地面濕滑,才踢得動貢丸
-    if (p === player) spawnText(p.x, p.y - TS * 0.4, '豪雨時才能踢', '#90caf9');
-    return;
-  }
+  const m = facingMeatball(p);
+  if (!m || m.moving) return false;
+  if (!canMoveBall(m)) { hint(p, '香腸類踢不動'); return false; }
+  if (!canKick(p)) { hint(p, '豪雨或🥾鋼頭鞋才能踢', '#90caf9'); return false; }
   m.vx = p.dir.x; m.vy = p.dir.y;
   m.moving = true;
-  sfx('kick', p.x, p.y);
   m.rider = p;
+  sfx('kick', p.x, p.y);
+  return true;
 }
 
 function updateMovingMeatball(m, dt) {
@@ -875,7 +932,7 @@ function updateMovingMeatball(m, dt) {
   const nr = m.row + m.vy;
   // 牆、其他貢丸、人(滑行中的貢丸不能穿過人體;放在腳下不受影響)都會擋住
   const blocked = isBlocked(nc, nr) ||
-    meatballs.some((o) => o !== m && o.col === nc && o.row === nr) ||
+    meatballs.some((o) => o !== m && !o.exploded && !o.eaten && o.col === nc && o.row === nr) ||
     fighters().some((f) => f.alive && f.col === nc && f.row === nr);
 
   if (blocked) {
@@ -890,61 +947,116 @@ function updateMovingMeatball(m, dt) {
   }
 }
 
-// 掃描玩家面向方向上的貢丸(到牆為止),依距離排序
-function scanAhead(p) {
-  const found = [];
-  let c = p.col, r = p.row;
-  for (let i = 0; i < Math.max(COLS, ROWS); i++) {
-    c += p.dir.x; r += p.dir.y;
-    if (r < 0 || c < 0 || r >= ROWS || c >= COLS) break;
-    if (grid[r][c] === TILE.SOLID) break; // 被水泥柱擋住
-    for (const m of meatballs) {
-      if (!m.exploded && !m.eaten && m.col === c && m.row === r) found.push(m);
-    }
-  }
-  return found;
+// 拋物線飛行(丟貢丸、彈弓):飛行中不擋路、不滑行
+function launchMeatball(m, c, r, dur, height) {
+  m.moving = false; m.vx = m.vy = 0; m.held = false;
+  m.fly = { t: 0, dur, x0: m.x, y0: m.y, x1: tileCenter(c), y1: tileCenter(r), h: height };
+}
+function updateFlying(m, dt) {
+  const f = m.fly;
+  f.t += dt;
+  const k = Math.min(1, f.t / f.dur);
+  m.x = f.x0 + (f.x1 - f.x0) * k;
+  m.y = f.y0 + (f.y1 - f.y0) * k;
+  m.jump = Math.sin(Math.PI * k) * f.h;
+  if (k >= 1) { m.fly = null; m.jump = 0; sfx('place', m.x, m.y); }
 }
 
-// 使用非食用道具:清除前方貢丸
-function useTool(p, type) {
-  if (!p.tools[type]) {
-    spawnText(p.x, p.y - TS * 0.5, '沒有' + TOOLS[type].name, '#bbb');
-    return;
-  }
-  const ahead = scanAhead(p);
-  if (!ahead.length) {
-    spawnText(p.x, p.y - TS * 0.5, '前方無貢丸', '#bbb');
-    return;
-  }
-  if (type === 'vacuum') {
-    ahead[0].eaten = true; // 只清第一顆
-  } else if (type === 'garbage') {
-    ahead.forEach((m) => (m.eaten = true)); // 清整排
-  }
-  p.tools[type]--;
-  sfx('whoosh', p.x, p.y);
-  spawnText(p.x, p.y - TS * 0.55, TOOLS[type].emoji + TOOLS[type].name + '!', '#80d8ff');
-  updateHud();
-}
-
-// 取得玩家面向方向第一顆貢丸(含腳下),供食物夾/隔熱手套使用
-function frontOrHereMeatball(p) {
-  const here = meatballs.find(
-    (m) => !m.exploded && !m.eaten && !m.held && m.col === p.col && m.row === p.row);
-  if (here) return here;
-  const ahead = scanAhead(p);
-  return ahead.length ? ahead[0] : null;
-}
-
-// 找落點:面向方向 maxDist 內、由遠到近第一個可放置的空格
+// 找落點:面向方向 maxDist 內、由遠到近第一個可放置的空格(可越過障礙物)
 function findLandingTile(p, maxDist) {
   for (let i = maxDist; i >= 1; i--) {
     const c = p.col + p.dir.x * i, r = p.row + p.dir.y * i;
     if (!isFloor(c, r)) continue;
-    if (meatballs.some((m) => !m.exploded && m.col === c && m.row === r)) continue;
+    if (meatballs.some((m) => !m.exploded && !m.eaten && m.col === c && m.row === r)) continue;
     return { c, r };
   }
   return null;
+}
+
+// 丟貢丸(面向貢丸、連按兩下空白鍵)
+function throwMeatball(p, m) {
+  if (!canMoveBall(m)) { hint(p, '香腸類丟不動'); return; }
+  const spot = findLandingTile(p, BASE_THROW);
+  if (!spot || (spot.c === m.col && spot.r === m.row)) { hint(p, '前方無落點'); return; }
+  launchMeatball(m, spot.c, spot.r, 0.42, 1.6);
+  m.thrown = true;
+  sfx('whoosh', p.x, p.y);
+  spawnText(p.x, p.y - TS * 0.55, '🧤丟!', '#ffd54f');
+}
+
+// 空白鍵:手上夾著貢丸 → 放下;面向可丟的貢丸 → 等第二下(兩下 = 丟,一下 = 照常放貢丸)
+function spacePress(p) {
+  if (!p.alive) return;
+  if (p.held) { dropHeld(p); return; }
+  const m = facingMeatball(p);
+  if (m && canThrow(p) && canMoveBall(m)) {
+    if (p.spaceT > 0) { p.spaceT = 0; throwMeatball(p, m); return; }
+    p.spaceT = DOUBLE_TAP;
+    return;
+  }
+  placeMeatball(p);
+}
+
+// 掃描某方向上的貢丸,遇到障礙物(柱子、箱子、垃圾桶)就停
+function scanLine(p, dx, dy, firstOnly) {
+  const found = [];
+  let c = p.col, r = p.row;
+  for (let i = 0; i < Math.max(COLS, ROWS); i++) {
+    c += dx; r += dy;
+    if (isBlocked(c, r)) break;
+    const m = ballAt(c, r);
+    if (m) { found.push(m); if (firstOnly) break; }
+  }
+  return found;
+}
+const DIRS4 = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+const vacuumTargets = (p) => DIRS4.flatMap(([dx, dy]) => scanLine(p, dx, dy, true));
+const garbageTargets = (p) => scanLine(p, p.dir.x, p.dir.y, false);
+
+// 卡牌現在能不能用(卡牌區顯示、按下時判斷共用)
+function cardUsable(p, key) {
+  if (key === 'rat' || key === 'roach') return !!p.petState[key] && p.petState[key].status === 'stored';
+  if (!p.alive || !(p.tools[key] > 0) || !TOOLS[key] || TOOLS[key].type !== 'once') return false;
+  if (key === 'vacuum') return vacuumTargets(p).length > 0;
+  if (key === 'garbage') return garbageTargets(p).length > 0;
+  if (key === 'tongs') return !p.held && !!facingMeatball(p);
+  if (key === 'slingshot') return !!(p.held || facingMeatball(p));
+  return false;
+}
+
+// 使用一次性工具卡(用完卡牌消失)
+function useCard(p, key) {
+  if (key === 'rat' || key === 'roach') { deployPet(p, key); return; }
+  if (!cardUsable(p, key)) {
+    if (p.tools[key] > 0) hint(p, key === 'vacuum' ? '四周沒有貢丸' : '前方沒有貢丸');
+    return;
+  }
+  const def = TOOLS[key];
+  if (key === 'vacuum' || key === 'garbage') {
+    const list = key === 'vacuum' ? vacuumTargets(p) : garbageTargets(p);
+    for (const m of list) { m.eaten = true; spawnText(m.x, m.y - 10, '清除', '#80d8ff'); }
+  } else if (key === 'tongs') {
+    const m = facingMeatball(p);
+    m.held = true; m.moving = false; m.vx = m.vy = 0;
+    p.held = m;
+  } else if (key === 'slingshot') {
+    fireSlingshot(p, p.held || facingMeatball(p));
+  }
+  p.tools[key]--;
+  sfx('whoosh', p.x, p.y);
+  spawnText(p.x, p.y - TS * 0.55, def.emoji + def.name + '!', '#80d8ff');
+  if (p === player) updateHud();
+}
+
+// 食物夾放下:放到前方一格(前方不能放就放腳下)
+function dropHeld(p) {
+  const m = p.held;
+  if (!m) return;
+  const spot = findLandingTile(p, 1) || { c: p.col, r: p.row };
+  m.held = false;
+  m.x = tileCenter(spot.c); m.y = tileCenter(spot.r);
+  p.held = null;
+  spawnText(m.x, m.y - 12, '放下', '#80d8ff');
 }
 
 // 找面向方向第一個人物(敵人或自己以外的人),回傳 {ent, c, r}
@@ -961,92 +1073,18 @@ function firstCharacterAhead(p) {
   return null;
 }
 
-// 食物夾:夾起貢丸帶著走;再按一次放到前方
-function useTongs(p) {
-  if (p.held) {
-    const spot = findLandingTile(p, 1) || { c: p.col, r: p.row };
-    p.held.held = false;
-    p.held.x = tileCenter(spot.c); p.held.y = tileCenter(spot.r);
-    spawnText(p.held.x, p.held.y - 12, '放下', '#80d8ff');
-    p.held = null;
-    return;
-  }
-  if (!p.tools.tongs) { spawnText(p.x, p.y - TS * 0.5, '沒有食物夾', '#bbb'); return; }
-  const m = frontOrHereMeatball(p);
-  if (!m) { spawnText(p.x, p.y - TS * 0.5, '前方無貢丸', '#bbb'); return; }
-  m.held = true; m.moving = false; m.vx = m.vy = 0;
-  p.held = m;
-  p.tools.tongs--;
-  sfx('whoosh', p.x, p.y);
-  spawnText(p.x, p.y - TS * 0.55, '🥢夾起貢丸', '#80d8ff');
-  updateHud();
-}
-
-// 隔熱手套:撿起前方(或手上)的貢丸往前丟擲
-function useGlove(p) {
-  if (!p.tools.glove) { spawnText(p.x, p.y - TS * 0.5, '沒有隔熱手套', '#bbb'); return; }
-  const m = p.held || frontOrHereMeatball(p);
-  if (!m) { spawnText(p.x, p.y - TS * 0.5, '前方無貢丸', '#bbb'); return; }
-  const dist = BASE_THROW + p.throwBonus;
-  const spot = findLandingTile(p, dist);
-  if (!spot) { spawnText(p.x, p.y - TS * 0.5, '前方無落點', '#bbb'); return; }
+// 彈弓:把面向(或夾著)的貢丸射向前方第一人 → 落地立刻爆;沒人就射到最遠的空格
+function fireSlingshot(p, m) {
   if (p.held === m) p.held = null;
-  m.held = false; m.moving = false; m.vx = m.vy = 0;
-  m.x = tileCenter(spot.c); m.y = tileCenter(spot.r);
-  p.tools.glove--;
-  sfx('whoosh', p.x, p.y);
-  spawnText(m.x, m.y - 12, '🧤丟!', '#ffd54f');
-  updateHud();
-}
-
-// 彈弓:把貢丸射向前方第一人 → 立即爆炸;無人則射到最遠空格(正常引信)
-// 優先射出「手上夾著/腳下/前方」既有的貢丸(原貢丸會被用掉);沒有才生成新的
-function useSlingshot(p) {
-  if (!p.tools.slingshot) { spawnText(p.x, p.y - TS * 0.5, '沒有彈弓', '#bbb'); return; }
   const hit = firstCharacterAhead(p);
-  const spot = hit || findLandingTile(p, Math.max(COLS, ROWS));
-  if (!spot) { spawnText(p.x, p.y - TS * 0.5, '前方無落點', '#bbb'); return; }
-
-  const existing = p.held || frontOrHereMeatball(p);
-  let m;
-  if (existing) {
-    // 用既有貢丸:搬到落點(原地那顆就是它,不會多出來)
-    if (p.held === existing) p.held = null;
-    existing.held = false; existing.moving = false; existing.vx = existing.vy = 0;
-    existing.x = tileCenter(spot.c); existing.y = tileCenter(spot.r);
-    m = existing;
-  } else {
-    // 沒有現成貢丸:生成一顆選定種類的
-    m = new Meatball(spot.c, spot.r, meatballById(p.selected), p);
-    meatballs.push(m);
-  }
+  const spot = hit || findLandingTile(p, Math.max(COLS, ROWS)) || { c: m.col, r: m.row };
+  const dist = Math.abs(spot.c - m.col) + Math.abs(spot.r - m.row);
+  const dur = 0.12 + dist * 0.03;
+  launchMeatball(m, spot.c, spot.r, dur, 0.5);
   if (hit) {
-    m.fuse = 0.02; m.armed = true; // 命中人物 → 立刻爆炸
+    m.fuse = dur + 0.02; m.armed = true; // 命中人物 → 落地立刻爆炸
     spawnText(tileCenter(spot.c), tileCenter(spot.r) - 12, '🏹命中!', '#ff8a80');
-  } else {
-    spawnText(tileCenter(spot.c), tileCenter(spot.r) - 12, '🏹射出', '#ffd54f');
   }
-  p.tools.slingshot--;
-  sfx('whoosh', p.x, p.y);
-  updateHud();
-}
-
-// 藍白拖:踩附近(任一)寵物,每踩扣其 HP
-function useSlippers(p) {
-  if (!p.tools.slippers) { spawnText(p.x, p.y - TS * 0.5, '沒有藍白拖', '#bbb'); return; }
-  let best = Infinity, target = null;
-  for (const pet of allPets()) {
-    if (!pet.alive) continue;
-    const d = Math.hypot(pet.x - p.x, pet.y - p.y);
-    if (d < best && d < TS * 1.6) { best = d; target = pet; }
-  }
-  if (!target) { spawnText(p.x, p.y - TS * 0.5, '附近無寵物', '#bbb'); return; }
-  target.hp -= SLIPPER_DMG;
-  spawnText(target.x, target.y - 12, '🩴踩!-' + SLIPPER_DMG, '#ff8a80');
-  if (target.hp <= 0) { target.hp = 0; target.alive = false; }
-  p.tools.slippers--;
-  sfx('squeak', target.x, target.y);
-  updateHud();
 }
 
 // 維持手持貢丸跟著玩家
@@ -1162,15 +1200,10 @@ function aiSkill(e) {
   }
 }
 
-// 放出寵物(若已放出則改為收起);可分別放出老鼠/蟑螂,順序不拘
+// 寵物卡:按下就放出,放出後不能收回(卡牌消失)
 function deployPet(p, id) {
   const s = p.petState[id];
-  if (!s) return;
-  if (s.status === 'dead') {
-    spawnText(p.x, p.y - TS * 0.5, s.def.emoji + '已昏倒,本場無法再放出', '#ff8a80');
-    return;
-  }
-  if (s.status === 'out') { recallPet(p, id); return; } // 再按一次=收起
+  if (!s || s.status !== 'stored') return;
   const pet = new Pet(p, s.def);
   pet.x = p.x; pet.y = p.y;
   s.pet = pet; s.status = 'out';
@@ -1280,7 +1313,8 @@ function advanceStep(e, dt) {
   if (!e.mvTarget) return;
   const ddx = e.mvTarget.x - e.x, ddy = e.mvTarget.y - e.y;
   const d = Math.hypot(ddx, ddy);
-  const mv = (e.speed + (weatherDef().speedBonus || 0) + (e.dashT > 0 ? SKILLS.dash.bonus : 0)) * dt; // 豪雨 +10、衝刺 +80
+  const base = weatherDef().snow ? Math.min(e.speed, SNOW_SPEED) : e.speed + (weatherDef().speedBonus || 0);
+  const mv = (base + (e.dashT > 0 ? SKILLS.dash.bonus : 0)) * dt; // 豪雨 +10、下雪降到最低、衝刺 +80
   if (d <= mv) {
     e.x = e.mvTarget.x; e.y = e.mvTarget.y;
     e.mvTarget = null; // 抵達格中心,可再轉向
@@ -1343,18 +1377,15 @@ function playerAction(p, k) {
     p.selected = k === 'o' ? 11 : 12;
     if (p === player) updateHud();
   }
-  if (k === ' ') placeMeatball(p);
-  if (k === 'e' || k === 'j') kickMeatball(p); // 踢/騎乘
-  if (k === 'q') useTool(p, 'vacuum');         // 吸塵器
-  if (k === 'f') useTool(p, 'garbage');        // 垃圾車
+  if (k === ' ') spacePress(p);                // 放貢丸 / 連按兩下丟貢丸 / 放下夾著的貢丸
+  if (k === 'q') useCard(p, 'vacuum');         // 卡牌:吸塵器
+  if (k === 'f') useCard(p, 'garbage');        // 卡牌:垃圾車
   if (k === 'g') activateShield(p);            // 防護盾(花 MP)
   if (k === 't') useSkill(p);                  // 角色技能
-  if (k === 'v') useSlippers(p);               // 藍白拖(踩寵物)
-  if (k === 'z') useTongs(p);                  // 食物夾(夾起/放下)
-  if (k === 'x') useGlove(p);                  // 隔熱手套(丟擲)
-  if (k === 'c') useSlingshot(p);              // 彈弓(射向前方人)
-  if (k === 'k') deployPet(p, 'rat');          // 放出/收起 老鼠
-  if (k === 'l') deployPet(p, 'roach');        // 放出/收起 蟑螂
+  if (k === 'z') useCard(p, 'tongs');          // 卡牌:食物夾
+  if (k === 'c') useCard(p, 'slingshot');      // 卡牌:彈弓
+  if (k === 'k') deployPet(p, 'rat');          // 卡牌:放出老鼠
+  if (k === 'l') deployPet(p, 'roach');        // 卡牌:放出蟑螂
 }
 window.addEventListener('keyup', (ev) => {
   const k = ev.key.toLowerCase();
@@ -1388,13 +1419,19 @@ function humanMove(p, want, keepFacing, dt) {
   if (!p.alive) return;
   // 鍵盤移動優先,會取消點擊地圖的自動走路
   if (want) p.autoPath = null;
+  if (!want) p.pushT = 0;
   // 在格中心且沒有進行中的移動時,接受新方向、決定下一格目標
   if (!p.mvTarget && want) {
     if (!keepFacing) p.dir = { x: want[0], y: want[1] }; // 倒退時不轉身
     const nc = p.col + want[0], nr = p.row + want[1];
     if (canEnterTile(p, nc, nr)) {
       p.mvTarget = { x: tileCenter(nc), y: tileCenter(nr) };
-    }
+      p.pushT = 0;
+    } else if (p.dir.x === want[0] && p.dir.y === want[1] && ballAt(nc, nr)) {
+      // 面向貢丸還繼續往它推 → 踢出去
+      p.pushT += dt;
+      if (p.pushT >= PUSH_KICK) { p.pushT = 0; kickMeatball(p); }
+    } else p.pushT = 0;
   }
   // 點擊地圖的自動走路:沿路徑一格一格走
   if (!want && !p.mvTarget && p.autoPath && p.autoPath.length) {
@@ -1423,6 +1460,13 @@ function tapCell(c, r, double) {
 }
 function setTapPath(p, c, r) {
   if (!isFloor(c, r)) return;
+  const dx = c - p.col, dy = r - p.row;
+  if (Math.abs(dx) + Math.abs(dy) === 1 && ballAt(c, r)) {   // 點旁邊的貢丸
+    if (p.dir.x === dx && p.dir.y === dy) kickMeatball(p);
+    else p.dir = { x: dx, y: dy };
+    p.autoPath = null;
+    return;
+  }
   p.autoPath = aiPath(p, (cc, rr) => cc === c && rr === r, 64, 0);
   if (!p.autoPath && p === player) spawnText(tileCenter(c), tileCenter(r), '走不到', '#bbb');
 }
@@ -1616,6 +1660,7 @@ function update(dt) {
     if (f.shieldT > 0) f.shieldT = Math.max(0, f.shieldT - dt);
     if (f.skillCd > 0) f.skillCd = Math.max(0, f.skillCd - dt);
     if (f.dashT > 0) f.dashT = Math.max(0, f.dashT - dt);
+    if (f.spaceT > 0) { f.spaceT -= dt; if (f.spaceT <= 0) { f.spaceT = 0; placeMeatball(f); } } // 只按一下:放貢丸
     if (f.alive) f.mp = Math.min(f.mp + MP_REGEN * dt, f.maxMp);
   }
 
@@ -1637,7 +1682,8 @@ function update(dt) {
   // 更新貢丸:老化、發霉、引信、滑行
   for (const m of meatballs) {
     if (m.eaten) continue;             // 已被寵物吃掉,等待移除
-    if (!m.held) updateMovingMeatball(m, dt); // 手持中不滑行(但仍會變質、引信倒數)
+    if (m.fly) updateFlying(m, dt);    // 丟出 / 彈弓射出的飛行中
+    else if (!m.held) updateMovingMeatball(m, dt); // 手持中不滑行(但仍會變質、引信倒數)
     m.age += dt;
     if (!m.moving && !isDormant(m)) m.fuse -= dt; // 未滿三顆的小貢丸不倒數
     if (m.def.behavior === 'homing' && !m.held) updateHoming(m, dt);
@@ -1681,8 +1727,14 @@ function update(dt) {
       if (!f.alive || it.col !== f.col || it.row !== f.row) continue;
       if (TOOLS[it.key]) {
         sfx('gear', f.x, f.y);
-        f.tools[it.key] = (f.tools[it.key] || 0) + 1;           // 工具入庫
-        spawnText(f.x, f.y - TS * 0.5, '+' + TOOLS[it.key].name, '#80d8ff');
+        const def = TOOLS[it.key];
+        if (def.type === 'perm') {                              // 永久卡:擁有就一直有效
+          spawnText(f.x, f.y - TS * 0.5, f.tools[it.key] > 0 ? def.name + '已擁有' : '永久卡 ' + def.emoji + def.name, '#a5d6a7');
+          f.tools[it.key] = 1;
+        } else {
+          f.tools[it.key] = (f.tools[it.key] || 0) + 1;         // 一次性卡 +1 張
+          spawnText(f.x, f.y - TS * 0.5, '+' + def.emoji + def.name + '卡', '#80d8ff');
+        }
       } else {
         sfx(SNACKS.includes(it.key) || it.key === 'luckybag' ? 'jackpot' : 'pickup', f.x, f.y);
         applyItem(f, it.key);                                   // 食用道具
@@ -1754,6 +1806,7 @@ function draw() {
   }
 
   if (env.weather === 'rain') drawRainSplashes();
+  if (weatherDef().snow) drawSnowGround();
 
   // 場上的東西依所在列分組,和地圖物件一起由上往下畫(前排會擋住後排)
   const rows = Array.from({ length: ROWS }, () => []);
@@ -1786,6 +1839,9 @@ function draw() {
   // 爆炸(在最上層)
   explosions.forEach(drawExplosion);
   if (env.weather === 'rain') drawRainStreaks();
+  if (weatherDef().snow) drawFlakes(90, 'rgba(255,255,255,0.9)', 2.2, 38);
+  if (weatherDef().ash) drawFlakes(70, 'rgba(60,52,48,0.85)', 1.8, 55);
+  if (env.abduct) drawAlien();
 
   // 飄字
   particles.forEach((p) => {
@@ -1809,8 +1865,9 @@ function draw() {
     ctx.fillRect(0, 0, W, H);
   }
 
-  // 被墨魚貢丸炸到 → 黑畫面
-  if (player.blindT > 0 && player.alive) drawBlind();
+  // 被墨魚貢丸炸到 / 火山灰 → 黑畫面
+  const ba = blindAlpha();
+  if (ba > 0.01) drawBlind(ba);
   // 選單/結算改用 HTML 疊層(見 index.html)
 }
 
@@ -1854,18 +1911,84 @@ function drawRainStreaks() {
   ctx.restore();
 }
 
-function drawBlind() {
-  // 吃過墨魚會降低不透明度;接近結束時漸退
-  const base = Math.max(0.25, 0.92 - player.inkEaten * 0.15);
-  const fade = clamp(player.blindT / 0.6, 0, 1);
-  ctx.fillStyle = `rgba(4,6,16,${base * fade})`;
+function drawBlind(a) {
+  // 吃過墨魚會降低不透明度;接近結束時漸退(透明度由 blindAlpha 算)
+  ctx.fillStyle = `rgba(4,6,16,${a})`;
   ctx.fillRect(0, 0, W, H);
-  ctx.globalAlpha = fade;
-  ctx.fillStyle = '#cfd8dc';
-  ctx.font = 'bold 22px sans-serif';
-  ctx.textAlign = 'center';
-  ctx.fillText('🦑 被墨魚噴黑了!', W / 2, H / 2);
-  ctx.globalAlpha = 1;
+  if (player.alive && player.blindT > 0) {
+    ctx.globalAlpha = clamp(player.blindT / 0.6, 0, 1);
+    ctx.fillStyle = '#cfd8dc';
+    ctx.font = 'bold 22px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🦑 被墨魚噴黑了!', W / 2, H / 2);
+    ctx.globalAlpha = 1;
+  }
+}
+
+// ---------- 下雪:地面白色雪跡(越下越白)+ 雪花;火山灰也用同一套飄落 ----------
+let snowLayer = null;
+function drawSnowGround() {
+  if (!snowLayer) {                       // 預先畫好一層柔邊白斑(位置固定,不會閃)
+    snowLayer = document.createElement('canvas');
+    snowLayer.width = W; snowLayer.height = H;
+    const g = snowLayer.getContext('2d');
+    let seed = 7;
+    const rnd = () => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (let i = 0; i < COLS * ROWS * 7; i++) {
+      const x = rnd() * W, y = rnd() * H, r = 5 + rnd() * 16;
+      const gr = g.createRadialGradient(x, y, 0, x, y, r);
+      gr.addColorStop(0, 'rgba(250,252,255,0.95)'); gr.addColorStop(0.6, 'rgba(244,248,255,0.7)'); gr.addColorStop(1, 'rgba(240,246,255,0)');
+      g.fillStyle = gr;
+      g.beginPath(); g.ellipse(x, y, r * (1 + rnd() * 0.8), r * 0.7, rnd() * Math.PI, 0, Math.PI * 2); g.fill();
+    }
+  }
+  const cover = clamp(0.25 + env.t / 6, 0.25, 0.95);   // 下越久雪跡越白
+  ctx.save();
+  ctx.fillStyle = 'rgba(235,242,252,0.16)';
+  ctx.fillRect(0, 0, W, H);
+  ctx.globalAlpha = cover;
+  ctx.drawImage(snowLayer, 0, 0);
+  ctx.restore();
+}
+function drawFlakes(n, color, size, fall) {
+  const t = performance.now() / 1000;
+  ctx.save();
+  ctx.fillStyle = color;
+  for (let i = 0; i < n; i++) {
+    const sp = fall * (0.7 + (i % 5) * 0.12);
+    const y = (i * 53.7 + t * sp) % (H + 20) - 10;
+    const x = (i * 97.3 + Math.sin(t * 0.8 + i) * 14 + t * 8) % (W + 20) - 10;
+    ctx.beginPath(); ctx.arc(x, y, size * (0.6 + (i % 3) * 0.3), 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
+}
+
+// ---------- 外星人來襲:飛碟 + 光束罩住被鎖定的人 ----------
+function drawAlien() {
+  const a = env.abduct, f = a.f;
+  if (!f) return;
+  const k = clamp(a.t / ALIEN_BEAM, 0, 1);
+  const ux = f.x, uy = f.y - TS * 2.4 + Math.sin(elapsed * 3) * 3;
+  ctx.save();
+  // 光束(越照越亮)
+  const g = ctx.createLinearGradient(0, uy, 0, f.y + TS * 0.4);
+  g.addColorStop(0, `rgba(190,255,140,${0.55 + k * 0.3})`);
+  g.addColorStop(1, `rgba(190,255,140,${0.12 + k * 0.25})`);
+  ctx.fillStyle = g;
+  ctx.beginPath();
+  ctx.moveTo(ux - TS * 0.3, uy + 6); ctx.lineTo(ux + TS * 0.3, uy + 6);
+  ctx.lineTo(f.x + TS * 0.62, f.y + TS * 0.42); ctx.lineTo(f.x - TS * 0.62, f.y + TS * 0.42);
+  ctx.closePath(); ctx.fill();
+  // 飛碟:圓盤 + 玻璃罩 + 閃燈
+  ctx.fillStyle = '#9aa4ad'; ctx.strokeStyle = '#262626'; ctx.lineWidth = 2.5;
+  ctx.beginPath(); ctx.ellipse(ux, uy, TS * 0.75, TS * 0.22, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+  ctx.fillStyle = 'rgba(140,230,255,0.85)';
+  ctx.beginPath(); ctx.ellipse(ux, uy - TS * 0.12, TS * 0.32, TS * 0.26, 0, Math.PI, 0); ctx.fill(); ctx.stroke();
+  for (let i = 0; i < 5; i++) {
+    ctx.fillStyle = (Math.floor(elapsed * 8) + i) % 2 ? '#ffeb3b' : '#ff5252';
+    ctx.beginPath(); ctx.arc(ux + (i - 2) * TS * 0.28, uy + 2, 3, 0, Math.PI * 2); ctx.fill();
+  }
+  ctx.restore();
 }
 
 function drawItem(it) {
@@ -2100,22 +2223,21 @@ function updateHud() {
   setHtml('stat-mp', meter('MP', `${Math.floor(player.mp)} / ${player.maxMp}`, player.mp / player.maxMp, '#3a8ee6'));
   setHtml('stat-power', meter('威力', `${player.power} / ${CAPS.power}`, player.power / CAPS.power, '#f08a24'));
   const rainBonus = weatherDef().speedBonus || 0;  // 豪雨的加成只在豪雨期間
-  setHtml('stat-speed', meter('速度', rainBonus ? `${Math.round(player.speed)} <span class="rain-plus">+${rainBonus}</span>` : `${Math.round(player.speed)} / ${CAPS.speed}`,
-    (player.speed + rainBonus) / CAPS.speed, '#2fa36b'));
+  const snowSp = weatherDef().snow ? Math.min(player.speed, SNOW_SPEED) : 0;  // 下雪:降到最低
+  setHtml('stat-speed', meter('速度',
+    snowSp ? `${snowSp} <span class="rain-plus">下雪</span>` :
+    rainBonus ? `${Math.round(player.speed)} <span class="rain-plus">+${rainBonus}</span>` : `${Math.round(player.speed)} / ${CAPS.speed}`,
+    (snowSp || player.speed + rainBonus) / CAPS.speed, '#2fa36b'));
   // 天氣:溫度 8~40°C、濕度 25~98%,並直接寫出影響(貢丸引信、道具發霉)
   setHtml('stat-weather',
     `<div class="wx-map">${theme().icon} ${theme().name}</div>` +
-    `<div class="wx-now"><span class="wx-icon">${weatherDef().icon}</span><b>${weatherDef().name}</b><span class="wx-fuse">引信 <b>${computeFuse().toFixed(1)}</b> 秒</span></div>` +
+    `<div class="wx-now"><span class="wx-icon">${weatherDef().icon}</span><b>${weatherDef().name}</b></div>` +
     `<p class="wx-desc">${weatherDef().desc}</p>` +
+    `<div class="stat-row"><span>貢丸引信</span><b>${computeFuse().toFixed(1)} 秒</b></div>` +
     meter('下次變天', `${Math.max(0, Math.ceil(env.left))} 秒`, env.left / WEATHER_MAX, '#8a8f95'));
   const left = Math.max(0, player.maxBombs - player.bombsPlaced());
   setHtml('stat-bombs', meter('貢丸數', `${left} / ${player.maxBombs}`, left / player.maxBombs, '#b07a45'));
-  const mark = { out: '放出', stored: '收起', dead: '昏倒' };
-  setHtml('stat-pet', '寵物 ' + Object.values(player.petState)
-    .map((s) => `${hudIcon('pets/' + s.def.id)}${mark[s.status]}`).join(' '));
-  const t = player.tools;
-  setHtml('stat-tools', ['vacuum', 'garbage', 'slippers', 'tongs', 'glove', 'slingshot']
-    .map((k) => `${hudIcon('items/' + k)}${t[k] || 0}`).join(' '));
+  renderCards();
   const mm = Math.floor(Math.max(0, matchTime) / 60);
   const ss = Math.floor(Math.max(0, matchTime) % 60);
   setHtml('stat-enemies',
@@ -2142,30 +2264,13 @@ function refreshActionButtons() {
   if (!actionBtns.length) return;
   const inMatch = gameState === 'playing' && !!player;
   const playing = inMatch && player.alive;
-  const t = playing ? player.tools : {};
-  // 共用的情境判定(都很便宜,每幀跑沒問題)
-  const aheadMb = playing && scanAhead(player).length > 0;          // 面向方向有貢丸
-  const frontMb = playing && !!frontOrHereMeatball(player);         // 前方或腳下有貢丸
-  const kickMb = playing && meatballs.some((m) =>
-    !m.exploded && !m.eaten && !m.moving && !m.held &&
-    m.col === player.col + player.dir.x && m.row === player.row + player.dir.y);
-  const petNear = playing && allPets().some((p) =>
-    p.alive && Math.hypot(p.x - player.x, p.y - player.y) < TS * 1.6);
+  const facing = playing ? facingMeatball(player) : null;
   const avail = {
-    ' ': playing && player.bombsPlaced() < player.maxBombs &&       // 放貢丸:有額度且腳下沒丸
-         !meatballs.some((m) => !m.exploded && m.col === player.col && m.row === player.row),
-    'e': kickMb && !!weatherDef().freeKick,                         // 踢:只有豪雨時、前方相鄰有丸                   // 踢/騎:前方相鄰有丸且 MP 夠
+    // 放貢丸:有額度且腳下沒丸;夾著貢丸時 = 放下;面向可丟的貢丸時 = 連按兩下丟
+    ' ': playing && (!!player.held || (!!facing && canThrow(player)) || (player.bombsPlaced() < player.maxBombs &&
+         !meatballs.some((m) => !m.exploded && m.col === player.col && m.row === player.row))),
     'g': playing && player.mp >= SHIELD_MP_COST && !(player.shieldT > 0), // 防護盾:MP 夠且沒在作用中
     't': playing && !(player.skillCd > 0),                          // 角色技能:冷卻完畢
-    'z': playing && (player.held ? true : (t.tongs > 0 && frontMb)),// 食物夾:夾著可放下;否則需有夾子+目標
-    'x': playing && t.glove > 0 && (!!player.held || frontMb),      // 手套:有手套+有丸可丟
-    'c': playing && t.slingshot > 0,                                // 彈弓:有彈弓
-    'q': playing && t.vacuum > 0 && aheadMb,                        // 吸塵器:有工具+前方有丸
-    'f': playing && t.garbage > 0 && aheadMb,                       // 垃圾車:有工具+前方有丸
-    'v': playing && t.slippers > 0 && petNear,                      // 藍白拖:有拖鞋+附近有寵物
-    // 寵物:倒下後仍可放出/收起還活著的寵物
-    'k': inMatch && player.petState.rat && player.petState.rat.status !== 'dead',
-    'l': inMatch && player.petState.roach && player.petState.roach.status !== 'dead',
     'r': true,                                                      // 重來:永遠可用
   };
   for (const b of actionBtns) {
@@ -2173,6 +2278,47 @@ function refreshActionButtons() {
     const ok = key in avail ? avail[key] : true;
     if (b.classList) b.classList.toggle('disabled', !ok);
   }
+}
+
+// ---------- 卡牌區(畫面下方):一次性工具、寵物、永久卡 ----------
+const CARD_TAG = { once: '一次性', perm: '永久', pet: '寵物' };
+const PET_DESC = '按下就放出,自動啃掉貢丸(無法收回)';
+function renderCards() {
+  const p = player;
+  const inMatch = gameState === 'playing' && !!p;
+  const cards = [];
+  if (p) {
+    for (const key of CARD_ORDER) {
+      if (PETS[key]) {
+        const s = p.petState[key];
+        if (s && s.status === 'stored') cards.push({ key, n: 1, kind: 'pet', def: PETS[key], img: 'pets/' + key, hot: key === 'rat' ? 'K' : 'L' });
+      } else if (p.tools[key] > 0) {
+        const def = TOOLS[key];
+        cards.push({ key, n: p.tools[key], kind: def.type, def, img: 'items/' + key, hot: (def.useKey || '').toUpperCase() });
+      }
+    }
+  }
+  const html = cards.map((c) => {
+    const ok = c.kind === 'perm' || (inMatch && cardUsable(p, c.key));
+    const desc = c.kind === 'pet' ? PET_DESC : c.def.desc;
+    return `<button type="button" class="tcard ${c.kind}${ok ? '' : ' off'}" data-card="${c.key}" title="${c.def.name}:${desc}">` +
+      `<span class="tc-tag">${CARD_TAG[c.kind]}</span>${c.hot ? `<kbd>${c.hot}</kbd>` : ''}` +
+      `<img src="assets/${c.img}.webp" alt=""><b>${c.def.name}</b>` +
+      (c.n > 1 ? `<span class="tc-n">×${c.n}</span>` : '') +
+      (c.kind === 'perm' ? '<span class="tc-auto">自動</span>' : '') + '</button>';
+  }).join('') || '<p class="cards-empty">木箱炸開撿到的工具會變成卡牌</p>';
+  setHtml('card-bar', html);
+}
+// 按下卡牌:立刻使用(連線玩家改送按鍵給攤主)
+function onCardClick(ev) {
+  const b = ev.target.closest && ev.target.closest('.tcard');
+  if (!b) return;
+  b.blur();
+  if (gameState !== 'playing' || !player) return;
+  const key = b.dataset.card;
+  if (TOOLS[key] && TOOLS[key].type === 'perm') { hint(player, TOOLS[key].name + ':' + TOOLS[key].desc + '(自動)', '#a5d6a7'); return; }
+  const hot = PETS[key] ? (key === 'rat' ? 'k' : 'l') : TOOLS[key].useKey;
+  if (NET.role === 'guest') NET.sendKey(hot); else playerAction(player, hot);
 }
 
 // 建立貢丸選單(只執行一次;用事件委派,避免每幀重建 DOM 吃掉點擊)
@@ -2339,6 +2485,8 @@ loadAssets().then(() => {
   const bm = $el('btn-menu');
   if (bm) bm.addEventListener('click', backToMainMenu);
   buildCharPick();
+  const cb = $el('card-bar');
+  if (cb) cb.addEventListener('click', onCardClick);
   const bh = $el('btn-home');
   if (bh) bh.addEventListener('click', () => { bh.blur(); goHome(); });
   // 地圖選擇:點選即切換主題並即時預覽(選單背後的場景跟著換)

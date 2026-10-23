@@ -26,8 +26,6 @@ const ITEMS = {
   skewer:   { name: '竹籤', emoji: '🍢', desc: '可放貢丸數 +', color: '#d2b48c' },
   // 白蘿蔔:提升免疫力 → 縮短負面狀態(中黴毒、黑畫面…)時效
   radish:   { name: '白蘿蔔', emoji: '🥬', desc: '免疫力 +(負面狀態變短)', color: '#cfd8dc' },
-  // 胡椒粉:增加丟擲貢丸的距離
-  pepper:   { name: '胡椒粉', emoji: '🧂', desc: '丟擲距離 +', color: '#bcaaa4' },
   // 金針菇:延長「自己產生的貢丸」食用時效;死亡時噴出等量金針菇
   enoki:    { name: '金針菇', emoji: '🍄‍🟫', desc: '自己貢丸時效 +', color: '#ffe0b2' },
   // 墨魚:會自行小範圍移動;食用後減輕被墨魚貢丸炸到的黑畫面
@@ -52,7 +50,7 @@ const SNACKS = ['chicken', 'bloodcake', 'milktea', 'boba', 'tofu'];
 
 // 會從可破壞磚隨機掉落的「食用」道具(竹籤不在此列,只從垃圾桶噴出)
 const FOOD_DROP_KEYS = ['mushroom', 'taro', 'cilantro', 'chili',
-  'radish', 'pepper', 'enoki', 'squid'];
+  'radish', 'enoki', 'squid'];
 
 // 套用道具效果到玩家身上
 function applyItem(p, key) {
@@ -76,9 +74,6 @@ function applyItem(p, key) {
       break;
     case 'radish':   // 白蘿蔔:提升免疫力(負面狀態時效變短)
       p.immunity = Math.min((p.immunity || 1) + 0.4, 4);
-      break;
-    case 'pepper':   // 胡椒粉:丟擲距離 +
-      p.throwBonus = (p.throwBonus || 0) + 1;
       break;
     case 'enoki':    // 金針菇:自己貢丸時效 +,並記錄數量(死亡會噴出)
       p.enokiEaten = (p.enokiEaten || 0) + 1;
@@ -213,28 +208,38 @@ const PETS = {
   roach: { id: 'roach', name: '蟑螂', emoji: '🪳', speed: 220, bite: 9,  hp: 3 },
 };
 
-// ===== 非食用道具(工具)=====
-// 用按鍵使用,清除前方的貢丸
+// ===== 工具卡牌 =====
+// once:一次性(按下卡牌立刻使用,用完卡牌消失);perm:永久性(撿到就一直有效、自動發動)
 const TOOLS = {
-  vacuum:    { id: 'vacuum',    name: '吸塵器',   emoji: '🧹', useKey: 'q',
-               desc: '清除前方第一顆貢丸' },
-  garbage:   { id: 'garbage',   name: '垃圾車',   emoji: '🚛', useKey: 'f',
-               desc: '清除前方整排貢丸' },
-  slippers:  { id: 'slippers',  name: '藍白拖',   emoji: '🩴', useKey: 'v',
-               desc: '踩附近寵物,每踩扣其 HP' },
-  tongs:     { id: 'tongs',     name: '食物夾',   emoji: '🥢', useKey: 'z',
-               desc: '夾起/放下貢丸帶著走' },
-  glove:     { id: 'glove',     name: '隔熱手套', emoji: '🧤', useKey: 'x',
-               desc: '撿起貢丸往前丟擲' },
-  slingshot: { id: 'slingshot', name: '彈弓',     emoji: '🏹', useKey: 'c',
-               desc: '把貢丸射向前方第一人(立即爆)' },
+  vacuum:    { id: 'vacuum',    name: '吸塵器',   emoji: '🧹', useKey: 'q', type: 'once',
+               desc: '吸掉上下左右各第一顆貢丸(拆彈)' },
+  garbage:   { id: 'garbage',   name: '垃圾車',   emoji: '🚛', useKey: 'f', type: 'once',
+               desc: '清除前方整排貢丸,遇障礙物停止' },
+  tongs:     { id: 'tongs',     name: '食物夾',   emoji: '🥢', useKey: 'z', type: 'once',
+               desc: '夾起前方貢丸,按空白鍵放下' },
+  slingshot: { id: 'slingshot', name: '彈弓',     emoji: '🏹', useKey: 'c', type: 'once',
+               desc: '把前方貢丸射向前方第一人(立即爆)' },
+  shoes:     { id: 'shoes',     name: '鋼頭鞋',   emoji: '🥾', type: 'perm',
+               desc: '隨時都能踢貢丸' },
+  glove:     { id: 'glove',     name: '隔熱手套', emoji: '🧤', type: 'perm',
+               desc: '隨時都能丟貢丸' },
 };
+// 木箱掉工具的權重(永久卡較稀有)
+const TOOL_DROP = { vacuum: 3, garbage: 2, tongs: 3, slingshot: 2, shoes: 1, glove: 1 };
+// 卡牌區的排列順序
+const CARD_ORDER = ['vacuum', 'garbage', 'tongs', 'slingshot', 'rat', 'roach', 'shoes', 'glove'];
+// 開場手牌(一次性工具;寵物卡另外各一張)
+const START_TOOLS = { vacuum: 1, garbage: 1, tongs: 1, slingshot: 1 };
+// 丟貢丸:面向貢丸連按兩下空白鍵的判定時間;踢:往貢丸方向推多久才踢出
+const DOUBLE_TAP = 0.3;
+const PUSH_KICK = 0.15;
+// 香腸、米腸、大腸包小腸不能踢也不能丟
+const canMoveBall = (m) => !m.def.night && m.def.behavior !== 'square';
 
 // 丟擲 / 致盲 / 金針菇 相關
-const BASE_THROW = 3;          // 丟擲基礎距離(格)
+const BASE_THROW = 4;          // 丟擲距離(格,從自己算起;可越過障礙物)
 const ENOKI_FUSE_BONUS = 0.7;  // 每顆金針菇增加自己貢丸的時效(秒)
 const BLIND_TIME = 3.5;        // 被墨魚貢丸炸到的黑畫面基礎秒數
-const SLIPPER_DMG = 2;         // 藍白拖每踩對寵物造成的傷害
 
 // 毒餌(老鼠藥/蟑螂藥)、防護裝備(防爆衣/N95 口罩)已移除;保留空表讓舊程式路徑不出錯
 const BAITS = {};
@@ -297,6 +302,8 @@ const INVULN_TIME = 1.0;
 const WEATHERS = {
   rain:    { name: '豪雨', icon: '⛈️', fuse: 3.0, decay: 8,  weight: 3, speedBonus: 10, freeKick: true,
              desc: '速度 +10、可以踢貢丸' },
+  snow:    { name: '下雪', icon: '🌨️', fuse: 4.0, decay: 16, weight: 2, snow: true, freeThrow: true,
+             desc: '速度降到最低、可以丟貢丸' },
   cold:    { name: '寒流', icon: '❄️', fuse: 4.6, decay: 16, weight: 3, desc: '貢丸很慢才爆' },
   cool:    { name: '涼爽', icon: '🍃', fuse: 3.6, decay: 14, weight: 3, desc: '貢丸較慢爆' },
   muggy:   { name: '悶熱', icon: '♨️', fuse: 2.3, decay: 10, weight: 3, desc: '貢丸較快爆' },
@@ -305,8 +312,14 @@ const WEATHERS = {
              desc: '每 4 秒吹走所有貢丸' },
   quake:   { name: '地震', icon: '🏚️', fuse: 3.0, decay: 12, weight: 1, shake: 1.3,
              desc: '貢丸隨機移位' },
+  volcano: { name: '火山噴發', icon: '🌋', fuse: 2.3, decay: 10, weight: 1, ash: true,
+             desc: '火山灰遮住視線' },
+  alien:   { name: '外星人來襲', icon: '🛸', fuse: 3.0, decay: 12, weight: 1, alien: true,
+             desc: '隨機抓走一位玩家' },
 };
-const WEATHER_MIN = 5, WEATHER_MAX = 20;
+const SNOW_SPEED = 90;        // 下雪時所有人的移動速度(最低)
+const ALIEN_BEAM = 2.2;       // 外星人光束照射幾秒後抓走
+const WEATHER_MIN = 5, WEATHER_MAX = 20;    // 每種天氣維持的秒數範圍(隨機)
 
 // ---------- 可選角色:初始能力值 + 專屬技能(T 鍵,用完要冷卻) ----------
 const CHARACTERS = {
@@ -330,7 +343,7 @@ const charDef = (id) => CHARACTERS[id] || CHARACTERS.aman;
 const skillOf = (p) => SKILLS[charDef(p.char).skill];
 // 主選單選的角色(記在瀏覽器)
 let myChar = 'aman';
-try { const c = localStorage.getItem('bbw_char'); if (CHARACTERS[c]) myChar = c; } catch (e) { /* 無痕模式 */ }    // 每種天氣維持的秒數範圍(隨機)
+try { const c = localStorage.getItem('bbw_char'); if (CHARACTERS[c]) myChar = c; } catch (e) { /* 無痕模式 */ }
 const env = {
   weather: 'cool',   // 目前天氣
   left: 40,          // 距離下次變天(秒)
@@ -355,7 +368,7 @@ function computeMiniDecay() { return weatherDef().decay; }
 function pickWeather(exclude, noDisaster) {
   const pool = [];
   for (const [k, w] of Object.entries(WEATHERS)) {
-    if (k === exclude || (noDisaster && !w.fuse) || (noDisaster && (w.gust || w.shake))) continue;
+    if (k === exclude || (noDisaster && (w.gust || w.shake || w.ash || w.alien))) continue;
     for (let i = 0; i < w.weight; i++) pool.push(k);
   }
   return pool[Math.floor(Math.random() * pool.length)];
@@ -365,6 +378,7 @@ function setWeather(id) {
   env.t = 0;
   env.left = WEATHER_MIN + Math.random() * (WEATHER_MAX - WEATHER_MIN);
   env.fx = 1;
+  env.abduct = null; env.abductDone = false;   // 外星人:這次來襲抓走的對象
 }
 // 開場天氣(一般天氣之一)
 function randomizeWeather() { setWeather(pickWeather(null, true)); }
