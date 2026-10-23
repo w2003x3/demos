@@ -1,26 +1,26 @@
 // 台北101 攀登挑戰 — 進入點:建立世界、主選單、模式切換與主迴圈。
 import * as THREE from 'three';
-import { Input } from './core/input.js?v=f1aef92';
-import { Audio } from './core/audio.js?v=f1aef92';
-import { UI, fmtTime } from './ui/ui.js?v=f1aef92';
-import { setAnisotropy } from './world/textures.js?v=f1aef92';
-import { createSky, createLights, buildGround, buildTerrain, buildCity, buildTrees, buildTraffic, applyTime, TIMES } from './world/environment.js?v=f1aef92';
-import { buildTower, buildPodium } from './world/tower.js?v=f1aef92';
-import { buildInteriors } from './world/interiors.js?v=f1aef92';
-import { buildLandmarks, landmarkZones } from './world/landmarks.js?v=f1aef92';
-import { loadXinyi, buildXinyi } from './world/xinyi.js?v=f1aef92';
-import { applyOsmLandmarks, applyOsmBuildings, GEO } from './world/geo.js?v=f1aef92';
-import { Fireworks } from './world/fireworks.js?v=f1aef92';
-import { buildElevatorScene } from './world/elevator.js?v=f1aef92';
-import { buildStairScene } from './world/stairwell.js?v=f1aef92';
-import { ClimbMode } from './modes/climb.js?v=f1aef92';
-import { RaceMode } from './modes/race.js?v=f1aef92';
-import { ExploreMode } from './modes/explore.js?v=f1aef92';
-import { HeliMode } from './modes/heli.js?v=f1aef92';
-import { GlideMode } from './modes/glide.js?v=f1aef92';
-import { RACES } from './config.js?v=f1aef92';
-import { Tutorial } from './ui/tutorial.js?v=f1aef92';
-import { TowerLights } from './world/towerLights.js?v=f1aef92';
+import { Input } from './core/input.js?v=4d1cca2';
+import { Audio } from './core/audio.js?v=4d1cca2';
+import { UI, fmtTime } from './ui/ui.js?v=4d1cca2';
+import { setAnisotropy } from './world/textures.js?v=4d1cca2';
+import { createSky, createLights, buildGround, buildTerrain, buildCity, buildTrees, buildTraffic, applyTime, TIMES } from './world/environment.js?v=4d1cca2';
+import { buildTower, buildPodium } from './world/tower.js?v=4d1cca2';
+import { buildInteriors } from './world/interiors.js?v=4d1cca2';
+import { buildLandmarks, landmarkZones, buildNanShan, buildSkyline } from './world/landmarks.js?v=4d1cca2';
+import { loadXinyi, buildXinyi } from './world/xinyi.js?v=4d1cca2';
+import { applyOsmLandmarks, applyOsmBuildings, GEO } from './world/geo.js?v=4d1cca2';
+import { Fireworks } from './world/fireworks.js?v=4d1cca2';
+import { buildElevatorScene } from './world/elevator.js?v=4d1cca2';
+import { buildStairScene } from './world/stairwell.js?v=4d1cca2';
+import { ClimbMode } from './modes/climb.js?v=4d1cca2';
+import { RaceMode } from './modes/race.js?v=4d1cca2';
+import { ExploreMode } from './modes/explore.js?v=4d1cca2';
+import { HeliMode } from './modes/heli.js?v=4d1cca2';
+import { GlideMode } from './modes/glide.js?v=4d1cca2';
+import { RACES } from './config.js?v=4d1cca2';
+import { Tutorial } from './ui/tutorial.js?v=4d1cca2';
+import { TowerLights } from './world/towerLights.js?v=4d1cca2';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
@@ -93,7 +93,13 @@ class Game {
     const outerTraffic = buildTraffic(scene, xdata ? xdata.radius + 120 : 0);
     buildLandmarks(scene, { skipNanshan: !!xdata });
     if (xdata) {
-      this.xinyi = buildXinyi(scene, xdata, { exclude: [{ ...GEO.sunYatSen, r: 70 }, { ...GEO.dome, r: 130 }, { ...GEO.taozhu, r: 40 }] });
+      this.xinyi = buildXinyi(scene, xdata, { exclude: [{ ...GEO.sunYatSen, r: 70 }, { ...GEO.dome, r: 130 }, { ...GEO.taozhu, r: 40 }], excludeNames: ['南山廣場', '微風南山', '富邦信義A25總部', '國泰置地廣場', '遠雄金融中心'] });
+      this.skyline = buildSkyline(xdata);
+      scene.add(this.skyline.root);
+      this.xinyi.solids.push(...this.skyline.solids);
+      // 南山廣場 + 微風南山:依實景造型的專屬模型(OSM 只有整片基地外框)
+      const site = xdata.buildings.find((b) => b.n === '南山廣場'), breeze = xdata.buildings.find((b) => b.n === '微風南山');
+      if (site) { this.nanshan = buildNanShan(site.p, breeze && breeze.p); scene.add(this.nanshan); this.xinyi.solids.push(...this.nanshan.userData.solids); }
       this.updateTraffic = (dt) => { outerTraffic(dt); this.xinyi.updateTraffic(dt); };
     } else this.updateTraffic = outerTraffic;
     await step(60);
@@ -175,6 +181,14 @@ class Game {
     this.towerLights.setNight(t.night, key === 'nye');
     this.city.setNight(t.night);
     if (this.xinyi) this.xinyi.setNight(t.night);
+    if (this.skyline) this.skyline.setNight(t.night);
+    if (this.nanshan) {
+      const nm = this.nanshan.userData.mats;
+      nm.towerMat.emissiveIntensity = t.night * 0.7;
+      nm.mallMat.emissiveIntensity = t.night * 1.0;
+      nm.crownMat.emissiveIntensity = t.night * 1.5;
+      if (this.nanshan.userData.atrium) this.nanshan.userData.atrium.emissiveIntensity = t.night * 0.6;
+    }
     this.fireworks.setActive(key === 'nye');
   }
 

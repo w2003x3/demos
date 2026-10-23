@@ -1,8 +1,8 @@
 // 信義區真實街景:依 OpenStreetMap 資料(assets/data/xinyi.json)建出 101 周邊建築、道路、綠地、行道樹與車流。
 // 資料授權:© OpenStreetMap contributors(ODbL)。
 import * as THREE from 'three';
-import { glassCurtainTexture, roofTexture, canvasTex } from './textures.js?v=f1aef92';
-import { applyInterior } from './interior.js?v=f1aef92';
+import { glassCurtainTexture, roofTexture, canvasTex } from './textures.js?v=4d1cca2';
+import { applyInterior } from './interior.js?v=4d1cca2';
 
 function rng(seed) {
   let s = seed >>> 0;
@@ -11,7 +11,7 @@ function rng(seed) {
 
 export async function loadXinyi() {
   try {
-    const r = await fetch('assets/data/xinyi.json?v=f1aef92');
+    const r = await fetch('assets/data/xinyi.json?v=4d1cca2');
     if (!r.ok) return null;
     return await r.json();
   } catch { return null; }
@@ -45,7 +45,7 @@ function glassFacade() {
   return map;
 }
 
-export function buildXinyi(scene, data, { exclude = [] } = {}) {
+export function buildXinyi(scene, data, { exclude = [], excludeNames = [] } = {}) {
   const root = new THREE.Group();
   root.name = 'xinyi';
   const r = rng(101);
@@ -63,6 +63,7 @@ export function buildXinyi(scene, data, { exclude = [] } = {}) {
     // 自建模型的地標(國父紀念館、大巨蛋)範圍內不重複建
     const cx = pts.reduce((s, q) => s + q[0], 0) / pts.length, cz = pts.reduce((s, q) => s + q[1], 0) / pts.length;
     if (exclude.some((e) => Math.hypot(cx - e.x, cz - e.z) < e.r)) continue;
+    if (b.n && excludeNames.includes(b.n)) continue;
     const tall = h > 90;
     const mall = b.k === 'mall' || /101/.test(b.n || '');
     const bcx = pts.reduce((s2, q2) => s2 + q2[0], 0) / pts.length, bcz = pts.reduce((s2, q2) => s2 + q2[1], 0) / pts.length;

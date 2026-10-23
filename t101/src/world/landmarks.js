@@ -1,9 +1,10 @@
 // 台北地標(簡化模型,位置依 101 為原點的大致方位與距離;北 = -Z、東 = +X)。
 import * as THREE from 'three';
-import { terrainHeight } from './environment.js?v=f1aef92';
-import { canvasTex } from './textures.js?v=f1aef92';
+import { terrainHeight } from './environment.js?v=4d1cca2';
+import { canvasTex } from './textures.js?v=4d1cca2';
+import { applyInterior } from './interior.js?v=4d1cca2';
 
-import { GEO } from './geo.js?v=f1aef92';
+import { GEO } from './geo.js?v=4d1cca2';
 
 const box = (c, w, d, h, name) => [c.x - w / 2, c.z - d / 2, c.x + w / 2, c.z + d / 2, h, name];
 // 城市產生器要避開的範圍 [x0, z0, x1, z1]
@@ -394,4 +395,240 @@ function buildTaoZhu() {
   podium.position.y = base / 2;
   g.add(podium);
   return g;
+}
+
+// ───────────── 南山廣場 + 微風南山 ─────────────
+/** 多邊形直立外牆(u 依周長、v 依高度,方便室內映射)。 */
+function prism(pts, y0, y1, mat, uScale = 3, vScale = 4.2) {
+  const pos = [], uv = [];
+  let u = 0;
+  for (let i = 0; i < pts.length; i++) {
+    const [ax, az] = pts[i], [bx, bz] = pts[(i + 1) % pts.length];
+    const len = Math.hypot(bx - ax, bz - az);
+    const v = [[ax, y0, az, u / uScale, y0 / vScale], [bx, y0, bz, (u + len) / uScale, y0 / vScale], [bx, y1, bz, (u + len) / uScale, y1 / vScale], [ax, y1, az, u / uScale, y1 / vScale]];
+    for (const t of [0, 2, 1, 0, 3, 2]) { pos.push(v[t][0], v[t][1], v[t][2]); uv.push(v[t][3], v[t][4]); }
+    u += len;
+  }
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.setAttribute('uv', new THREE.Float32BufferAttribute(uv, 2));
+  g.computeVertexNormals();
+  const m = new THREE.Mesh(g, mat);
+  m.castShadow = m.receiveShadow = true;
+  return m;
+}
+function capMesh(pts, y, mat) {
+  const tris = THREE.ShapeUtils.triangulateShape(pts.map(([x, z]) => new THREE.Vector2(x, z)), []);
+  const pos = [];
+  for (const t of tris) for (const k of [t[0], t[2], t[1]]) pos.push(pts[k][0], y, pts[k][1]);
+  const g = new THREE.BufferGeometry();
+  g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
+  g.computeVertexNormals();
+  const m = new THREE.Mesh(g, mat);
+  m.receiveShadow = true;
+  return m;
+}
+/** 透鏡(雙手合十)形平面:長 L、寬 W,中心在原點,長軸沿 X;逆時針。 */
+function lens(L, W, n = 28) {
+  const pts = [];
+  const R = (L * L / 4 + W * W / 4) / W; // 兩段圓弧的半徑
+  const c = R - W / 2;
+  const a = Math.asin((L / 2) / R);
+  for (let i = 0; i <= n; i++) { const t = -a + (2 * a * i) / n; pts.push([R * Math.sin(t), -(R * Math.cos(t) - c)]); }
+  for (let i = 0; i <= n; i++) { const t = a - (2 * a * i) / n; pts.push([R * Math.sin(t), R * Math.cos(t) - c]); }
+  pts.pop();
+  return pts.reverse().map(([x, z]) => [x, -z]).reverse();
+}
+
+export function buildNanShan(site, breeze) {
+  const g = new THREE.Group();
+  // 塔樓外牆:藍灰玻璃 + 白色直向鰭片(每 1.5m 一支)
+  const finTex = canvasTex(256, 256, (c, W, H) => {
+    const grd = c.createLinearGradient(0, 0, 0, H);
+    grd.addColorStop(0, '#6f8ea3'); grd.addColorStop(1, '#4f6e84');
+    c.fillStyle = grd; c.fillRect(0, 0, W, H);
+    c.fillStyle = 'rgba(20,30,40,0.5)'; c.fillRect(0, H * 0.84, W, H * 0.16);
+    c.fillStyle = '#e9eef0';
+    for (let x = 0; x < W; x += 64) { c.fillRect(x, 0, 10, H); c.fillStyle = 'rgba(0,0,0,0.25)'; c.fillRect(x + 10, 0, 4, H); c.fillStyle = '#e9eef0'; }
+  });
+  const towerMat = new THREE.MeshStandardMaterial({ map: finTex, roughness: 0.15, metalness: 0.6, envMapIntensity: 1.4, emissive: 0xffffff, emissiveIntensity: 0 });
+  applyInterior(towerMat, { cells: [1, 1], win: [0.07, 0.96, 0.0, 0.84], lit: 0.35, seed: 41, depth: 1.3 });
+  const white = new THREE.MeshStandardMaterial({ color: 0xe9eceb, roughness: 0.45, metalness: 0.3 });
+  const roof = new THREE.MeshStandardMaterial({ color: 0x8f9597, roughness: 0.8 });
+  const crownMat = new THREE.MeshStandardMaterial({ color: 0xdfe7ea, roughness: 0.3, metalness: 0.5, emissive: 0xcfe8ff, emissiveIntensity: 0 });
+  // 裙樓與微風南山:白色石材飾帶 + 大面玻璃櫥窗
+  const mallTex = canvasTex(256, 256, (c, W, H) => {
+    c.fillStyle = '#e3e0d8'; c.fillRect(0, 0, W, H);
+    const grd = c.createLinearGradient(0, H * 0.28, 0, H);
+    grd.addColorStop(0, '#6d8a90'); grd.addColorStop(1, '#45626a');
+    c.fillStyle = grd; c.fillRect(0, H * 0.28, W, H * 0.72);
+    c.fillStyle = '#cfcbc2'; c.fillRect(0, 0, 4, H); c.fillRect(W - 4, 0, 4, H);
+  });
+  const mallMat = new THREE.MeshStandardMaterial({ map: mallTex, roughness: 0.2, metalness: 0.4, emissive: 0xffffff, emissiveIntensity: 0 });
+  applyInterior(mallMat, { cells: [1, 1], win: [0.02, 0.98, 0.0, 0.72], store: true, seed: 9, depth: 1.5 });
+
+  // 塔樓位置:基地東側(較窄的部分)
+  let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+  for (const [x, z] of site) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
+  const cx = x1 - 36, cz = (z0 + z1) / 2 - 1;
+  const at = (pts) => pts.map(([x, z]) => [x + cx, z + cz]);
+  // 低層裙樓(6 層)
+  g.add(prism(site, 0, 30, mallMat, 6, 5));
+  g.add(capMesh(site, 30, roof));
+  // 塔身與三段退縮(由兩端往中間收,呈雙手合十的輪廓)
+  const tiers = [[30, 228, 70, 38], [228, 246, 58, 35], [246, 260, 44, 31], [260, 270, 30, 26]];
+  for (const [y0, y1, L, W] of tiers) {
+    const p = at(lens(L, W));
+    g.add(prism(p, y0, y1, towerMat, 1.5, 4.2));
+    g.add(capMesh(p, y1, white));
+    // 每段頂部的白色飾帶
+    const band = prism(at(lens(L + 1.2, W + 1.2)), y1 - 1.2, y1, white, 4, 1);
+    g.add(band);
+  }
+  // 頂冠:斜面與夜間燈帶
+  const top = at(lens(22, 20));
+  const crown = prism(top, 270, 273, crownMat, 4, 1);
+  g.add(crown);
+  g.add(capMesh(top, 273, roof));
+  // 微風南山(西側百貨)
+  if (breeze) {
+    g.add(prism(breeze, 0, 42, mallMat, 6, 5));
+    g.add(capMesh(breeze, 42, roof));
+    // 入口的弧形玻璃中庭
+    let bx0 = Infinity, bz1 = -Infinity, bx1 = -Infinity;
+    for (const [x, z] of breeze) { bx0 = Math.min(bx0, x); bx1 = Math.max(bx1, x); bz1 = Math.max(bz1, z); }
+    const atrium = new THREE.Mesh(new THREE.CylinderGeometry(14, 14, 36, 32, 1, false, -Math.PI / 2, Math.PI), new THREE.MeshStandardMaterial({ color: 0x9fc0cc, roughness: 0.05, metalness: 0.7, emissive: 0xffe6c0, emissiveIntensity: 0 }));
+    atrium.position.set((bx0 + bx1) / 2, 18, bz1);
+    g.add(atrium);
+    g.userData.atrium = atrium.material;
+  }
+  g.userData.mats = { towerMat, mallMat, crownMat };
+  // 碰撞(滑翔賽):裙樓、塔樓、微風南山
+  const bb = (pts, h, name) => { let a = Infinity, b2 = -Infinity, c2 = Infinity, d = -Infinity; for (const [x, z] of pts) { a = Math.min(a, x); b2 = Math.max(b2, x); c2 = Math.min(c2, z); d = Math.max(d, z); } return [a, c2, b2, d, h, name, pts, '']; };
+  g.userData.solids = [bb(site, 30, '南山廣場'), bb(at(lens(70, 38)), 273, '南山廣場'), ...(breeze ? [[...bb(breeze, 42, '微風南山').slice(0, 7), 'mall']] : [])];
+  return g;
+}
+
+// ───────────── 信義區地標高樓(依空拍照片的造型)─────────────
+// style:
+//   'a25'   富邦 A25:淺藍玻璃方塔,四角內凹,頂部斜切
+//   'cathay' 國泰置地:深灰玻璃,轉角斜切,頂部三段退縮
+//   'farglory' 遠雄金融:藍玻璃,頂部退縮並有金屬冠
+//   'skytower' 台北天空塔:白色直條鰭片的方塔,頂部錯落的斜面
+const SKYLINE = [
+  { name: '富邦信義A25總部', style: 'a25', h: 266, glass: '#a9c8d8', size: [44, 44] },
+  { name: '國泰置地廣場', style: 'cathay', h: 212, glass: '#4f5d68', size: [46, 46], podium: 32 },
+  { name: '遠雄金融中心', style: 'farglory', h: 208, glass: '#5b86a8', size: [40, 36] },
+  { name: '台北天空塔', style: 'skytower', h: 280, glass: '#c4d3da', size: [48, 48], podium: 24 }
+];
+
+function glassMat(hex, seed, fins = false) {
+  const tex = canvasTex(256, 256, (c, W, H) => {
+    const base = new THREE.Color(hex);
+    const grd = c.createLinearGradient(0, 0, 0, H);
+    grd.addColorStop(0, '#' + base.clone().offsetHSL(0, 0, 0.08).getHexString());
+    grd.addColorStop(1, '#' + base.clone().offsetHSL(0, 0, -0.06).getHexString());
+    c.fillStyle = grd; c.fillRect(0, 0, W, H);
+    c.fillStyle = 'rgba(20,30,40,0.35)'; c.fillRect(0, H * 0.86, W, H * 0.14);
+    c.fillStyle = fins ? '#f2f4f4' : 'rgba(230,236,238,0.8)';
+    const fw = fins ? 12 : 4;
+    for (let x = 0; x <= W; x += fins ? 64 : 128) c.fillRect(x - fw / 2, 0, fw, H);
+  });
+  const m = new THREE.MeshStandardMaterial({ map: tex, roughness: 0.1, metalness: 0.65, envMapIntensity: 1.4, emissive: 0xffffff, emissiveIntensity: 0 });
+  applyInterior(m, { cells: [fins ? 2 : 1, 1], win: [0.06, 0.94, 0.0, 0.86], lit: 0.35, seed, depth: 1.3 });
+  return m;
+}
+/** 正方形四角斜切/內凹的斷面。cut:斜切長度;notch:內凹深度(優先)。 */
+function squarePlan(w, d, cut = 0, notch = 0) {
+  const x = w / 2, z = d / 2;
+  if (notch) {
+    const n = notch;
+    return [[x - n, -z], [x - n, -z + n], [x, -z + n], [x, z - n], [x - n, z - n], [x - n, z], [-x + n, z], [-x + n, z - n], [-x, z - n], [-x, -z + n], [-x + n, -z + n], [-x + n, -z]].reverse();
+  }
+  if (!cut) return [[x, -z], [x, z], [-x, z], [-x, -z]].reverse();
+  return [[x - cut, -z], [x, -z + cut], [x, z - cut], [x - cut, z], [-x + cut, z], [-x, z - cut], [-x, -z + cut], [-x + cut, -z]].reverse();
+}
+const shift = (pts, cx, cz, s = 1) => pts.map(([x, z]) => [x * s + cx, z * s + cz]);
+
+export function buildSkyline(data) {
+  const root = new THREE.Group();
+  const solids = [], names = [];
+  const roof = new THREE.MeshStandardMaterial({ color: 0x8f9597, roughness: 0.8 });
+  const metal = new THREE.MeshStandardMaterial({ color: 0xd6dbdd, roughness: 0.3, metalness: 0.8, emissive: 0xffffff, emissiveIntensity: 0 });
+  const mats = [];
+  SKYLINE.forEach((S, i) => {
+    let cx, cz, site = null;
+    const b = data.buildings.find((bb) => bb.n === S.name);
+    if (b) {
+      site = b.p;
+      let x0 = Infinity, x1 = -Infinity, z0 = Infinity, z1 = -Infinity;
+      for (const [x, z] of b.p) { x0 = Math.min(x0, x); x1 = Math.max(x1, x); z0 = Math.min(z0, z); z1 = Math.max(z1, z); }
+      cx = (x0 + x1) / 2; cz = (z0 + z1) / 2;
+      names.push(S.name);
+    } else {
+      const l = data.landmarks.find((ll) => ll.name === S.name);
+      if (!l) return;
+      [cx, cz] = l.xz;
+    }
+    const g = new THREE.Group();
+    const gm = glassMat(S.glass, 50 + i, S.style === 'skytower');
+    mats.push(gm);
+    const [w, d] = S.size, H = S.h;
+    const add = (m) => { g.add(m); return m; };
+    // 裙樓(OSM 外框較大時)
+    if (S.podium && site) { add(prism(site, 0, S.podium, gm, 6, 5)); add(capMesh(site, S.podium, roof)); }
+    if (S.style === 'a25') {
+      const p = shift(squarePlan(w, d, 0, 4), cx, cz);
+      add(prism(p, 0, H - 22, gm, 3, 4.2));
+      // 頂部斜切:四面分段收短,形成斜面輪廓
+      for (let k = 0; k < 6; k++) {
+        const y0 = H - 22 + k * 3.6, s = 1 - k * 0.07;
+        add(prism(shift(squarePlan(w * s, d * (1 - k * 0.12), 0, 4 * s), cx + k * 1.6, cz, 1), y0, y0 + 3.6, gm, 3, 4.2));
+      }
+      add(capMesh(shift(squarePlan(w * 0.6, d * 0.3, 0, 2), cx + 9, cz), H, roof));
+      const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.5, 18, 8), metal);
+      mast.position.set(cx + 9, H + 9, cz);
+      add(mast);
+    } else if (S.style === 'cathay') {
+      const tiers = [[S.podium || 0, H - 30, 1], [H - 30, H - 18, 0.86], [H - 18, H - 8, 0.7], [H - 8, H, 0.5]];
+      for (const [y0, y1, s] of tiers) {
+        const p = shift(squarePlan(w, d, 7, 0), cx, cz, s);
+        add(prism(p, y0, y1, gm, 3, 4.2));
+        add(capMesh(p, y1, roof));
+        add(prism(shift(squarePlan(w + 1, d + 1, 7.3, 0), cx, cz, s), y1 - 1, y1, metal, 4, 1));
+      }
+    } else if (S.style === 'farglory') {
+      const tiers = [[0, H - 26, 1, 0], [H - 26, H - 14, 0.9, 1], [H - 14, H - 6, 0.78, 1], [H - 6, H, 0.6, 1]];
+      for (const [y0, y1, s, ring] of tiers) {
+        const p = shift(squarePlan(w, d, 5, 0), cx, cz, s);
+        add(prism(p, y0, y1, gm, 3, 4.2));
+        add(capMesh(p, y1, roof));
+        if (ring) add(prism(shift(squarePlan(w + 1.5, d + 1.5, 5.5, 0), cx, cz, s), y1 - 1.4, y1, metal, 4, 1));
+      }
+      const crown = new THREE.Mesh(new THREE.CylinderGeometry(4, 9, 10, 4, 1, true), metal);
+      crown.rotation.y = Math.PI / 4;
+      crown.position.set(cx, H + 5, cz);
+      add(crown);
+    } else if (S.style === 'skytower') {
+      const p = shift(squarePlan(w, d, 0, 3), cx, cz);
+      add(prism(p, S.podium || 0, H - 28, gm, 3, 4.2));
+      // 頂部:四面高低錯落的斜面板(由不同高度的條狀量體組成)
+      for (let k = 0; k < 4; k++) {
+        const hh = 28 - k * 6, ww = w / 4;
+        const strip = shift([[ww / 2, -d / 2], [ww / 2, d / 2], [-ww / 2, d / 2], [-ww / 2, -d / 2]].reverse(), cx - w / 2 + ww * (k + 0.5), cz);
+        add(prism(strip, H - 28, H - 28 + hh, gm, 3, 4.2));
+        add(capMesh(strip, H - 28 + hh, roof));
+      }
+      if (!site) { const ped = shift(squarePlan(w + 24, d + 24, 6), cx, cz); add(prism(ped, 0, 24, gm, 6, 5)); add(capMesh(ped, 24, roof)); }
+    }
+    g.traverse((o) => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+    root.add(g);
+    // 碰撞
+    const fp = site || shift(squarePlan(w + 24, d + 24), cx, cz);
+    let a = Infinity, b2 = -Infinity, c2 = Infinity, d2 = -Infinity;
+    for (const [x, z] of fp) { a = Math.min(a, x); b2 = Math.max(b2, x); c2 = Math.min(c2, z); d2 = Math.max(d2, z); }
+    solids.push([cx - w / 2, cz - d / 2, cx + w / 2, cz + d / 2, H, S.name, null, '']);
+    if (S.podium) solids.push([a, c2, b2, d2, S.podium, S.name, fp, '']);
+  });
+  return { root, solids, names, setNight(n) { for (const m of mats) m.emissiveIntensity = n * 0.7; metal.emissiveIntensity = n * 0.15; } };
 }

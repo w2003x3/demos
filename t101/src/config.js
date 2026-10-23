@@ -18,8 +18,8 @@ export const BASE_HW1 = 24; // 26F 頂
 export const SEG_HW0 = 22.5; // 每節底
 export const SEG_HW1 = 27; // 每節頂(外擴)
 export const TOP_HW0 = 15; // 91F
-export const TOP_HW1 = 12; // 101F 頂
-export const CROWN_HW = 8;
+export const TOP_HW1 = 13.6; // 101F 頂(91F 以上幾乎直立)
+export const CROWN_HW = 8.6;
 
 /** 外牆分段;攀爬模式用同一份資料計算牆面位置。 */
 export function towerSections() {
@@ -29,7 +29,7 @@ export function towerSections() {
     s.push({ name: `第 ${k + 1} 節`, seg: k + 1, y0, y1: y0 + SEG_H, hw0: SEG_HW0, hw1: SEG_HW1, floors: [27 + k * 8, 34 + k * 8] });
   }
   s.push({ name: '塔頂', y0: TOP_Y, y1: ROOF_Y, hw0: TOP_HW0, hw1: TOP_HW1, floors: [91, 101] });
-  s.push({ name: '頂冠', y0: ROOF_Y, y1: CROWN_Y, hw0: TOP_HW1 - 1, hw1: CROWN_HW, floors: [101, 101] });
+  s.push({ name: '頂冠', y0: ROOF_Y, y1: CROWN_Y, hw0: 10.6, hw1: CROWN_HW, floors: [101, 101] });
   return s;
 }
 

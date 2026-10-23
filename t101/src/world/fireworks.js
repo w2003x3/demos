@@ -1,7 +1,7 @@
 // 跨年煙火:101 外牆倒數 + 從各節竹節施放的煙火秀。
 import * as THREE from 'three';
-import { BASE_TOP, SEG_H, SEG_COUNT, SEG_HW1, halfWidthAt } from '../config.js?v=f1aef92';
-import { canvasTex } from './textures.js?v=f1aef92';
+import { BASE_TOP, SEG_H, SEG_COUNT, SEG_HW1, halfWidthAt } from '../config.js?v=4d1cca2';
+import { canvasTex } from './textures.js?v=4d1cca2';
 
 const MAX = 40000;
 const COUNTDOWN = 30; // 倒數階段長度(秒)

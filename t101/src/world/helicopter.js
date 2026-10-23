@@ -1,6 +1,6 @@
 // 觀光直升機(程序化模型)。機頭朝 +Z,原點在機身中心下方(起落橇底)。
 import * as THREE from 'three';
-import { canvasTex } from './textures.js?v=f1aef92';
+import { canvasTex } from './textures.js?v=4d1cca2';
 
 export function buildHelicopter() {
   const g = new THREE.Group();

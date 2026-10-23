@@ -1,8 +1,8 @@
 // 台北101 外觀(程序化):鋸齒內縮轉角的正方形斷面,基座內收、8 節竹節外擴、塔頂、頂冠、塔尖。
 import * as THREE from 'three';
-import { towerSections, BASE_TOP, SEG_COUNT, SEG_H, TOP_Y, ROOF_Y, CROWN_Y, SPIRE_TOP, SEG_HW0, SEG_HW1, BASE_HW1, TOP_HW0, TOP_HW1, halfWidthAt, floorY, FH } from '../config.js?v=f1aef92';
-import { facadeTextures, canvasTex } from './textures.js?v=f1aef92';
-import { applyInterior } from './interior.js?v=f1aef92';
+import { towerSections, BASE_TOP, SEG_COUNT, SEG_H, TOP_Y, ROOF_Y, CROWN_Y, SPIRE_TOP, SEG_HW0, SEG_HW1, BASE_HW1, TOP_HW0, TOP_HW1, halfWidthAt, floorY, FH } from '../config.js?v=4d1cca2';
+import { facadeTextures, canvasTex } from './textures.js?v=4d1cca2';
+import { applyInterior } from './interior.js?v=4d1cca2';
 
 /** 斷面多邊形:正方形四角各兩階鋸齒(101 的「竹節」轉角)。回傳 [[x,z],...]。 */
 export function towerPolygon(h, notch = 0.11) {
@@ -145,7 +145,13 @@ export function buildTower(envMap) {
       // 每格 = 3m 寬(兩片玻璃)× 1 層樓;窗間牆在每層頂部 14%
       applyInterior(m, { cells: [4, 2], win: [0.025, 0.975, 0.0, 0.855], depth: 1.6, lit: 0.3, seed: i + 1 });
     }
-    add(frustumGeometry(s.y0, s.hw0, s.y1, s.hw1, { notch, uvScale: crown ? [3, 4] : [6, 8.6] }), m);
+    if (crown) {
+      // 頂冠:兩段階梯狀的百葉箱(照片中 101F 以上的灰白色量體)
+      const mid = (s.y0 + s.y1) / 2;
+      add(frustumGeometry(s.y0, s.hw0, mid, s.hw0 - 0.2, { notch, uvScale: [3, 4] }), m);
+      add(ringGeometry(mid, s.hw0 - 0.2, s.hw1, true, notch), ledge);
+      add(frustumGeometry(mid, s.hw1, s.y1, s.hw1 - 0.2, { notch, uvScale: [3, 4] }), m);
+    } else add(frustumGeometry(s.y0, s.hw0, s.y1, s.hw1, { notch, uvScale: [6, 8.6] }), m);
     sections.push({ name: s.name, seg: s.seg || 0, glass: m, band: null });
   });
 
@@ -176,8 +182,8 @@ export function buildTower(envMap) {
       group.add(orn);
     }
   }
-  add(ringGeometry(ROOF_Y, TOP_HW1, TOP_HW1 - 1, true), ledge);
-  add(ringGeometry(CROWN_Y, 8, 0, true, 0.08), darkMetal);
+  add(ringGeometry(ROOF_Y, TOP_HW1 + 0.4, 10.6, true), ledge);
+  add(ringGeometry(CROWN_Y, 8.4, 0, true, 0.08), darkMetal);
   // 91F 室外觀景台欄杆
   {
     const railMat = new THREE.MeshStandardMaterial({ color: 0x8b969a, metalness: 0.7, roughness: 0.35, transparent: true, opacity: 0.9 });
@@ -311,7 +317,8 @@ function buildTop(group, { metal, darkMetal, ledge }) {
 
   // ── 塔尖下段:八角錐形,白灰色金屬板 ──
   const s0 = CROWN_Y + 3.3, sH = 30;
-  const pin = add(new THREE.CylinderGeometry(1.75, 3.0, sH, 8), panel, 0, s0 + sH / 2, 0);
+  const pin = add(new THREE.CylinderGeometry(2.2, 3.9, sH, 4), panel, 0, s0 + sH / 2, 0);
+  pin.rotation.y = Math.PI / 4;
   pin.material.flatShading = true;
   // ── 塔尖上段:桅杆 + 環形維修走道 + 爬梯 ──
   const m0 = s0 + sH, mH = 21.5;

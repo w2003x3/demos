@@ -1,10 +1,10 @@
 // 可參觀樓層室內(放在大樓內的真實高度,窗外就是實際城市)。
 import * as THREE from 'three';
-import { floorY, FH, halfWidthAt } from '../config.js?v=f1aef92';
-import { towerPolygon, frustumGeometry } from './tower.js?v=f1aef92';
-import { canvasTex, woodTexture, stoneTileTexture, carpetTexture, concreteTexture } from './textures.js?v=f1aef92';
-import * as F from './furniture.js?v=f1aef92';
-import { createCharacter, poseIdle, poseSit, poseLean } from './character.js?v=f1aef92';
+import { floorY, FH, halfWidthAt } from '../config.js?v=4d1cca2';
+import { towerPolygon, frustumGeometry } from './tower.js?v=4d1cca2';
+import { canvasTex, woodTexture, stoneTileTexture, carpetTexture, concreteTexture } from './textures.js?v=4d1cca2';
+import * as F from './furniture.js?v=4d1cca2';
+import { createCharacter, poseIdle, poseSit, poseLean } from './character.js?v=4d1cca2';
 
 /** 水平樓板(外框為大樓斷面,可挖圓孔)。 */
 function slab(hw, holeR, up, mat, uvRepeat = 0.5) {

@@ -1,9 +1,9 @@
 // 天空、光線、地面、城市、山景、行道樹與車流。座標:北 = -Z、東 = +X,101 位於原點。
 import * as THREE from 'three';
 import { Sky } from 'three/addons/objects/Sky.js';
-import { groundTexture, glassCurtainTexture, roofTexture, stoneTileTexture } from './textures.js?v=f1aef92';
-import { applyInterior } from './interior.js?v=f1aef92';
-import { GEO, RIVERS } from './geo.js?v=f1aef92';
+import { groundTexture, glassCurtainTexture, roofTexture, stoneTileTexture } from './textures.js?v=4d1cca2';
+import { applyInterior } from './interior.js?v=4d1cca2';
+import { GEO, RIVERS } from './geo.js?v=4d1cca2';
 
 function rng(seed) {
   let s = seed >>> 0;
