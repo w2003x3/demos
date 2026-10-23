@@ -296,10 +296,17 @@ export function textTexture(text, { w = 512, h = 128, bg = '#0d3b2e', fg = '#fff
     g.fillStyle = fg;
     g.textAlign = align;
     g.textBaseline = 'middle';
-    g.font = font;
+    // 文字太長時縮小字級,避免左右被裁切
+    const fit = (f, str) => {
+      g.font = f;
+      const maxW = w * 0.92 - (align === 'center' ? 0 : 24);
+      const tw = g.measureText(str).width;
+      if (tw > maxW) g.font = f.replace(/(\d+(?:\.\d+)?)px/, (m, n) => `${Math.floor(Number(n) * maxW / tw)}px`);
+    };
+    fit(font, text);
     const x = align === 'center' ? w / 2 : 24;
     g.fillText(text, x, sub ? h * 0.4 : h / 2);
-    if (sub) { g.font = subFont; g.globalAlpha = 0.85; g.fillText(sub, x, h * 0.78); }
+    if (sub) { fit(subFont, sub); g.globalAlpha = 0.85; g.fillText(sub, x, h * 0.78); }
   }, { repeat: false });
 }
 

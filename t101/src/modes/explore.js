@@ -569,6 +569,7 @@ export class ExploreMode {
     this.ride = makeRide(this.floor.n, to);
     this.rideT = -2.2; // 關門 + 起步前
     this.state = 'ride';
+    g.ui.prompt('');
     this.cup.visible = this.cup.visible && Math.random() < 1;
     g.elevator.setDoors(1);
     g.ui.hud(`
@@ -586,6 +587,8 @@ export class ExploreMode {
 
   updateRide(dt, rawDt) {
     const g = this.g, ui = g.ui, E = g.elevator;
+    const aspect = innerWidth / innerHeight;
+    if (Math.abs(E.camera.aspect - aspect) > 1e-3) { E.camera.aspect = aspect; E.camera.updateProjectionMatrix(); }
     this.rideT += dt;
     const r = this.ride;
     // 0~-2.2:關門

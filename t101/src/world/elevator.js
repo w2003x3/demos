@@ -125,7 +125,7 @@ export function buildElevatorScene(renderer) {
     people.push(c);
   }
 
-  const camera = new THREE.PerspectiveCamera(70, 1, 0.05, 50);
+  const camera = new THREE.PerspectiveCamera(70, innerWidth / innerHeight, 0.05, 50);
   camera.position.set(0.25, 1.62, -0.9);
   camera.lookAt(0, 1.8, D / 2);
 

@@ -59,6 +59,13 @@ class Game {
 
   async build() {
     const step = (p) => new Promise((res) => { const b = document.getElementById('lb'); if (b) b.style.width = p + '%'; setTimeout(res, 16); });
+    // 招牌、菜單等貼圖會用到網頁字型:先等字型載入(最多 3 秒)
+    try {
+      await Promise.race([
+        Promise.all(['900 40px "Noto Sans TC"', '700 40px "Noto Sans TC"', '500 40px "Noto Sans TC"', '700 40px "Barlow Condensed"'].map((f) => document.fonts.load(f, '台北101咖啡'))),
+        new Promise((r) => setTimeout(r, 3000))
+      ]);
+    } catch { /* 字型載入失敗就用系統字型 */ }
     const scene = (this.scene = new THREE.Scene());
     scene.fog = new THREE.FogExp2(0xb9cad6, 0.000038);
     this.sky = createSky(scene);
