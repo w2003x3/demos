@@ -39,7 +39,23 @@ export class Audio {
     this.wind = loop(500, 'bandpass', 0.6);
     this.hum = loop(160, 'lowpass', 1.2);
     this.murmur = loop(900, 'bandpass', 0.4);
+    // 直升機旋翼:低頻噪音 × 17Hz 拍動
+    this.rotor = loop(260, 'lowpass', 1);
+    this.rotorAmp = ctx.createGain();
+    this.rotorAmp.gain.value = 0;
+    this.rotor.g.disconnect();
+    const rotorMod = ctx.createGain();
+    rotorMod.gain.value = 0.5;
+    this.rotor.g.connect(rotorMod).connect(this.rotorAmp).connect(this.master);
+    this.rotor.g.gain.value = 1;
+    const lfo = ctx.createOscillator();
+    lfo.frequency.value = 17;
+    const depth = ctx.createGain();
+    depth.gain.value = 0.5;
+    lfo.connect(depth).connect(rotorMod.gain);
+    lfo.start();
   }
+  setRotor(v) { if (this.ctx) this.rotorAmp.gain.setTargetAtTime(v * 0.5, this.ctx.currentTime, 0.4); }
 
   setMuted(m) {
     this.muted = m;
@@ -121,6 +137,8 @@ export class Audio {
     this.noise(1.4, { freq: 600, type: 'lowpass', gain: 0.45 * k, delay });
     for (let i = 0; i < 5; i++) this.noise(0.05, { freq: 5000, type: 'highpass', gain: 0.05 * k, delay: delay + 0.3 + Math.random() * 0.8 });
   }
+
+  stopVoice() { if (this.current) { this.current.pause(); this.current = null; } }
 
   /** 播放語音(事先產生的音檔)。 */
   say(id, { onEnd } = {}) {

@@ -4,6 +4,7 @@ import { RACES, RACE_STEPS_TOTAL, WATER_FLOORS } from '../config.js';
 import { U_PER_FLOOR, stairPath } from '../world/stairwell.js';
 import { createCharacter, poseStairs, poseTired, poseCheer, poseIdle } from '../world/character.js';
 import { fmtTime } from '../ui/ui.js';
+import { VIS } from '../ui/tutorial.js';
 
 const RIVALS = [
   { name: '林志遠', shirt: 0x1f6fb2, cad: 5.3 },
@@ -59,8 +60,16 @@ export class RaceMode {
     this.rivals.forEach((r) => { r.p = 0; r.fatigue = 0; r.done = null; r.drink = 0; r.cadNow = r.cad * (0.92 + Math.random() * 0.12); });
     g.interiors.setActive(null);
     this.buildHud();
-    g.audio.say('race_ready');
-    g.ui.subtitle('各就各位,預備。', 2);
+    const go = () => { g.audio.say('race_ready'); g.ui.subtitle('各就各位,預備。', 2); };
+    if (!g.tutorial.seen('race')) this.tutorial(false, go); else go();
+  }
+
+  tutorial(force, onDone) {
+    this.g.tutorial.pages('race', [
+      { title: '左右腳交替踩樓梯', visual: VIS.race, html: '每按一下 = 往上踩一階。<b>左腳 <kbd>J</kbd>、右腳 <kbd>K</kbd> 一定要交替</b>(也可以用 ← →,手機請點右下角按鈕)。按得越快、跑得越快。' },
+      { title: '心率與效率', visual: VIS.hr, html: '按太快心率會飆高。超過<b>乳酸閾值</b>後疲勞累積,每一步的效率會下降。<b>保持穩定節奏</b>比一開始猛衝更快完賽;心跳太快時放慢一點。' },
+      { title: '扶手與補水站', html: '<ul><li>在樓梯段<b>按住 <kbd>L</kbd> 拉扶手</b>,每一步多 18% 的距離。</li><li>20F、35F、50F、65F、80F 有<b>補水站</b>,經過平台時按 <kbd>E</kbd> 喝水,降低心率與疲勞。</li><li>全程 1F → 91F 共 2046 階,和 7 位跑者比名次。</li></ul>' }
+    ], { finishLabel: force ? '繼續比賽' : '準備起跑', onDone });
   }
   exit() { this.g.ui.big(''); this.me.root.visible = true; }
   setView(i) { this.view = i; this.camInit = false; }
@@ -292,7 +301,7 @@ export class RaceMode {
           </div>
           <div class="row">
             <button class="btn primary" id="f-again">再跑一次</button>
-            ${this.race.to === 35 ? '<button class="btn" id="f-sbux">去 35F 星巴克</button>' : '<button class="btn" id="f-89">搭電梯到 89F</button>'}
+            ${this.race.to === 35 ? '<button class="btn" id="f-sbux">去 35F 四八八克</button>' : '<button class="btn" id="f-89">搭電梯到 89F</button>'}
             <button class="btn" id="f-menu">主選單</button>
           </div>
         </div>`);

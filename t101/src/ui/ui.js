@@ -13,9 +13,12 @@ export class UI {
       <div class="topbar" id="topbar" style="display:none">
         <div class="viewbar" id="viewbar" role="group" aria-label="預設視角"></div>
         <span class="fps num" id="fps"></span>
+        <button class="icon-btn" id="help" aria-label="教學" title="教學"><span style="font-family:var(--num);font-size:22px;font-weight:700">?</span></button>
         <button class="icon-btn" id="gear" aria-label="設定(Esc)" title="設定(Esc)"><svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg></button>
       </div>
+      <div id="guide"></div>
       <div id="settings"></div>
+      <div id="tut"></div>
       <div class="fade" id="fade"></div>`;
     this.$ = (id) => root.querySelector('#' + id);
     this.hudEl = this.$('hud');
@@ -54,7 +57,7 @@ export class UI {
     this.layer.innerHTML = html ? `<div class="modal-wrap">${html}</div>` : '';
     return this.layer;
   }
-  clear() { this.hud(''); this.modal(''); this.prompt(''); this.big(''); this.danger(0); }
+  clear() { this.hud(''); this.modal(''); this.prompt(''); this.big(''); this.danger(0); this._subT = 0; this.$('sub').style.opacity = 0; this._bannerT = 0; this.$('banner').style.opacity = 0; }
   update(dt) {
     if (this._bannerT > 0 && (this._bannerT -= dt) <= 0) this.$('banner').style.opacity = 0;
     if (this._subT > 0 && (this._subT -= dt) <= 0) this.$('sub').style.opacity = 0;
@@ -80,14 +83,14 @@ export function makeQuestion(level = 0) {
  * 顯示心算降落傘題目。secs 秒內輸入答案按 Enter。
  * 回傳 Promise<boolean>(答對 true)。
  */
-export function askQuiz(ui, audio, level, secs = 5) {
+export function askQuiz(ui, audio, level, secs = 10) {
   return new Promise((resolve) => {
     const q = makeQuestion(level);
     const layer = ui.modal(`
       <div class="quiz" role="dialog" aria-label="心算降落傘">
-        <div style="font-size:15px;color:#f5c76a;font-weight:700">墜落中!5 秒內答對才能打開降落傘</div>
+        <div style="font-size:15px;color:#f5c76a;font-weight:700">墜落中!${secs} 秒內答對才能打開降落傘</div>
         <div class="q">${q.text} = ?</div>
-        <input id="qa" inputmode="numeric" autocomplete="off" aria-label="答案">
+        <input id="qa" inputmode="numeric" pattern="[0-9]*" maxlength="4" autocomplete="off" aria-label="答案(只能輸入數字)">
         <div class="timer"><i id="qt" style="width:100%"></i></div>
         <div class="pad">${[7, 8, 9, '⌫', 4, 5, 6, 0, 1, 2, 3, '確定'].map((k) => `<button data-k="${k}">${k}</button>`).join('')}</div>
       </div>`);
@@ -105,12 +108,19 @@ export function askQuiz(ui, audio, level, secs = 5) {
       resolve(ok);
     };
     const submit = () => finish(input.value.trim() !== '' && Number(input.value) === q.answer);
-    input.addEventListener('keydown', (e) => { if (e.key === 'Enter') submit(); e.stopPropagation(); });
+    // 只接受 0~9:擋掉其他按鍵,貼上或輸入法輸入的內容也過濾
+    input.addEventListener('keydown', (e) => {
+      e.stopPropagation();
+      if (e.key === 'Enter') { submit(); return; }
+      if (e.ctrlKey || e.metaKey || e.key.length > 1) return;
+      if (!/^[0-9]$/.test(e.key)) e.preventDefault();
+    });
+    input.addEventListener('input', () => { const v = input.value.replace(/[^0-9]/g, '').slice(0, 4); if (v !== input.value) input.value = v; });
     layer.querySelectorAll('.pad button').forEach((b) => b.addEventListener('click', () => {
       const k = b.dataset.k;
       if (k === '⌫') input.value = input.value.slice(0, -1);
       else if (k === '確定') submit();
-      else input.value += k;
+      else if (/^[0-9]$/.test(k) && input.value.length < 4) input.value += k;
       audio.click();
     }));
     let lastSec = secs;

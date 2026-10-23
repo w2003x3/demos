@@ -46,8 +46,8 @@ export const floorAtY = (y) => Math.max(1, Math.min(101, Math.floor(y / FH + 1e-
 // 可參觀樓層
 export const DESTS = [
   { floor: 5, name: '5F 售票入口', short: '售票入口' },
-  { floor: 35, name: '35F 星巴克咖啡', short: '星巴克' },
-  { floor: 88, name: '88F 興波咖啡 · 阻尼器', short: '興波咖啡' },
+  { floor: 35, name: '35F 四八八克咖啡', short: '四八八克' },
+  { floor: 88, name: '88F 心缽咖啡 · 阻尼器', short: '心缽咖啡' },
   { floor: 89, name: '89F 室內觀景台', short: '觀景台' }
 ];
 
@@ -60,6 +60,6 @@ export const STEPS_PER_FLOOR = 22; // 兩跑各 11 階
 export const RACE_STEPS_TOTAL = 2046; // 1F → 91F 官方階數(顯示用)
 export const RACES = [
   { id: 'full', name: '登高全程', from: 1, to: 91, desc: '1F → 91F · 2046 階' },
-  { id: 'sprint', name: '星巴克衝刺', from: 1, to: 35, desc: '1F → 35F · 短程' }
+  { id: 'sprint', name: '四八八克衝刺', from: 1, to: 35, desc: '1F → 35F · 短程' }
 ];
 export const WATER_FLOORS = [20, 35, 50, 65, 80];

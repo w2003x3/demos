@@ -5,6 +5,7 @@ import { towerSections, CROWN_Y, SPIRE_TOP, BASE_HW0, floorAtY, ROOF_Y } from '.
 import { createCharacter, poseIdle, poseWalk, poseCheer, resetPose } from '../world/character.js';
 import { OrbitCam, buildParachute } from './common.js';
 import { askQuiz, fmtTime } from '../ui/ui.js';
+import { VIS } from '../ui/tutorial.js';
 
 const LIMBS = [
   { id: 'LH', key: 'KeyQ', label: 'Q', name: '左手', hand: true, side: -1 },
@@ -64,11 +65,56 @@ export class ClimbMode {
     this.toLedge(-1);
     this.cam.first = true;
     this.setView(this.view);
-    g.audio.say('climb_start');
-    g.ui.subtitle('攀爬開始。安全繩已扣好,抓穩每一節竹節外牆。');
+    if (!g.tutorial.seen('climb')) this.tutorial(false);
+    else { g.audio.say('climb_start'); g.ui.subtitle('攀爬開始。安全繩已扣好,抓穩每一節竹節外牆。'); }
     this.fwHit = (p, n) => this.onFirework(p, n);
     g.fireworks.listeners.push(this.fwHit);
   }
+  /** 教學頁;第一次會接著做互動練習。 */
+  tutorial(force) {
+    const g = this.g;
+    const pages = [
+      { title: '目標:爬上 508 公尺塔尖', html: '從 101 <b>南面地面</b>出發,沿著外牆往上爬。每一節「竹節」頂端都有<b>平台</b>,翻上去就能休息、恢復握力,也是墜落後的重來點。91F 是室外觀景台,最後還要爬上塔尖。' },
+      { title: '用四個按鍵控制四肢', visual: VIS.climber, html: '<b>按住</b>某個鍵 = <b>放開那一肢</b>,它會自動往上伸(變黃色)。<br><b>放開</b>那個鍵 = 那一肢<b>抓住</b>牆面(變綠色)。<br>伸展時可以按 <kbd>A</kbd>/<kbd>D</kbd> 往左右、按住 <kbd>S</kbd> 改成往下。' },
+      { title: '爬升節奏:對角一起動', visual: VIS.rhythm, html: '身體會跟著<b>抓住的手腳</b>移動。最有效率的方法是<b>對角兩肢一起動</b>:<br>同時按住 <kbd>Q</kbd>+<kbd>C</kbd> → 放開 → 同時按住 <kbd>E</kbd>+<kbd>Z</kbd> → 放開,一直輪流。' },
+      { title: '握力', visual: VIS.grip, html: '左下角的<b>握力條</b>就是體力。<b>外擴的竹節是倒掛面</b>,比基座更耗力。握力低時,放開所有按鍵讓四肢抓牢,就會慢慢恢復;握力歸零會墜落。' },
+      { title: '危險與降落傘', html: '<ul><li><b>四肢同時放開 = 墜落</b>(至少要有一肢抓著)。</li><li>強風來襲:按住 <kbd>Shift</kbd> 貼緊牆面(貼牆時手腳不能動)。</li><li>跨年夜:煙火即將從附近發射時會預警,快往旁邊移開。</li><li>墜落時會出現<b>心算題,10 秒內</b>輸入答案按 Enter,答對才能打開降落傘。</li></ul>' }
+    ];
+    if (force) {
+      g.tutorial.pages('climb-pages', pages, { finishLabel: '繼續攀爬', extra: { label: '回地面重新練習', fn: () => this.startPractice() } });
+    } else {
+      g.tutorial.pages('climb-pages', pages, { finishLabel: '開始練習', onDone: () => this.startPractice() });
+    }
+  }
+
+  startPractice() {
+    const g = this.g;
+    this.body = null;
+    this.grip = 100;
+    this.toLedge(-1);
+    this.gust.t = 1e9;
+    const snap = {};
+    const take = () => { if (this.limbs) for (const l of this.limbs) snap[l.id] = l.y; };
+    const up = (id, d = 0.3) => this.state === 'wall' && this.limbs && this.limbs.find((l) => l.id === id).held && this.limbs.find((l) => l.id === id).y - (snap[id] ?? 1e9) > d;
+    let shiftT = 0;
+    g.tutorial.guided('climb', [
+      { title: '① 離開地面', text: '按 <kbd>W</kbd>(或任一肢體鍵)抓上牆面。', check: () => this.state === 'wall' },
+      { title: '② 移動左手', text: '<b>按住 <kbd>Q</kbd></b>:左手放開往上伸(左下 Q 變黃)→ <b>放開 Q</b>:左手抓住(變綠)。', enter: take, check: () => up('LH') },
+      { title: '③ 移動右腳', text: '同樣方式:<b>按住 <kbd>C</kbd> 再放開</b>,右腳往上踩。', enter: take, check: () => up('RF') },
+      { title: '④ 對角一起動', text: '<b>同時按住 <kbd>E</kbd> + <kbd>Z</kbd></b>,約半秒後一起放開。', enter: take, check: () => up('RH') && up('LF') },
+      { title: '⑤ 連續攀爬', text: '輪流「<kbd>Q</kbd>+<kbd>C</kbd>」→「<kbd>E</kbd>+<kbd>Z</kbd>」,爬到 <b>12 公尺</b>(看左上角高度)。', check: () => this.state === 'wall' && this.by > 12.9 },
+      { title: '⑥ 恢復握力', text: '握力已降到 55%。<b>放開所有按鍵</b>讓四肢抓牢,等握力回到 <b>90%</b>。', enter: () => { this.grip = 55; }, check: () => this.state === 'wall' && this.grip >= 90 },
+      { title: '⑦ 抵抗強風', text: '強風來時要<b>按住 <kbd>Shift</kbd></b> 貼緊牆面。現在按住 Shift 約 1 秒。', check: () => { shiftT = g.input.is('ShiftLeft', 'ShiftRight') ? shiftT + 1 / 60 : 0; return shiftT > 0.8; } },
+      { title: '⑧ 準備好了!', text: '記住:<b>四肢不能同時放開</b>。墜落時 10 秒內答對心算才能開傘。<br>按 <kbd>Enter</kbd> 開始正式挑戰(計時歸零)。', check: () => g.input.hit('Enter', 'NumpadEnter') }
+    ], (done) => {
+      this.time = 0;
+      this.falls = 0;
+      this.gust.t = 15 + Math.random() * 10;
+      g.ui.banner(done ? '練習完成!正式挑戰開始' : '已跳過練習', false, 2.5);
+      g.audio.say('climb_start');
+    });
+  }
+
   exit() {
     const g = this.g;
     g.scene.remove(this.char.root, this.chute);
@@ -152,9 +198,9 @@ export class ClimbMode {
     }
     this.state = 'falling';
     g.audio.say('fall');
-    // 慢動作 + 心算題
-    g.timeScale = 0.12;
-    askQuiz(g.ui, g.audio, h / 508, 5).then((ok) => {
+    // 慢動作(確保 10 秒作答期間不會先落地)+ 心算題
+    g.timeScale = Math.min(0.12, Math.sqrt((2 * h) / 9.8) / 12);
+    askQuiz(g.ui, g.audio, h / 508, 10).then((ok) => {
       g.timeScale = 1;
       if (this.g.mode !== this) return;
       if (ok) {

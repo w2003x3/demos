@@ -254,9 +254,9 @@ function build5F() {
   return f;
 }
 
-// ───────────────────────── 35F 星巴克 ─────────────────────────
+// ───────────────────────── 35F 四八八克 ─────────────────────────
 function build35F() {
-  const f = new Floor(35, '35F 星巴克咖啡 101 門市');
+  const f = new Floor(35, '35F 四八八克咖啡 101 門市');
   const wt = woodTexture(26, 34);
   f.shell({ floorMat: new THREE.MeshStandardMaterial({ map: wt, roughness: 0.55 }) });
   f.core(8, MATS.coreWood, '35F');
@@ -278,10 +278,10 @@ function build35F() {
   const m2 = F.menuBoard(2.6, 1.3, '特調 SIGNATURE', menu.slice(4), { bg: '#1e2b25' });
   m2.position.set(8.02, 2.5, 1.0); m2.rotation.y = Math.PI / 2;
   f.group.add(m1, m2);
-  const sign = F.signPlane(4.2, 0.7, 'STARBUCKS COFFEE', { bg: green, fg: '#ffffff', font: '700 150px "Barlow Condensed", sans-serif', glow: 0.9 });
+  const sign = F.signPlane(4.2, 0.7, '488K COFFEE', { bg: green, fg: '#ffffff', font: '700 150px "Barlow Condensed", sans-serif', glow: 0.9 });
   sign.position.set(8.03, 3.2, -0.6); sign.rotation.y = Math.PI / 2; sign.scale.set(0.9, 0.9, 1);
   f.group.add(sign);
-  const sign2 = F.signPlane(3.2, 0.5, '星巴克 101 門市 · 35F', { bg: null, fg: '#e6f2ec', font: '700 110px "Noto Sans TC", sans-serif', glow: 0.6 });
+  const sign2 = F.signPlane(3.2, 0.5, '四八八克 101 門市 · 35F', { bg: null, fg: '#e6f2ec', font: '700 110px "Noto Sans TC", sans-serif', glow: 0.6 });
   sign2.position.set(8.03, 1.5, 4.0); sign2.rotation.y = Math.PI / 2;
   f.group.add(sign2);
   // 吊燈
@@ -321,12 +321,12 @@ function build35F() {
   return f;
 }
 
-// ─────────────────────── 88F 興波咖啡 + 阻尼器 ───────────────────────
+// ─────────────────────── 88F 心缽咖啡 + 阻尼器 ───────────────────────
 const SUSPEND_Y = floorY(92); // 懸吊點高度
 const SPHERE_CENTER = floorY(88) + 3.25;
 
 function build88F(damper) {
-  const f = new Floor(88, '88F 興波咖啡 · 風阻尼器');
+  const f = new Floor(88, '88F 心缽咖啡 · 風阻尼器');
   const ct = carpetTexture('#2f2d33', '#3a3840');
   ct.repeat.set(1, 1);
   f.shell({ floorMat: new THREE.MeshStandardMaterial({ map: ct, roughness: 0.95 }), holeCeil: 5.6 });
@@ -374,7 +374,7 @@ function build88F(damper) {
   f.elevators(-11.5, '88F');
   f.spawn.ry = 0;
 
-  // 興波咖啡(東側)
+  // 心缽咖啡(東側)
   const bar = F.coffeeCounter(7.5, { front: F.MAT.woodDark, top: F.MAT.darkStone, brand: 0x3a2a1e });
   f.add(bar, 15.5, 0, -Math.PI / 2);
   f.box(15.5, 0, 0.9, 7.8);
@@ -383,7 +383,7 @@ function build88F(damper) {
   backWall.castShadow = true;
   f.group.add(backWall);
   f.box(17.6, 0, 0.6, 9);
-  const kafSign = F.signPlane(5, 0.9, '興波咖啡 Simple Kaffa', { bg: '#14110f', fg: '#e9d6b0', font: '700 120px "Noto Sans TC", sans-serif', glow: 0.8 });
+  const kafSign = F.signPlane(5, 0.9, '心缽咖啡 XIN BO KAFFA', { bg: '#14110f', fg: '#e9d6b0', font: '700 120px "Noto Sans TC", sans-serif', glow: 0.8 });
   kafSign.position.set(17.44, 2.5, 0); kafSign.rotation.y = -Math.PI / 2;
   f.group.add(kafSign);
   const km = F.menuBoard(2.4, 1.0, '手沖 POUR OVER', [['招牌綜合', '$280'], ['衣索比亞', '$320'], ['101 拿鐵', '$300']], { bg: '#1a1714', accent: '#d9b25a' });

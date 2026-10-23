@@ -161,7 +161,9 @@ export function buildCity(scene, zones = []) {
   const top = { pos: [], uv: [], col: [] };
   const color = new THREE.Color();
   const palette = [0xb9b2a5, 0xa59d90, 0x9a9c9c, 0x868f96, 0xc7bfb0, 0x7a838c, 0xae9f86, 0x6e787f, 0x939c9f, 0xb08f7a, 0x8a7f74, 0x5f6b72];
+  const boxes = [];
   const addBox = (x0, z0, x1, z1, h, c) => {
+    boxes.push([x0, z0, x1, z1, h]);
     const quads = [
       [[x0, z1], [x1, z1]], [[x1, z1], [x1, z0]], [[x1, z0], [x0, z0]], [[x0, z0], [x0, z1]]
     ];
@@ -236,7 +238,7 @@ export function buildCity(scene, zones = []) {
   const roofs = new THREE.Mesh(mk(top), new THREE.MeshStandardMaterial({ map: roofTexture(), vertexColors: true, roughness: 0.9 }));
   roofs.receiveShadow = true;
   scene.add(sides, roofs);
-  return { setNight: (n) => { sideMat.emissiveIntensity = n * 1.1; } };
+  return { boxes, setNight: (n) => { sideMat.emissiveIntensity = n * 1.1; } };
 }
 
 /** 行道樹(101 周邊 900m 內)。 */

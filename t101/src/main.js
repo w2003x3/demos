@@ -14,7 +14,10 @@ import { buildStairScene } from './world/stairwell.js';
 import { ClimbMode } from './modes/climb.js';
 import { RaceMode } from './modes/race.js';
 import { ExploreMode } from './modes/explore.js';
+import { HeliMode } from './modes/heli.js';
+import { GlideMode } from './modes/glide.js';
 import { RACES } from './config.js';
+import { Tutorial } from './ui/tutorial.js';
 
 const store = {
   get(k, d) { try { const v = localStorage.getItem('t101.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
@@ -45,9 +48,10 @@ class Game {
     this.audio.setVolume(this.settings.sfx / 100);
     this.audio.setVoiceVolume(this.settings.voice / 100);
     this.audio.setMuted(this.settings.muted);
-    this.paused = false;
     this.fpsN = 0; this.fpsT = 0;
+    this.tutorial = new Tutorial(this);
     this.ui.$('gear').addEventListener('click', () => this.toggleSettings());
+    this.ui.$('help').addEventListener('click', () => { if (this.mode && this.mode.tutorial && !this.tutorial.open) { this.closeSettings(); this.mode.tutorial(true); } });
     this.clock = new THREE.Clock();
     this.t = 0;
     setTimeout(() => this.build(), 30);
@@ -88,7 +92,7 @@ class Game {
     this.setTime(this.timeKey);
     this.applyQuality(this.settings.quality);
     await step(100);
-    this.modes = { climb: new ClimbMode(this), race: new RaceMode(this), explore: new ExploreMode(this) };
+    this.modes = { climb: new ClimbMode(this), race: new RaceMode(this), explore: new ExploreMode(this), heli: new HeliMode(this), glide: new GlideMode(this) };
     this.ui.modal('');
     this.showMenu();
     this.renderer.setAnimationLoop(() => this.loop());
@@ -150,10 +154,12 @@ class Game {
 
   showMenu() {
     if (this.mode) { this.mode.exit(); this.mode = null; }
+    this.audio.stopVoice();
     this.ui.clear();
     this.audio.setWind(0); this.audio.setHum(0); this.audio.setMurmur(0);
     this.interiors.setActive(null);
     this.closeSettings();
+    this.tutorial.closeAll();
     this.ui.$('topbar').style.display = 'none';
     this.menuT = 0;
     const best = store.get('best', {});
@@ -168,13 +174,16 @@ class Game {
           <div>
             <div class="kicker">TAIPEI 101 · 508 M</div>
             <h1>台北101<br>攀登挑戰</h1>
-            <p class="lead">四肢攀上竹節外牆、衝刺 2046 階登高賽,或搭 37 秒高速電梯直上 89 樓觀景台。</p>
+            <p class="lead">四肢攀上竹節外牆、衝刺 2046 階登高賽、搭高速電梯上觀景台,或坐直升機、駕滑翔翼看台北。</p>
           </div>
           <div class="modes">
             <button class="mode-btn" data-mode="climb"><span class="no">01</span><span class="t"><b>外牆攀爬</b><span>四肢交替抓住外牆,一節一節爬上 508 公尺塔尖</span></span><span class="tag">挑戰</span></button>
             <button class="mode-btn" data-mode="race" data-race="full"><span class="no">02</span><span class="t"><b>樓梯登高賽 · 全程</b><span>${RACES[0].desc},與 7 位跑者競速</span></span><span class="tag">計時賽</span></button>
-            <button class="mode-btn" data-mode="race" data-race="sprint"><span class="no">03</span><span class="t"><b>樓梯登高賽 · 短程</b><span>${RACES[1].desc}(終點星巴克)</span></span><span class="tag">計時賽</span></button>
-            <button class="mode-btn" data-mode="explore"><span class="no">04</span><span class="t"><b>高速電梯 · 樓層導覽</b><span>5F 售票 → 35F 星巴克 · 88F 興波咖啡與阻尼器 · 89F 觀景台</span></span><span class="tag">探索</span></button>
+            <button class="mode-btn" data-mode="race" data-race="sprint"><span class="no">03</span><span class="t"><b>樓梯登高賽 · 短程</b><span>${RACES[1].desc}(終點四八八克)</span></span><span class="tag">計時賽</span></button>
+            <button class="mode-btn" data-mode="explore"><span class="no">04</span><span class="t"><b>高速電梯 · 樓層導覽</b><span>5F 售票 → 35F 四八八克 · 88F 心缽咖啡與阻尼器 · 89F 觀景台</span></span><span class="tag">探索</span></button>
+            <button class="mode-btn" data-mode="heli"><span class="no">05</span><span class="t"><b>直升機環景</b><span>環繞 101 飛行欣賞台北;跨年夜可在空中看煙火</span></span><span class="tag">觀光</span></button>
+            <button class="mode-btn" data-mode="glide"><span class="no">06</span><span class="t"><b>創意滑翔賽</b><span>打造滑翔翼從 101 頂樓起飛,滑得越遠越好</span></span><span class="tag">挑戰</span></button>
+            
           </div>
           <div class="row"><span class="label">時段</span><div class="seg" role="group" aria-label="時段">${timeBtns}</div>
             <button class="icon-btn" id="mute" aria-label="音效開關" title="音效開關">${this.audio.muted ? speakerOff : speakerOn}</button>
@@ -209,8 +218,10 @@ class Game {
 
   startMode(name, opts = {}) {
     if (this.mode) this.mode.exit();
+    this.audio.stopVoice();
     this.ui.clear();
     this.closeSettings();
+    this.tutorial.closeAll();
     this.mode = this.modes[name];
     this.mode.enter(opts);
     this.renderViewbar();
@@ -236,19 +247,20 @@ class Game {
     this.ui.banner(`視角:${this.mode.views[i].name}`, false, 1.2);
   }
 
+  /** 設定或教學開著時遊戲暫停。 */
+  get paused() { return !!this.mode && (!!this.settingsOpen || !!(this.tutorial && this.tutorial.open)); }
+
   // ── 設定面板 ──
   toggleSettings() { if (this.settingsOpen) this.closeSettings(); else this.openSettings(); }
   closeSettings() {
     if (!this.settingsOpen) return;
     this.settingsOpen = false;
-    this.paused = false;
     this.ui.$('settings').innerHTML = '';
     this.clock.getDelta();
   }
   openSettings() {
     if (this.ui.layer.querySelector('.quiz')) return;
     this.settingsOpen = true;
-    this.paused = !!this.mode;
     const s = this.settings;
     const q = (k, l) => `<button data-q="${k}" class="${s.quality === k ? 'on' : ''}">${l}</button>`;
     const el = this.ui.$('settings');
@@ -313,7 +325,8 @@ class Game {
     this.fpsN++; this.fpsT += realDt;
     if (this.fpsT > 0.5) { if (this.settings.fps) this.ui.set('fps', `${Math.round(this.fpsN / this.fpsT)} FPS`); this.fpsN = 0; this.fpsT = 0; }
     if (input.hit('Escape') && !this.ui.layer.querySelector('.quiz')) {
-      if (this.settingsOpen) this.closeSettings();
+      if (this.tutorial.open) this.tutorial.closeFn();
+      else if (this.settingsOpen) this.closeSettings();
       else if (this.mode) this.openSettings();
     }
     if (this.paused) {
@@ -329,6 +342,7 @@ class Game {
     const rawDt = Math.min(0.05, realDt);
     const dt = rawDt * (this.timeScale ?? 1);
     this.t += dt;
+    this.tutorial.update(rawDt);
     this.updateTraffic(dt);
     this.interiors.update(this.t, dt);
     this.tower.userData.beacon.visible = Math.sin(this.t * 3) > 0;

@@ -1,10 +1,11 @@
 // 語音台詞清單。音檔由 tools/gen-voice-edge.py 事先產生到 assets/audio/voice/<id>.mp3。
-// 角色:announcer = 廣播(男聲 雲哲)、lift = 電梯廣播(女聲 曉臻)、barista = 星巴克店員(曉臻)、kaffa = 興波咖啡店員(曉雨)
+// 角色:announcer = 廣播(男聲 雲哲)、lift = 電梯廣播(女聲 曉臻)、barista = 四八八克店員(曉臻)、kaffa = 心缽咖啡店員(曉雨)
 export const VOICES = {
   announcer: { voice: 'zh-TW-YunJheNeural', rate: '+0%' },
   lift: { voice: 'zh-TW-HsiaoChenNeural', rate: '+0%' },
   barista: { voice: 'zh-TW-HsiaoChenNeural', rate: '+5%' },
-  kaffa: { voice: 'zh-TW-HsiaoYuNeural', rate: '+0%' }
+  kaffa: { voice: 'zh-TW-HsiaoYuNeural', rate: '+0%' },
+  guide: { voice: 'zh-TW-HsiaoYuNeural', rate: '+0%' }
 };
 
 export const LINES = [
@@ -13,8 +14,8 @@ export const LINES = [
   { id: 'elev_down', role: 'lift', text: '電梯下樓中,請站穩扶好。' },
   { id: 'elev_ear', role: 'lift', text: '電梯以每分鐘一千零一十公尺的速度上升,如有耳鳴,請吞嚥口水。' },
   { id: 'arrive_5', role: 'lift', text: '五樓到了,這裡是觀景台售票入口。' },
-  { id: 'arrive_35', role: 'lift', text: '三十五樓到了,星巴克咖啡在您的右前方。' },
-  { id: 'arrive_88', role: 'lift', text: '八十八樓到了,風阻尼器與興波咖啡,歡迎參觀。' },
+  { id: 'arrive_35', role: 'lift', text: '三十五樓到了,四八八克咖啡在您的右前方。' },
+  { id: 'arrive_88', role: 'lift', text: '八十八樓到了,風阻尼器與心缽咖啡,歡迎參觀。' },
   { id: 'arrive_89', role: 'lift', text: '八十九樓,室內觀景台到了,祝您參觀愉快。' },
   { id: 'race_ready', role: 'announcer', text: '各就各位,預備。' },
   { id: 'race_go', role: 'announcer', text: '開跑!' },
@@ -43,5 +44,17 @@ export const LINES = [
   { id: 'fw_warn', role: 'announcer', text: '注意!附近即將施放煙火,快往旁邊移動!' },
   { id: 'fw_hit', role: 'announcer', text: '被煙火炸飛了!' },
   { id: 'nye_10', role: 'announcer', text: '跨年倒數,十、九、八、七、六、五、四、三、二、一!' },
-  { id: 'nye_happy', role: 'announcer', text: '新年快樂!二零二七年到了!' }
+  { id: 'nye_happy', role: 'announcer', text: '新年快樂!二零二七年到了!' },
+  { id: 'heli_welcome', role: 'guide', text: '歡迎搭乘台北101環景直升機,我們將環繞這座五百零八公尺高的地標飛行,請繫好安全帶。' },
+  { id: 'heli_east', role: 'guide', text: '現在位於101東側,後方是象山與四獸山,也是拍攝101最熱門的地點。' },
+  { id: 'heli_north', role: 'guide', text: '北邊可以看到台北大巨蛋和國父紀念館,遠方的山是陽明山。' },
+  { id: 'heli_west', role: 'guide', text: '西邊是台北車站與淡水河的方向,天氣好的時候可以看到觀音山。' },
+  { id: 'heli_south', role: 'guide', text: '101的外型像節節高升的竹子,每一節有八層樓,南面還有金色的如意裝飾。' },
+  { id: 'heli_damper', role: 'guide', text: '在八十七到九十二樓之間,懸掛著六百六十公噸的風阻尼器,幫助大樓抵抗強風。' },
+  { id: 'heli_nye', role: 'guide', text: '跨年煙火即將開始,我們會在最佳位置盤旋,請欣賞101的跨年煙火秀!' },
+  { id: 'glide_go', role: 'announcer', text: '三、二、一,起飛!' },
+  { id: 'glide_stall', role: 'announcer', text: '失速了!壓低機頭加速!' },
+  { id: 'glide_land', role: 'announcer', text: '成功著陸!來看看飛了多遠!' },
+  { id: 'glide_crash', role: 'announcer', text: '撞到建築物了!' },
+  { id: 'glide_record', role: 'announcer', text: '新紀錄!這是目前飛得最遠的滑翔翼!' }
 ];

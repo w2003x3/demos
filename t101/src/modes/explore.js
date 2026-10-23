@@ -4,8 +4,26 @@ import { DESTS, floorY } from '../config.js';
 import { createCharacter, poseIdle, poseWalk, poseLean } from '../world/character.js';
 import { makeRide } from '../world/elevator.js';
 import { OrbitCam } from './common.js';
+import { VIS } from '../ui/tutorial.js';
 
 const clamp = THREE.MathUtils.clamp;
+// 望遠鏡可辨識的地標(座標以 101 為原點,北 = -Z、東 = +X)
+const SCOPE_TARGETS = [
+  { name: '象山', desc: '海拔 183 公尺,台北夜景步道', x: 1150, y: 150, z: 380, r: 260 },
+  { name: '四獸山 · 虎山', desc: '信義區東側的山系', x: 1500, y: 110, z: -150, r: 260 },
+  { name: '南山廣場', desc: '272 公尺,101 旁的摩天大樓', x: -200, y: 140, z: -265, r: 40 },
+  { name: '國父紀念館', desc: '黃色大屋頂,1972 年落成', x: -1250, y: 20, z: -250, r: 70 },
+  { name: '台北大巨蛋', desc: '國父紀念館北側的巨蛋', x: -1250, y: 30, z: -710, r: 150 },
+  { name: '新光摩天大樓', desc: '244 公尺,台北車站前', x: -6200, y: 120, z: -900, r: 60 },
+  { name: '台北車站', desc: '北門與西門町一帶', x: -6200, y: 20, z: -600, r: 120 },
+  { name: '中正紀念堂', desc: '藍色八角屋頂', x: -4800, y: 40, z: 650, r: 70 },
+  { name: '圓山大飯店', desc: '紅柱黃瓦的宮殿式建築', x: -3900, y: 70, z: -6100, r: 120 },
+  { name: '松山機場', desc: '市區內的國內線機場', x: -2650, y: 5, z: -3200, r: 600 },
+  { name: '陽明山 · 七星山', desc: '海拔 1120 公尺', x: -1500, y: 900, z: -12500, r: 2500 },
+  { name: '淡水河', desc: '台北盆地西側的大河', x: -4900, y: 0, z: -2000, r: 500 },
+  { name: '基隆河', desc: '流經松山、內湖', x: 1000, y: 0, z: -3600, r: 400 },
+  { name: '貓空 · 指南宮', desc: '南方的茶園山區', x: 1200, y: 300, z: 6500, r: 1500 }
+];
 const ARRIVE = { 5: 'arrive_5', 35: 'arrive_35', 88: 'arrive_88', 89: 'arrive_89' };
 
 export class ExploreMode {
@@ -47,6 +65,16 @@ export class ExploreMode {
     this.arrive(opts.floor || 5, true);
     this.buildHud();
     this.setView(this.view);
+    if (!g.tutorial.seen('explore')) this.tutorial(false);
+  }
+
+  tutorial(force) {
+    this.g.tutorial.pages('explore', [
+      { title: '用滑鼠點擊移動', visual: VIS.click, html: '<b>點地面</b>:角色自動走過去(會繞開桌椅),<b>連點兩下</b>快走。<br><b>點物件</b>(櫃台、望遠鏡、阻尼器、電梯門):走過去並直接互動。<br>也可以用 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 走、靠近時按 <kbd>E</kbd> 互動。' },
+      { title: '各樓層可以做什麼', html: '<ul><li><b>5F</b> 售票入口:買票、看 101 模型</li><li><b>35F 四八八克</b>:點咖啡、靠窗看信義區</li><li><b>88F 心缽咖啡</b>:中央的 660 公噸<b>風阻尼器</b>、颱風模擬</li><li><b>89F 觀景台</b>:四個方位的<b>望遠鏡</b>、紀念章</li></ul>' },
+      { title: '高速電梯', html: '點<b>電梯門</b>(或靠近按 <kbd>E</kbd>)選擇樓層。5F → 89F 約 <b>37 秒</b>,分速 1010 公尺,車廂內會顯示樓層與速度。' },
+      { title: '視角與望遠鏡', html: '右上角可切換<b>跟隨/肩後/第一人稱/俯視/正面</b>視角(或按 <kbd>V</kbd>、<kbd>1</kbd>~<kbd>5</kbd>)。<br>望遠鏡:拖曳或 <kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd> 轉動、滾輪變焦,<b>十字對準地標</b>會顯示名稱與距離。跨年夜可在窗邊看煙火。' }
+    ], { finishLabel: force ? '繼續' : '開始參觀' });
   }
   exit() {
     const g = this.g;
@@ -407,7 +435,7 @@ export class ExploreMode {
         g.audio.steam();
         ui.subtitle(g.audio.say('kaffa_order') || '這是我們的招牌手沖咖啡。');
         this.cup.visible = true;
-        ui.banner('獲得:興波招牌手沖', false, 2.5);
+        ui.banner('獲得:心缽招牌手沖', false, 2.5);
         break;
       case 'damper':
         ui.subtitle(g.audio.say('damper_info'), 8);
@@ -420,11 +448,33 @@ export class ExploreMode {
         break;
       case 'telescope':
         this.state = 'telescope';
-        this.scope = { yaw: it.look + Math.PI, pitch: -0.08, it };
+        this.path = null;
+        this.marker.visible = false;
+        // 望遠鏡朝外(it.look 為望遠鏡面向),往窗外看
+        this.scope = { base: it.look, yaw: 0, pitch: -0.12, it };
+        this.char.root.visible = false;
         ui.prompt('');
-        ui.hud(`<div class="pnl tc">望遠鏡 · 拖曳轉動、滾輪變焦 · 按 <kbd>E</kbd> 離開</div>
-          <div style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 50%, transparent 0 36%, rgba(0,0,0,.92) 38%)"></div>`);
+        ui.hud(`
+          <div style="position:absolute;inset:0;pointer-events:none;background:radial-gradient(circle at 50% 50%, transparent 0 34%, rgba(0,0,0,.25) 35%, rgba(0,0,0,.94) 37%)"></div>
+          <svg aria-hidden="true" style="position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);pointer-events:none" width="220" height="220" viewBox="0 0 220 220" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.2">
+            <line x1="110" y1="20" x2="110" y2="95"/><line x1="110" y1="125" x2="110" y2="200"/><line x1="20" y1="110" x2="95" y2="110"/><line x1="125" y1="110" x2="200" y2="110"/><circle cx="110" cy="110" r="4"/>
+          </svg>
+          <div class="pnl tc" style="text-align:center;min-width:260px">
+            <div style="font-size:20px;font-weight:900" id="sc-name">—</div>
+            <div class="small" id="sc-sub">把十字對準地標</div>
+          </div>
+          <div class="pnl bl" style="display:flex;flex-direction:column;gap:6px;min-width:200px">
+            <div class="kv"><span>方位</span><span class="num" id="sc-dir" style="font-size:18px">南</span></div>
+            <div class="kv"><span>倍率</span><span class="num" id="sc-zoom" style="font-size:18px;color:var(--gold)">×4</span></div>
+          </div>
+          <div class="pnl br" style="display:flex;flex-direction:column;gap:6px;align-items:flex-end">
+            <div class="small">拖曳 / <kbd>A</kbd><kbd>D</kbd><kbd>W</kbd><kbd>S</kbd> 轉動 · 滾輪或 <kbd>+</kbd><kbd>-</kbd> 變焦</div>
+            <div class="row"><button class="btn" id="sc-in" aria-label="放大">放大</button><button class="btn" id="sc-out" aria-label="縮小">縮小</button><button class="btn primary" id="sc-exit">離開望遠鏡 (E)</button></div>
+          </div>`);
         this.scopeFov = 14;
+        ui.q('#sc-in').addEventListener('click', () => { this.scopeFov = clamp(this.scopeFov * 0.7, 2.5, 45); });
+        ui.q('#sc-out').addEventListener('click', () => { this.scopeFov = clamp(this.scopeFov / 0.7, 2.5, 45); });
+        ui.q('#sc-exit').addEventListener('click', () => this.leaveTelescope());
         break;
       case 'stamp': {
         const n = g.store.get('stamps', 0) + 1;
@@ -445,18 +495,45 @@ export class ExploreMode {
   }
 
   updateTelescope(dt) {
-    const g = this.g, input = g.input, cam = g.camera, s = this.scope;
-    s.yaw -= input.drag.dx * 0.002 * (this.scopeFov / 40);
-    s.pitch = clamp(s.pitch - input.drag.dy * 0.002 * (this.scopeFov / 40), -0.7, 0.3);
-    if (input.wheel) this.scopeFov = clamp(this.scopeFov * (input.wheel > 0 ? 1.15 : 0.87), 3, 40);
+    const g = this.g, input = g.input, cam = g.camera, s = this.scope, ui = g.ui;
+    const k = this.scopeFov / 40;
+    s.yaw -= input.drag.dx * 0.003 * k;
+    s.pitch -= input.drag.dy * 0.003 * k;
+    const kx = (input.is('KeyA', 'ArrowLeft') ? 1 : 0) - (input.is('KeyD', 'ArrowRight') ? 1 : 0);
+    const ky = (input.is('KeyW', 'ArrowUp') ? 1 : 0) - (input.is('KeyS', 'ArrowDown') ? 1 : 0);
+    s.yaw += kx * 0.6 * k * dt * 2;
+    s.pitch += ky * 0.6 * k * dt * 2;
+    // 限制在窗戶範圍:左右 ±75°,上下 -60°~+20°
+    s.yaw = clamp(s.yaw, -1.3, 1.3);
+    s.pitch = clamp(s.pitch, -1.05, 0.35);
+    if (input.wheel) this.scopeFov = clamp(this.scopeFov * (input.wheel > 0 ? 1.15 : 0.87), 2.5, 45);
+    if (input.hit('Equal', 'NumpadAdd')) this.scopeFov = clamp(this.scopeFov * 0.7, 2.5, 45);
+    if (input.hit('Minus', 'NumpadSubtract')) this.scopeFov = clamp(this.scopeFov / 0.7, 2.5, 45);
     const it = s.it;
-    cam.position.set(it.x + Math.sin(it.look) * 0.6, this.floor.y + 1.6, it.z + Math.cos(it.look) * 0.6);
+    // 鏡頭放在望遠鏡目鏡前方(望遠鏡位於互動點往外 1m)
+    const fx = Math.sin(it.look), fz = Math.cos(it.look);
+    cam.position.set(it.x + fx * 1.62, this.floor.y + 1.3, it.z + fz * 1.62);
     cam.fov = this.scopeFov;
     cam.updateProjectionMatrix();
-    cam.lookAt(cam.position.clone().add(new THREE.Vector3(Math.sin(s.yaw) * Math.cos(s.pitch), Math.sin(s.pitch), Math.cos(s.yaw) * Math.cos(s.pitch))));
-    poseLean(this.char, g.t);
+    const yaw = s.base + s.yaw;
+    const dir = new THREE.Vector3(Math.sin(yaw) * Math.cos(s.pitch), Math.sin(s.pitch), Math.cos(yaw) * Math.cos(s.pitch));
+    cam.lookAt(cam.position.clone().add(dir));
+    // HUD:方位、倍率、對準的地標
+    const deg = ((Math.atan2(dir.x, -dir.z) * 180) / Math.PI + 360) % 360;
+    const names = ['北', '東北', '東', '東南', '南', '西南', '西', '西北'];
+    ui.set('sc-dir', `${names[Math.round(deg / 45) % 8]} ${Math.round(deg)}°`);
+    ui.set('sc-zoom', `×${(55 / this.scopeFov).toFixed(1)}`);
+    let best = null, bd = 1e9;
+    for (const L of SCOPE_TARGETS) {
+      const v = new THREE.Vector3(L.x - cam.position.x, L.y - cam.position.y, L.z - cam.position.z);
+      const dist = v.length();
+      const ang = v.normalize().angleTo(dir);
+      const tol = Math.max(0.025, (this.scopeFov * Math.PI / 180) * 0.18) + L.r / dist;
+      if (ang < tol && ang < bd) { bd = ang; best = { ...L, dist }; }
+    }
+    ui.set('sc-name', best ? best.name : '—');
+    ui.set('sc-sub', best ? `${best.desc} · 距離約 ${best.dist > 1000 ? (best.dist / 1000).toFixed(1) + ' 公里' : Math.round(best.dist) + ' 公尺'}` : '把十字對準地標');
     if (input.hit('KeyE')) this.leaveTelescope();
-    void dt;
     return null;
   }
   leaveTelescope() {
@@ -464,6 +541,7 @@ export class ExploreMode {
     cam.fov = 55;
     cam.updateProjectionMatrix();
     this.state = 'walk';
+    this.char.root.visible = !this.views[this.view].fp;
     this.buildHud();
   }
 
