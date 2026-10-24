@@ -955,3 +955,12 @@ body.mode-3d #lowhp-overlay.on {
 .hero-arrow.next { right: 19%; }
 .hero-chars .hc-img.swap { animation: heroSwap .28s ease; }
 @keyframes heroSwap { from { opacity: .3; transform: translateY(10px) scale(.96); } to { opacity: 1; transform: none; } }
+
+/* 低血量文字提示(配合畫面邊緣紅光,2D / 3D 共用) */
+#lowhp-tip {
+  position: absolute; left: 50%; top: 56px; transform: translateX(-50%); z-index: 6; pointer-events: none;
+  padding: 5px 14px; background: rgba(200,30,30,.92); color: #fff; font-size: 15px; font-weight: 900; white-space: nowrap;
+  box-shadow: 3px 3px 0 rgba(0,0,0,.25); animation: lowhp 1.6s ease-in-out infinite;
+}
+#lowhp-tip.hidden { display: none; }
+@media (max-width: 560px) { #lowhp-tip { top: 44px; font-size: 13px; padding: 4px 10px; } }

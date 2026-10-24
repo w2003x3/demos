@@ -2432,7 +2432,10 @@ function updateHud() {
   }
   // 3D 的低血量警示(2D 畫在畫布上):HP 只剩 1 時畫面邊緣泛紅閃爍
   const low = $el('lowhp-overlay');
-  if (low && low.classList) low.classList.toggle('on', p.alive && p.hp === 1 && gameState === 'playing');
+  const lowHp = p.alive && p.hp === 1 && gameState === 'playing';
+  if (low && low.classList) low.classList.toggle('on', lowHp);
+  const lowTip = $el('lowhp-tip');                 // 紅光的文字說明(2D / 3D 都顯示)
+  if (lowTip && lowTip.classList) lowTip.classList.toggle('hidden', !lowHp);
   setHtml('ctx-hint', tip);
   const ch = $el('ctx-hint');
   if (ch && ch.classList) ch.classList.toggle('hidden', !tip);
