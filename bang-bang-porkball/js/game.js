@@ -2429,6 +2429,9 @@ function updateHud() {
     if (canThrow(p)) parts.push(phone ? '放貢丸 ×2 = 丟' : '<kbd>空白 ×2</kbd>丟');
     tip = parts.join('<i></i>');
   }
+  // 3D 的低血量警示(2D 畫在畫布上):HP 只剩 1 時畫面邊緣泛紅閃爍
+  const low = $el('lowhp-overlay');
+  if (low && low.classList) low.classList.toggle('on', p.alive && p.hp === 1 && gameState === 'playing');
   setHtml('ctx-hint', tip);
   const ch = $el('ctx-hint');
   if (ch && ch.classList) ch.classList.toggle('hidden', !tip);

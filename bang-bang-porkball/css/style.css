@@ -898,3 +898,12 @@ button.big:disabled { opacity: .45; cursor: not-allowed; }
 .sp-num { font: 700 14px var(--font-num); text-align: right; }
 .sp-note { margin: 0; font-size: 12px; font-weight: 500; color: var(--muted); line-height: 1.5; }
 @media (max-width: 560px) { .sound-panel { left: 8px; right: 8px; width: auto; top: 60px; } }
+
+/* 3D 低血量警示:畫面邊緣泛紅閃爍(2D 版畫在畫布上) */
+#lowhp-overlay { display: none; }
+body.mode-3d #lowhp-overlay.on {
+  display: block; position: absolute; inset: 10px; z-index: 4; pointer-events: none;
+  background: radial-gradient(ellipse at center, rgba(200,0,0,0) 55%, rgba(200,0,0,.42) 100%);
+  animation: lowhp 1.6s ease-in-out infinite;
+}
+@keyframes lowhp { 0%, 100% { opacity: .65; } 50% { opacity: 1; } }
