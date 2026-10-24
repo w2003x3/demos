@@ -88,7 +88,26 @@ let grid = []; // grid[r][c] = TILE.*
 
 // 兩隊出生點(col,row):藍隊在左、紅隊在右。第一個是人類玩家。
 // 出生點:前 n 個藍隊(左側)、後 n 個紅隊(右側);n = 每隊人數(對戰設定)
+// 每局隨機:整張左右 / 上下翻轉(藍隊可能在右邊),同隊的出生位置再打亂
+let spawnLayout = null;
+let spotT = 0;   // 開局「你在這裡」亮光剩餘秒數
+function rollSpawns() {
+  const base = baseSpawns();
+  const fx = Math.random() < 0.5, fy = Math.random() < 0.5;
+  const pos = base.map((s) => [fx ? COLS - 1 - s.col : s.col, fy ? ROWS - 1 - s.row : s.row]);
+  const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = rand(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
+  const n = base.filter((s) => s.team === 'blue').length;
+  const bluePos = shuffle(pos.slice(0, n)), redPos = shuffle(pos.slice(n));
+  spawnLayout = { size: n, list: base.map((s, i) => {
+    const [col, row] = i < n ? bluePos[i] : redPos[i - n];
+    return { ...s, col, row };
+  }) };
+}
 function teamSpawns() {
+  const n = (typeof MATCH !== 'undefined' && MATCH.size) || 3;
+  return spawnLayout && spawnLayout.size === n ? spawnLayout.list : baseSpawns();
+}
+function baseSpawns() {
   const mid = Math.floor(ROWS / 2);
   const n = (typeof MATCH !== 'undefined' && MATCH.size) || 3;
   // 每隊 4 人時沿左右兩側平均分開(1、4、8、11 列);3 人以下維持角落 + 中間
@@ -281,6 +300,12 @@ let matchTime = MATCH_TIME;
 let usedBush = new Set();  // 已驚動過野生生物的草叢(每叢只觸發一次)
 let benches = {};          // 長椅:key = r*COLS+c → {c, r, back(椅背朝向 n/s/e/w), fc, fr(正面那一格)}
 const benchAt = (c, r) => benches[r * COLS + c] || null;
+// 頭上顯示的名稱:自己=你(連線時用暱稱)、連線玩家=暱稱、電腦=角色名
+function displayName(f) {
+  if (f === player) return NET.online && NET.name ? NET.name : '你';
+  if (f.isHuman || f.remote || f.netId) return (f.label || '').replace('(電腦)', '') || '玩家';
+  return charDef(f.char).name;
+}
 // 正躺在長椅上(站定在長椅格、沒在移動)
 const onBench = (e) => !!(e && e.alive && !e.mvTarget && grid[e.row] && grid[e.row][e.col] === TILE.BENCH);
 let wildCritters = [];     // 被草叢驚動的野生老鼠/蟑螂(攻擊一次後自生自滅)
@@ -1702,6 +1727,7 @@ function update(dt) {
   elapsed += dt;
 
   updateWeather(dt);
+  if (spotT > 0) spotT -= dt;
   danger = computeDanger(); // 供 AI 決策與畫面預警
 
   readPlayerInput(dt);
@@ -2135,6 +2161,24 @@ function drawCharacter(e) {
   // 全身像(寫實圖,腳底對齊格子下方;往左走時左右翻轉)
   const size = TS * 1.55, footY = e.y + TS * 0.42;
   const img = ASSETS[charSprite(e)];
+  const spot = e === player && e.alive && spotT > 0 ? Math.min(1, spotT / 0.6) : 0;
+  if (spot) {                                   // 開局:光柱 + 地面光圈,標出自己的位置
+    const pulse = 0.75 + 0.25 * Math.sin(elapsed * 10);
+    ctx.save();
+    ctx.globalAlpha = spot;
+    const beam = ctx.createLinearGradient(0, e.y - TS * 4, 0, footY);
+    beam.addColorStop(0, 'rgba(255,230,120,0)'); beam.addColorStop(1, `rgba(255,220,90,${0.55 * pulse})`);
+    ctx.fillStyle = beam;
+    ctx.fillRect(e.x - TS * 0.55, e.y - TS * 4, TS * 1.1, footY - (e.y - TS * 4));
+    const glow = ctx.createRadialGradient(e.x, footY - 4, 2, e.x, footY - 4, TS * 1.1);
+    glow.addColorStop(0, `rgba(255,236,140,${0.85 * pulse})`); glow.addColorStop(1, 'rgba(255,220,90,0)');
+    ctx.fillStyle = glow;
+    ctx.beginPath(); ctx.ellipse(e.x, footY - 4, TS * 1.1, TS * 0.5, 0, 0, Math.PI * 2); ctx.fill();
+    ctx.strokeStyle = `rgba(255,213,79,${pulse})`; ctx.lineWidth = 3;
+    const rr = TS * (0.5 + ((elapsed * 1.2) % 1) * 0.6);
+    ctx.beginPath(); ctx.ellipse(e.x, footY - 4, rr, rr * 0.45, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
   ctx.globalAlpha = e.alive ? 1 : 0.4;
   const lying = onBench(e) ? benchAt(e.col, e.row) : null;
   if (img && img.complete && img.naturalWidth) {
@@ -2168,6 +2212,28 @@ function drawCharacter(e) {
   ctx.lineTo(e.x - 6, headY - 10 + bob);
   ctx.lineTo(e.x + 6, headY - 10 + bob);
   ctx.closePath(); ctx.fill(); ctx.stroke();
+  if (spot) {
+    ctx.save();
+    ctx.globalAlpha = spot;
+    ctx.font = 'bold 15px "Noto Sans TC", sans-serif'; ctx.textAlign = 'center';
+    ctx.lineWidth = 4; ctx.strokeStyle = 'rgba(0,0,0,0.7)'; ctx.fillStyle = '#ffd54f';
+    const ty = headY - 44 + Math.sin(elapsed * 6) * 2;
+    ctx.strokeText('▼ 你在這裡!', e.x, ty); ctx.fillText('▼ 你在這裡!', e.x, ty);
+    ctx.restore();
+  }
+  // 頭上名稱(隊伍色底):自己=你(連線時是暱稱)、連線玩家=暱稱、電腦=角色名
+  if (e.alive) {
+    const name = displayName(e);
+    ctx.font = 'bold 11px "Noto Sans TC", sans-serif';
+    const w = ctx.measureText(name).width + 10, ny = headY - 24 + bob;
+    ctx.fillStyle = e === player ? 'rgba(199,154,0,0.92)' : e.team === 'red' ? 'rgba(170,40,30,0.88)' : 'rgba(25,95,170,0.88)';
+    ctx.beginPath();
+    if (ctx.roundRect) ctx.roundRect(e.x - w / 2, ny - 7, w, 15, 4); else ctx.rect(e.x - w / 2, ny - 7, w, 15);
+    ctx.fill();
+    ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(name, e.x, ny + 0.5);
+    ctx.textBaseline = 'alphabetic';
+  }
   const midY = footY - size * 0.42;
   // 防護盾光環(作用中;快結束時閃爍)
   if (e.shieldT > 0 && !(e.shieldT < 0.8 && Math.floor(e.shieldT * 10) % 2 === 0)) {
@@ -2576,6 +2642,8 @@ function pickChar(id) {
 // ====================================================================
 function restart() {
   if (window.tutorial) tutorial.stop(); // 任何重新開局都會結束教學
+  rollSpawns();                         // 每局出生位置都不同
+  spotT = 3.5;                          // 開局亮光標出自己的位置
   generateMap();
   randomizeWeather();
   if (MATCH.wx === 'calm') { setWeather('cool'); env.left = 1e9; }   // 對戰設定:固定涼爽

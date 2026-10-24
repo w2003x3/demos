@@ -228,6 +228,7 @@ const NET = {
       applyCfg(msg.cfg);
       SERIES.round = msg.round || 1; SERIES.wins = msg.wins || { blue: 0, red: 0 }; SERIES.over = false; SERIES.nextAt = 0;
       this.ready = {};
+      spotT = 3.5;              // 開局亮光標出自己的位置
       setupUI.hide();
       currentMapId = msg.map;
       this.resultShown = false;
@@ -253,7 +254,7 @@ const NET = {
     this.raw({ t: 'in', mv: want ? [want[0], want[1], keep ? 1 : 0] : null });
   },
   sendTap(c, r) { this.raw({ t: 'in', go: [c, r] }); },
-  guestUpdate(dt) { guest.update(dt); },
+  guestUpdate(dt) { if (spotT > 0) spotT -= dt; guest.update(dt); },
 
   // 舊介面相容(單機時不做事)
   send() {},

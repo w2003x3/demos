@@ -967,6 +967,29 @@
       if (boneNames.has(base)) o.name = base;
     });
   }
+  // 名稱標籤:Canvas 畫成貼圖的 Sprite(固定大小比例、不受燈光影響)
+  function makeNameSprite(text, bg) {
+    const cv = document.createElement('canvas');
+    const g2 = cv.getContext('2d');
+    const font = 'bold 44px "Noto Sans TC", sans-serif';
+    g2.font = font;
+    const w = Math.ceil(g2.measureText(text).width) + 36;
+    cv.width = w; cv.height = 64;
+    g2.font = font;
+    g2.fillStyle = bg; g2.globalAlpha = 0.9;
+    const r = 14;
+    g2.beginPath(); g2.moveTo(r, 0); g2.lineTo(w - r, 0); g2.quadraticCurveTo(w, 0, w, r); g2.lineTo(w, 64 - r); g2.quadraticCurveTo(w, 64, w - r, 64);
+    g2.lineTo(r, 64); g2.quadraticCurveTo(0, 64, 0, 64 - r); g2.lineTo(0, r); g2.quadraticCurveTo(0, 0, r, 0); g2.fill();
+    g2.globalAlpha = 1; g2.fillStyle = '#fff'; g2.textAlign = 'center'; g2.textBaseline = 'middle';
+    g2.fillText(text, w / 2, 34);
+    const tex = new THREE.CanvasTexture(cv);
+    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, depthWrite: false, transparent: true }));
+    sp.renderOrder = 10;
+    const hgt = 0.26;
+    sp.scale.set(hgt * w / 64, hgt, 1);
+    return sp;
+  }
+
   // 共用:頭上箭頭、防護盾、口罩光環、腳下柔影
   function addCharExtras(g, accent) {
     const marker = new THREE.Mesh(coneGeo, colorMat(accent));
@@ -988,7 +1011,17 @@
     maskRing.visible = false;
     g.add(maskRing);
     g.add(blobShadow(0.75));
-    Object.assign(g.userData, { marker, shield, maskRing });
+    // 開局光柱 + 地面光圈:標出自己的位置
+    const beacon = new THREE.Group();
+    const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.55, 5, 24, 1, true),
+      new THREE.MeshBasicMaterial({ color: 0xffd54f, transparent: true, opacity: 0.3, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
+    beam.position.y = 2.5;
+    const ring = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: 0xffe082, transparent: true, opacity: 0.9, side: THREE.DoubleSide, depthWrite: false }));
+    ring.rotation.x = -Math.PI / 2; ring.position.y = 0.05;
+    beacon.add(beam, ring);
+    beacon.visible = false;
+    g.add(beacon);
+    Object.assign(g.userData, { marker, shield, maskRing, beacon, beam, ring });
   }
   function makeRealChar(f) {
     const vname = variantFor(f);
@@ -1139,7 +1172,29 @@
         u.armL.rotation.x = -sw * 0.8; u.armR.rotation.x = sw * 0.8;
       }
       u.marker.visible = f.alive;
+      if (u.beacon) {                                   // 開局亮光(只有自己)
+        const on = f === player && f.alive && typeof spotT !== 'undefined' && spotT > 0;
+        u.beacon.visible = on;
+        if (on) {
+          const k = Math.min(1, spotT / 0.6), pulse = 0.75 + 0.25 * Math.sin(elapsed * 10);
+          u.beam.material.opacity = 0.32 * k * pulse;
+          const rr = 1.2 + ((elapsed * 1.2) % 1) * 1.6;
+          u.ring.scale.set(rr, rr, 1);
+          u.ring.material.opacity = 0.9 * k * (1 - ((elapsed * 1.2) % 1));
+        }
+      }
       u.marker.position.y = (u.real ? 1.5 : 1.42) + Math.sin(elapsed * 5) * 0.05;
+      // 頭上名稱(畫在箭頭上方,永遠面向鏡頭、不被擋住)
+      const nm = typeof displayName === 'function' ? displayName(f) : '';
+      const nmKey = nm + '|' + (f === player ? 'me' : f.team);
+      if (u.nameKey !== nmKey) {
+        if (u.nameSprite) { g.remove(u.nameSprite); u.nameSprite.material.map.dispose(); u.nameSprite.material.dispose(); }
+        u.nameSprite = makeNameSprite(nm, f === player ? '#c79a00' : f.team === 'red' ? '#aa281e' : '#195faa');
+        g.add(u.nameSprite);
+        u.nameKey = nmKey;
+      }
+      u.nameSprite.visible = f.alive && !(camMode === 'fps' && f === player);
+      u.nameSprite.position.y = u.marker.position.y + 0.32;
       // 防護盾:金色護罩球(呼吸脈動);口罩:藍色地環(旋轉)
       u.shield.visible = f.alive && f.shieldT > 0;
       if (u.shield.visible) {
