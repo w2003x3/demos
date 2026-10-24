@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261025m" />
+  <link rel="stylesheet" href="css/style.css?v=20261025n" />
 </head>
 <body>
 <div id="app">
@@ -189,12 +189,14 @@
     </nav>
   </div>
 
-  <div class="menu-hero" aria-hidden="true">
-    <div class="sunburst"></div>
-    <div class="sun-inner"></div>
-    <div class="hero-floor"></div>
+  <div class="menu-hero">
+    <div class="sunburst" aria-hidden="true"></div>
+    <div class="sun-inner" aria-hidden="true"></div>
+    <div class="hero-floor" aria-hidden="true"></div>
     <div class="hero-chars"><img id="hero-char" class="hc-img" src="assets/portraits/aman.webp" alt=""></div>
-    <div id="hero-card" class="hero-card"></div>
+    <button type="button" class="hero-arrow prev" aria-label="上一位角色" onclick="cycleChar(-1)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
+    <button type="button" class="hero-arrow next" aria-label="下一位角色" onclick="cycleChar(1)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
+    <div id="hero-card" class="hero-card" aria-live="polite"></div>
     <svg class="hero-ball" viewBox="0 0 96 110"><path d="M50 30 L58 4" stroke="#8d6e63" stroke-width="6" stroke-linecap="round"/><circle cx="59" cy="4" r="5" fill="#e2552e"/><circle cx="48" cy="66" r="40" fill="#b07a45" stroke="#262626" stroke-width="5"/><ellipse cx="34" cy="50" rx="11" ry="8" fill="#d8a978"/><circle cx="62" cy="78" r="4" fill="#8a5a30"/></svg>
     <svg class="hero-sausage" viewBox="0 0 54 130"><rect x="10" y="10" width="34" height="104" rx="17" fill="#c2412a" stroke="#262626" stroke-width="5"/><path d="M14 36 l26 -10 M14 60 l26 -10 M14 84 l26 -10" stroke="#7a2414" stroke-width="4" stroke-linecap="round"/><path d="M27 114 V128" stroke="#8d6e63" stroke-width="5" stroke-linecap="round"/></svg>
     <svg class="hero-boba" viewBox="0 0 64 120"><path d="M42 4 L36 40" stroke="#e2552e" stroke-width="5" stroke-linecap="round"/><path d="M8 30 h48 l-6 86 h-36 z" fill="#f5e6c8" stroke="#262626" stroke-width="5" stroke-linejoin="round"/><path d="M10 56 h44 l-4 58 h-36 z" fill="#c9905a"/><circle cx="22" cy="104" r="5" fill="#262626"/><circle cx="34" cy="108" r="5" fill="#262626"/><circle cx="42" cy="98" r="5" fill="#262626"/><rect x="6" y="26" width="52" height="8" fill="#262626"/></svg>
@@ -275,14 +277,14 @@
   </div>
 </div>
 
-<script src="js/config.js?v=20261025m"></script>
-<script src="js/audio.js?v=20261025m"></script>
-<script src="js/net.js?v=20261025m"></script>
-<script src="js/game.js?v=20261025m"></script>
-<script src="js/match.js?v=20261025m"></script>
-<script src="js/controls.js?v=20261025m"></script>
-<script src="js/guide.js?v=20261025m"></script>
-<script src="js/tutorial.js?v=20261025m"></script>
-<script src="js/view.js?v=20261025m"></script>
+<script src="js/config.js?v=20261025n"></script>
+<script src="js/audio.js?v=20261025n"></script>
+<script src="js/net.js?v=20261025n"></script>
+<script src="js/game.js?v=20261025n"></script>
+<script src="js/match.js?v=20261025n"></script>
+<script src="js/controls.js?v=20261025n"></script>
+<script src="js/guide.js?v=20261025n"></script>
+<script src="js/tutorial.js?v=20261025n"></script>
+<script src="js/view.js?v=20261025n"></script>
 </body>
 </html>

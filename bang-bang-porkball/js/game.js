@@ -2627,7 +2627,11 @@ function pickChar(id) {
   const info = $el('char-info');
   if (info) info.innerHTML = `<b>${c.name}</b>・${c.role}・技能 <b>${sk.icon}${sk.name}</b> ${sk.desc}`;
   const img = $el('hero-char');
-  if (img) img.src = `assets/portraits/${id}.webp`;
+  if (img) {
+    img.src = `assets/portraits/${id}.webp`;
+    img.alt = c.name;
+    img.classList.remove('swap'); void img.offsetWidth; img.classList.add('swap');   // 換人小動畫
+  }
   const bar = (label, v, max, color) =>
     `<div class="hc-row"><span>${label}</span><div class="bar"><div class="fill" style="width:${Math.round(v / max * 100)}%;background:${color}"></div></div><b>${v}</b></div>`;
   const card = $el('hero-card');
@@ -2636,9 +2640,14 @@ function pickChar(id) {
     bar('HP', c.hp, CHAR_MAX.hp, '#d9483b') + bar('MP', c.mp, CHAR_MAX.mp, '#3a8ee6') +
     bar('速度', c.speed, CHAR_MAX.speed, '#2fa36b') + bar('威力', c.power, CHAR_MAX.power, '#f08a24') +
     bar('貢丸數', c.bombs, CHAR_MAX.bombs, '#b07a45') +
-    `<div class="hc-skill"><kbd>T</kbd><b>${sk.icon}${sk.name}</b><span>${sk.desc}</span></div>` +
-    `<div class="hc-cd">冷卻 ${sk.cd} 秒</div>`;
+    `<div class="hc-skill"><kbd>T</kbd><b>${sk.icon}${sk.name}</b><span>${sk.desc}・冷卻 ${sk.cd} 秒</span></div>`;
   if (typeof NET !== 'undefined' && NET.role === 'guest') NET.raw({ t: 'pick', c: id });
+}
+
+// 首頁左右切換角色(按鈕或方向鍵);開始對戰時預設就是畫面上這位
+function cycleChar(d) {
+  const n = CHAR_IDS.length;
+  pickChar(CHAR_IDS[(CHAR_IDS.indexOf(myChar) + d + n) % n]);
 }
 
 // ====================================================================

@@ -331,5 +331,12 @@ function updateMenuInfo() {
   updateMenuInfo();
   window.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && setupUI.visible() && !NET.online) { e.preventDefault(); startSeries(); }
+    // 首頁:左右方向鍵切換角色
+    const menu = document.getElementById('menu-overlay'), help = document.getElementById('help-modal');
+    if ((e.key === 'ArrowLeft' || e.key === 'ArrowRight') && menu && !menu.classList.contains('hidden') &&
+        !setupUI.visible() && !(help && !help.classList.contains('hidden'))) {
+      e.preventDefault();
+      cycleChar(e.key === 'ArrowLeft' ? -1 : 1);
+    }
   });
 })();
