@@ -270,7 +270,18 @@ const AUDIO = (() => {
   }
   applyMode();
 
-  return { play, init, openPanel };
+  // 預錄語音(assets/voice/*.mp3,edge-tts 產生);跟著「音效」開關與音量
+  function voice(name) {
+    if (!snd.sfx) return false;
+    try {
+      const a = new Audio('assets/voice/' + name + '.mp3');
+      a.volume = Math.min(1, snd.sfxVol / 100);
+      a.play().catch(() => {});
+    } catch { return false; }
+    return true;
+  }
+
+  return { play, init, openPanel, voice };
 })();
 
 // 遊戲內呼叫:播放音效;房主連線時記下來,隨快照送給其他玩家

@@ -2289,7 +2289,8 @@ function backToMainMenu() {
   if (window.tutorial && tutorial.active) tutorial.stop();
   showOverlay('result-overlay', false);
   setupUI.hide();
-  SERIES.nextAt = 0; SERIES.over = false;
+  SERIES.nextAt = 0; SERIES.over = false; SERIES.offline = false;
+  showNetBanner('');
   restart();
   gameState = 'menu';
   showOverlay('menu-overlay', true);

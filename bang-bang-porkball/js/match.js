@@ -68,6 +68,7 @@ function onRoundEnd() {
     // 先拿到 need 勝結束;打滿局數還平手就延長,最多再打 2 局
     SERIES.over = SERIES.wins.blue >= need || SERIES.wins.red >= need ||
       (SERIES.round >= MATCH.rounds && lead) || SERIES.round >= MATCH.rounds + 2;
+    if (SERIES.offline) SERIES.over = true;   // 連線中斷、電腦接手的那局:打完就不再繼續
     SERIES.nextAt = SERIES.over ? 0 : performance.now() + ROUND_GAP * 1000;
     if (NET.role === 'host') NET.sendSeries();
   }
@@ -106,7 +107,7 @@ const resultUI = {
     const w = SERIES.last;
     const mine = player.team;
     const roundTitle = !w ? '這局平手' : w === mine ? '你的隊伍拿下這局!' : '對手拿下這局';
-    const single = MATCH.rounds === 1;
+    const single = MATCH.rounds === 1 || SERIES.offline;
     let html = '';
     if (!SERIES.over) {
       html += `<div class="result-kicker">第 ${SERIES.round} 局結束</div>` +
@@ -122,8 +123,11 @@ const resultUI = {
         `<div class="result-title">${title}</div>` +
         `<p class="result-sub">${single ? `存活 🔵 ${teamAlive('blue')} vs 🔴 ${teamAlive('red')}` : `${MATCH.rounds === 3 ? '三戰兩勝' : '五戰三勝'}・最後一局${!w ? '平手' : w === 'blue' ? '藍隊勝' : '紅隊勝'}`}</p>` +
         (single ? '' : seriesBar()) +
-        `<div class="rs-label">下一輪的角色(點一下更換)</div>` + miniCharPick();
-      if (!NET.online) {
+        (SERIES.offline ? '' : `<div class="rs-label">下一輪的角色(點一下更換)</div>` + miniCharPick());
+      if (SERIES.offline) {
+        html += '<p class="rs-offline">⚠️ 連線已中斷,這局打完就結束了</p>' +
+          '<button type="button" class="start-btn" data-rs="menu">回主選單</button>';
+      } else if (!NET.online) {
         html += '<button type="button" class="start-btn" data-rs="again">再來一輪</button>' +
           '<div class="rs-row"><button type="button" class="home-btn" data-rs="setup">調整設定</button>' +
           '<button type="button" class="home-btn" data-rs="menu">回主選單</button></div>' +
@@ -133,12 +137,12 @@ const resultUI = {
         if (NET.role === 'host') {
           const [n, total] = readyCount();
           html += `<button type="button" class="start-btn" data-rs="again">開始下一輪(${n}/${total} 已準備)</button>` +
-            '<div class="rs-row"><button type="button" class="home-btn" data-rs="lobby">調整設定</button>' +
-            '<button type="button" class="home-btn" data-rs="quit">收攤</button></div>';
+            '<div class="rs-row rs-row3"><button type="button" class="home-btn" data-rs="lobby">調整設定</button>' +
+            nudgeButton('rs') + '<button type="button" class="home-btn" data-rs="quit">收攤</button></div>';
         } else {
           const ready = !!NET.ready[NET.id];
           html += `<button type="button" class="start-btn${ready ? ' done' : ''}" data-rs="ready">${ready ? '✓ 已準備,等攤主開始' : '準備下一輪'}</button>` +
-            '<div class="rs-row"><button type="button" class="home-btn" data-rs="quit">離開攤位</button></div>';
+            '<div class="rs-row">' + nudgeButton('rs') + '<button type="button" class="home-btn" data-rs="quit">離開攤位</button></div>';
         }
       }
     }
@@ -156,9 +160,36 @@ const resultUI = {
     else if (a === 'menu') backToMainMenu();
     else if (a === 'lobby') NET.backToLobby();
     else if (a === 'ready') { NET.setReady(!NET.ready[NET.id]); this.render(); }
+    else if (a === 'nudge') NET.pressNudge();
     else if (a === 'quit') { NET.leave(); backToMenu(''); }
   },
 };
+
+// 催促鈕(5 秒冷卻)
+function nudgeButton(kind) {
+  const cooling = performance.now() - (NET.nudgeAt || 0) < 5000;
+  const cls = kind === 'su' ? 'su-nudge' : 'home-btn rs-nudge';
+  return `<button type="button" class="${cls}" data-${kind}="nudge"${cooling ? ' disabled' : ''} title="催還沒準備好的人;大家都準備好了就催攤主">${cooling ? '📣 已催促' : '📣 催促'}</button>`;
+}
+// 遊戲畫面上方常駐的連線訊息(斷線後由電腦接手時顯示)
+function showNetBanner(text) {
+  const stage = document.querySelector('.stage');
+  if (!stage) return;
+  let el = document.getElementById('net-banner');
+  if (!el) { el = document.createElement('div'); el.id = 'net-banner'; el.setAttribute('role', 'status'); stage.appendChild(el); }
+  el.textContent = text || '';
+  el.className = text ? 'show' : '';
+}
+
+// 畫面上方的提示訊息(被催促時用醒目樣式)
+function showToast(text, loud) {
+  let el = document.getElementById('toast');
+  if (!el) { el = document.createElement('div'); el.id = 'toast'; el.setAttribute('role', 'status'); document.body.appendChild(el); }
+  el.textContent = text;
+  el.className = 'toast show' + (loud ? ' loud' : '');
+  clearTimeout(el._t);
+  el._t = setTimeout(() => { el.className = 'toast'; }, loud ? 3500 : 2500);
+}
 
 // 連線:準備狀態
 function readyCount() {
@@ -230,14 +261,15 @@ const setupUI = {
         (extra > 0 ? `<p class="su-note">人數超過 ${2 * n} 人,${extra} 位要等下一場</p>` : `<p class="su-note">空位由電腦補上</p>`) + '</div>';
     }
     let foot;
+    const nudgeBtn = online ? nudgeButton('su') : '';
     if (!online) foot = '<button type="button" class="su-back" data-su="back">返回</button><button type="button" class="start-btn" data-su="start">開始對戰</button>';
     else if (host) {
       const [r, total] = readyCount();
-      foot = '<button type="button" class="su-back" data-su="leave">收攤</button>' +
+      foot = '<button type="button" class="su-back" data-su="leave">收攤</button>' + nudgeBtn +
         `<button type="button" class="start-btn" data-su="start">開始對戰(${r}/${total} 已準備)</button>`;
     } else {
       const ready = !!NET.ready[NET.id];
-      foot = '<button type="button" class="su-back" data-su="leave">離開攤位</button>' +
+      foot = '<button type="button" class="su-back" data-su="leave">離開攤位</button>' + nudgeBtn +
         `<button type="button" class="start-btn${ready ? ' done' : ''}" data-su="ready">${ready ? '✓ 已準備' : '準備好了'}</button>`;
     }
     box.innerHTML =
@@ -276,6 +308,7 @@ const setupUI = {
       startSeries();
     } else if (a === 'back') { this.hide(); showOverlay('menu-overlay', true); }
     else if (a === 'ready') { NET.setReady(!NET.ready[NET.id]); this.render(); }
+    else if (a === 'nudge') NET.pressNudge();
     else if (a === 'leave') { NET.leave(); this.hide(); backToMenu(''); }
   },
 };

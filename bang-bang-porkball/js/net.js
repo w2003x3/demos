@@ -130,6 +130,7 @@ const NET = {
       if (this.ws !== ws) return;
       const wasOnline = this.online;
       this.ws = null;
+      if (wasOnline && gameState === 'playing') { this.takeover('與伺服器的連線中斷了'); return; }
       this.reset();
       if (wasOnline) backToMenu('與伺服器的連線中斷了');
       else lobbyUI.status(lobbyUI.lastError || '連不上連線伺服器,請確認網路後再試一次(若剛更新過遊戲,請重新整理頁面)', true);
@@ -229,6 +230,7 @@ const NET = {
         return;
       case 'host-left':
         this.ws = null;
+        if (gameState === 'playing') { this.takeover('攤主斷線了'); return; }
         this.reset();
         backToMenu('攤主收攤了,攤位已關閉');
         return;
@@ -298,6 +300,77 @@ const NET = {
   sendSeries() {
     this.raw({ t: 'series', s: { round: SERIES.round, wins: SERIES.wins, last: SERIES.last, over: SERIES.over, next: SERIES.over ? 0 : ROUND_GAP } });
   },
+  // ---------- 催促:還沒準備好的人;大家都準備好了就催攤主 ----------
+  nudgeTargets(byId) {
+    const humans = this.roster();
+    const notReady = humans.filter((p) => !p.host && !this.ready[p.id] && p.id !== byId).map((p) => p.id);
+    if (notReady.length) return notReady;
+    const host = humans.find((p) => p.host);
+    return host && host.id !== byId ? [host.id] : [];
+  },
+  // 按下催促鈕(5 秒冷卻)
+  pressNudge() {
+    const now = performance.now();
+    if (now - (this.nudgeAt || 0) < 5000) return;
+    this.nudgeAt = now;
+    if (this.role === 'host') this.nudge(this.id);
+    else this.raw({ t: 'nudge' });
+    refreshRoomUi();
+    setTimeout(refreshRoomUi, 5100);
+  },
+  // 攤主:算出要催誰,廣播給大家(同一個人 3 秒內只算一次)
+  nudge(byId) {
+    if (this.role !== 'host') return;
+    this.nudgeSeen = this.nudgeSeen || {};
+    const now = performance.now();
+    if (now - (this.nudgeSeen[byId] || 0) < 3000) return;
+    this.nudgeSeen[byId] = now;
+    const by = (this.players.find((p) => p.id === byId) || {}).name || '玩家';
+    const msg = { t: 'nudge', by, byId, targets: this.nudgeTargets(byId) };
+    this.raw(msg);
+    this.onNudge(msg);
+  },
+  onNudge(msg) {
+    const names = (msg.targets || []).map((id) => (this.players.find((p) => p.id === id) || {}).name).filter(Boolean);
+    if ((msg.targets || []).includes(this.id)) {
+      AUDIO.voice('hurry');
+      showToast(`📣 ${msg.by} 在催你:快點!大家都在等你!`, true);
+    } else if (msg.byId === this.id) {
+      showToast(names.length ? `📣 已催促 ${names.join('、')}` : '大家都準備好了,攤主可以開始囉!');
+    } else if (names.length) {
+      showToast(`📣 ${msg.by} 催促了 ${names.join('、')}`);
+    }
+  },
+  // 對戰中斷線:離開連線,其他真人角色全部改由電腦接手,自己在本機把這局打完;這局結束就不再繼續
+  takeover(reason) {
+    if (this.ws) { const w = this.ws; this.ws = null; try { w.close(); } catch { /* 已關閉 */ } }
+    for (const p of Object.values(this.peers)) p.close();
+    if (this.hostPeer) this.hostPeer.close();
+    this.peers = {}; this.hostPeer = null; this.links = {};
+    this.online = false; this.role = null; this.id = null; this.players = [];
+    this.picks = {}; this.ready = {};
+    guest.clear();
+    for (const f of fighters()) {
+      if (!f) continue;
+      f.x = tileCenter(f.col); f.y = tileCenter(f.row);         // 從插值位置對齊到格子,給本機模擬接手
+      f.mvTarget = null; f.autoPath = null; f.tx = f.ty = undefined;
+      if (f !== player) {
+        if ((f.isHuman || f.remote || f.netId) && !/電腦/.test(f.label || '')) f.label = (f.label || '玩家') + '(電腦)';
+        f.remote = false; f.netWant = null; f.netId = null;
+      }
+    }
+    for (const m of meatballs) {
+      m.moving = false; m.vx = m.vy = 0; m.fly = null; m.jump = 0; m.tx = m.ty = undefined;
+      if (!m.held) { m.x = tileCenter(m.col); m.y = tileCenter(m.row); }
+    }
+    for (const it of items) { it.tx = it.ty = undefined; }
+    for (const w of wildCritters) { w.vx = 0; w.vy = 0; w.wt = 0; w.tx = w.ty = undefined; if (!(w.life > 0)) w.life = 1; }   // 同步來的只有位置,補上本機模擬需要的欄位
+    SERIES.offline = true;
+    buildRoster();
+    showNetBanner(`⚠️ ${reason}:這局改由電腦接手,打完就回主選單`);
+    showToast(`⚠️ ${reason},改由電腦接手`, true);
+    updateHud();
+  },
   setReady(v) {
     this.ready[this.id] = !!v;
     if (this.role === 'guest') this.raw({ t: 'ready', v: !!v });
@@ -307,13 +380,19 @@ const NET = {
     if (msg.t === 'peer-left') {
       // 對戰中有人離開:改由電腦接手
       const f = bots.find((b) => b.netId === msg.id);
-      if (f) { f.remote = false; f.netWant = null; f.label += '(電腦)'; buildRoster(); }
+      if (f) {
+        f.remote = false; f.netWant = null; f.label += '(電腦)'; buildRoster();
+        const text = `⚠️ ${f.label.replace('(電腦)', '')} 斷線了,改由電腦接手`;
+        showToast(text, true);
+        this.raw({ t: 'notice', text });
+      }
       delete this.ready[msg.id]; delete this.picks[msg.id];
       if (this.peers[msg.id]) { this.peers[msg.id].close(); delete this.peers[msg.id]; }
       return;
     }
     if (msg.t === 'pick') { if (CHARACTERS[msg.c]) { this.picks[msg.from] = msg.c; this.sendPicks(); } return; }
     if (msg.t === 'ready') { this.ready[msg.from] = !!msg.v; this.sendPicks(); return; }
+    if (msg.t === 'nudge') { this.nudge(msg.from); return; }
     if (msg.t !== 'in' || gameState !== 'playing') return;
     const f = bots.find((b) => b.remote && b.netId === msg.from);
     if (!f) return;
@@ -341,6 +420,8 @@ const NET = {
     if (msg.t === 'rtc') { this.onRtcSignal('host', msg.d); return; }
     if (msg.t === 'cfg') { applyCfg(msg.cfg); refreshRoomUi(); return; }
     if (msg.t === 'picks') { this.picks = msg.picks || {}; this.ready = msg.ready || {}; this.links = msg.links || {}; refreshRoomUi(); return; }
+    if (msg.t === 'nudge') { this.onNudge(msg); return; }
+    if (msg.t === 'notice') { showToast(msg.text, true); return; }
     if (msg.t === 'series') {
       const s = msg.s || {};
       SERIES.round = s.round; SERIES.wins = s.wins || { blue: 0, red: 0 }; SERIES.last = s.last; SERIES.over = !!s.over;

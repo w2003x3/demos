@@ -910,3 +910,28 @@ body.mode-3d #lowhp-overlay.on {
 
 .su-players em.p2p { background: #e3f0fd; color: #1f5e9e; }
 .su-players em.relay { background: #f1f1f1; color: var(--muted); }
+
+/* ===== 催促 ===== */
+.su-nudge { height: 60px; padding: 0 18px; border: 4px solid var(--ink); background: #fff3e0; font-family: inherit; font-size: 18px; font-weight: 900; cursor: pointer; white-space: nowrap; }
+.su-nudge:disabled, .rs-nudge:disabled { opacity: .5; cursor: default; }
+.rs-row3 { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.toast {
+  position: fixed; left: 50%; top: 14px; z-index: 90; transform: translate(-50%, -140%);
+  padding: 10px 18px; background: var(--ink); color: #fff; border: 3px solid var(--ink);
+  font-size: 15px; font-weight: 900; white-space: nowrap; box-shadow: 4px 4px 0 rgba(0,0,0,.25);
+  transition: transform .25s ease; pointer-events: none;
+}
+.toast.show { transform: translate(-50%, 0); }
+.toast.loud { background: var(--accent); color: var(--ink); font-size: 18px; animation: toastShake .5s ease 2; }
+@keyframes toastShake { 0%, 100% { margin-left: 0; } 25% { margin-left: -6px; } 75% { margin-left: 6px; } }
+@media (max-width: 560px) { .su-nudge { height: 60px; padding: 0 10px; font-size: 15px; } .toast { white-space: normal; width: calc(100% - 32px); text-align: center; } }
+
+/* ===== 連線中斷、電腦接手 ===== */
+#net-banner { display: none; }
+#net-banner.show {
+  display: block; position: absolute; left: 50%; top: 18px; transform: translateX(-50%); z-index: 7; pointer-events: none;
+  padding: 6px 14px; background: rgba(217,72,59,.94); color: #fff; font-size: 14px; font-weight: 900; white-space: nowrap;
+  box-shadow: 3px 3px 0 rgba(0,0,0,.25);
+}
+.rs-offline { margin: 0; font-size: 15px; font-weight: 900; color: var(--red-dark); }
+@media (max-width: 560px) { #net-banner.show { white-space: normal; width: calc(100% - 40px); text-align: center; font-size: 12px; } }
