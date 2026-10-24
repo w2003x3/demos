@@ -39,8 +39,8 @@ const ITEMS = {
   luckybag:  { name: '福袋',       emoji: '🧧', desc: '全能力直接達頂!', color: '#e53935' },
   chicken:   { name: '雞排',       emoji: '🍗', desc: 'HP 補滿',        color: '#e0a33c' },
   bloodcake: { name: '豬血糕',     emoji: '🍡', desc: 'MP 補滿',        color: '#6d3a2e' },
-  milktea:   { name: '早餐店奶茶', emoji: '🧋', desc: '速度達頂',       color: '#c89b6a' },
-  boba:      { name: '珍奶',       emoji: '🧋', desc: '貢丸數達頂',     color: '#8d6e63' },
+  milktea:   { name: '早餐店奶茶', emoji: '☕', desc: '速度達頂',       color: '#c89b6a' },
+  boba:      { name: '珍奶',       emoji: '🥤', desc: '貢丸數達頂',     color: '#8d6e63' },
   tofu:      { name: '臭豆腐',     emoji: '🥡', desc: '貢丸威力達頂',   color: '#e6b84a' },
 };
 
