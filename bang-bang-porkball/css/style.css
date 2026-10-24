@@ -1,5 +1,5 @@
 /* ====================================================================
-   爆爆丸 介面(灰天空 + 炭黑緞帶 + 亮黃重點色;粗黑描邊的扁平風格)
+   炸裂丸子 介面(灰天空 + 炭黑緞帶 + 亮黃重點色;粗黑描邊的扁平風格)
    ==================================================================== */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -249,7 +249,7 @@ body.mode-3d #ink-overlay {
   content: ""; position: absolute; left: 8px; top: 7px; width: 20px; height: 20px; background: var(--accent);
   clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
 }
-.menu-title h1 { font-weight: 900; font-size: clamp(72px, 10vw, 124px); line-height: 1.05; letter-spacing: .04em; }
+.menu-title h1 { font-weight: 900; white-space: nowrap; font-size: clamp(60px, 8.5vw, 110px); line-height: 1.05; letter-spacing: .04em; }
 .menu-sub { font-size: 18px; font-weight: 700; color: #4a4a4a; }
 .start-btn {
   display: flex; align-items: center; justify-content: center; gap: 14px;
