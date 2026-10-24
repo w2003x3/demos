@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261025c" />
+  <link rel="stylesheet" href="css/style.css?v=20261025d" />
 </head>
 <body>
 <div id="app">
@@ -72,7 +72,7 @@
         </select>
         <span id="fps-meter" class="fps-meter"></span>
       </label>
-      <button id="btn-sound" class="dark-btn square" type="button" title="音效/音樂">🔊</button>
+      <button id="btn-sound" class="dark-btn square" type="button" title="聲音設定" aria-haspopup="true">🔊</button>
       <button id="btn-help" class="dark-btn square" type="button" title="說明" aria-label="說明">?</button>
     </div>
   </header>
@@ -184,7 +184,7 @@
       <button id="btn-tutorial" class="flag" type="button"><small>一步步學</small>新手教學</button>
       <button id="btn-guide" class="flag" type="button"><small>貢丸・道具</small>玩法說明</button>
       <button id="btn-online" class="flag" type="button"><small>最多 6 人</small>多人連線</button>
-      <button id="btn-settings" class="flag" type="button" onclick="document.getElementById('btn-sound').click()"><small>音效・音樂</small>切換音效</button>
+      <button id="btn-settings" class="flag" type="button" aria-haspopup="true"><small>音效・音樂</small>聲音設定</button>
     </nav>
   </div>
 
@@ -211,6 +211,22 @@
     </div>
     <div id="mb-info" class="mb-info">🔵 你 + 2 名隊友 vs 🔴 3 名對手・限時 3 分鐘・炸光敵隊獲勝</div>
   </div>
+</div>
+
+<!-- ===== 聲音設定(音效 / 音樂各自開關 + 音量) ===== -->
+<div id="sound-panel" class="sound-panel hidden" role="dialog" aria-label="聲音設定">
+  <div class="sp-head"><b>聲音設定</b><button id="snd-close" type="button" aria-label="關閉">✕</button></div>
+  <div class="sp-row">
+    <label class="sp-switch"><input id="snd-sfx" type="checkbox"><span></span>音效</label>
+    <input id="snd-sfx-vol" type="range" min="0" max="100" step="5" aria-label="音效音量">
+    <b id="snd-sfx-num" class="sp-num"></b>
+  </div>
+  <div class="sp-row">
+    <label class="sp-switch"><input id="snd-music" type="checkbox"><span></span>音樂</label>
+    <input id="snd-music-vol" type="range" min="0" max="100" step="5" aria-label="音樂音量">
+    <b id="snd-music-num" class="sp-num"></b>
+  </div>
+  <p class="sp-note">背景音樂 4 首:主選單、公園、菜市場、夜市各一首;剩 30 秒會加快</p>
 </div>
 
 <!-- ===== 對戰設定(單機 / 連線攤位共用) ===== -->
@@ -258,14 +274,14 @@
   </div>
 </div>
 
-<script src="js/config.js?v=20261025c"></script>
-<script src="js/audio.js?v=20261025c"></script>
-<script src="js/net.js?v=20261025c"></script>
-<script src="js/game.js?v=20261025c"></script>
-<script src="js/match.js?v=20261025c"></script>
-<script src="js/controls.js?v=20261025c"></script>
-<script src="js/guide.js?v=20261025c"></script>
-<script src="js/tutorial.js?v=20261025c"></script>
-<script src="js/view.js?v=20261025c"></script>
+<script src="js/config.js?v=20261025d"></script>
+<script src="js/audio.js?v=20261025d"></script>
+<script src="js/net.js?v=20261025d"></script>
+<script src="js/game.js?v=20261025d"></script>
+<script src="js/match.js?v=20261025d"></script>
+<script src="js/controls.js?v=20261025d"></script>
+<script src="js/guide.js?v=20261025d"></script>
+<script src="js/tutorial.js?v=20261025d"></script>
+<script src="js/view.js?v=20261025d"></script>
 </body>
 </html>

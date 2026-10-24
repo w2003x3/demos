@@ -2,12 +2,22 @@
 //  音效與背景音樂(Web Audio 即時合成,不需音檔)
 //  sfx(名稱, x, y):播放音效(依與自己的距離調整音量);房主連線時會一併送給其他玩家
 //  背景音樂:選單一首、三張地圖各一首;剩 30 秒加快、最後 10 秒倒數嗶聲
-//  右上角 🔊 按鈕循環切換:全開 → 只有音效 → 靜音(記在瀏覽器)
+//  聲音設定面板(右上角 🔊、主選單「聲音設定」):音效、音樂各自開關 + 音量(記在瀏覽器)
 // ====================================================================
 const AUDIO = (() => {
   let ac = null, master = null, sfxBus = null, musicBus = null;
-  let mode = 'all'; // all | sfx | off
-  try { mode = localStorage.getItem('bbw.sound') || 'all'; } catch { /* 無痕模式 */ }
+  // 音效 / 音樂各自開關與音量(0~100);沿用舊版「全開 / 只有音效 / 靜音」的選擇
+  const snd = { sfx: true, music: true, sfxVol: 90, musicVol: 70 };
+  try {
+    const saved = JSON.parse(localStorage.getItem('bbw.sound2') || 'null');
+    if (saved) Object.assign(snd, saved);
+    else {
+      const old = localStorage.getItem('bbw.sound');
+      if (old === 'sfx') snd.music = false;
+      if (old === 'off') { snd.music = false; snd.sfx = false; }
+    }
+  } catch { /* 無痕模式 */ }
+  const saveSnd = () => { try { localStorage.setItem('bbw.sound2', JSON.stringify(snd)); } catch { /* 無痕模式 */ } };
 
   function init() {
     if (ac) { if (ac.state === 'suspended') ac.resume(); return; }
@@ -20,14 +30,49 @@ const AUDIO = (() => {
     applyMode();
   }
   function applyMode() {
-    if (!ac) return;
-    sfxBus.gain.value = mode === 'off' ? 0 : 0.9;
-    musicBus.gain.value = mode === 'all' ? 0.32 : 0;
     const btn = document.getElementById('btn-sound');
     if (btn) {
-      btn.textContent = mode === 'all' ? '🔊' : mode === 'sfx' ? '🔉' : '🔇';
-      btn.title = mode === 'all' ? '音效+音樂(點一下:只留音效)' : mode === 'sfx' ? '只有音效(點一下:靜音)' : '靜音(點一下:全開)';
+      btn.textContent = snd.sfx && snd.music ? '🔊' : snd.sfx ? '🔉' : snd.music ? '🎵' : '🔇';
+      btn.title = `聲音設定(音效${snd.sfx ? '開' : '關'}・音樂${snd.music ? '開' : '關'})`;
     }
+    syncPanel();
+    if (!ac) return;
+    sfxBus.gain.value = snd.sfx ? 1.0 * snd.sfxVol / 100 : 0;
+    musicBus.gain.value = snd.music ? 0.46 * snd.musicVol / 100 : 0;
+  }
+  // ---------- 聲音設定面板 ----------
+  const panel = document.getElementById('sound-panel');
+  function syncPanel() {
+    if (!panel) return;
+    const $ = (id) => document.getElementById(id);
+    if ($('snd-sfx')) $('snd-sfx').checked = snd.sfx;
+    if ($('snd-music')) $('snd-music').checked = snd.music;
+    if ($('snd-sfx-vol')) { $('snd-sfx-vol').value = snd.sfxVol; $('snd-sfx-vol').disabled = !snd.sfx; }
+    if ($('snd-music-vol')) { $('snd-music-vol').value = snd.musicVol; $('snd-music-vol').disabled = !snd.music; }
+    if ($('snd-sfx-num')) $('snd-sfx-num').textContent = snd.sfx ? snd.sfxVol : '關';
+    if ($('snd-music-num')) $('snd-music-num').textContent = snd.music ? snd.musicVol : '關';
+  }
+  function openPanel(on) {
+    if (!panel) return;
+    panel.classList.toggle('hidden', !on);
+    syncPanel();
+  }
+  if (panel) {
+    panel.addEventListener('click', (e) => e.stopPropagation());
+    panel.addEventListener('input', (e) => {
+      const t = e.target;
+      init();
+      if (t.id === 'snd-sfx') snd.sfx = t.checked;
+      if (t.id === 'snd-music') snd.music = t.checked;
+      if (t.id === 'snd-sfx-vol') snd.sfxVol = +t.value;
+      if (t.id === 'snd-music-vol') snd.musicVol = +t.value;
+      saveSnd(); applyMode();
+    });
+    panel.addEventListener('change', (e) => { if (e.target.id === 'snd-sfx-vol' && snd.sfx) play('pickup'); });   // 放開滑桿試聽一下
+    const close = document.getElementById('snd-close');
+    if (close) close.addEventListener('click', () => openPanel(false));
+    document.addEventListener('click', () => openPanel(false));            // 點其他地方收起
+    window.addEventListener('keydown', (e) => { if (e.key === 'Escape') openPanel(false); });
   }
   // 瀏覽器規定要有使用者操作後才能出聲
   ['pointerdown', 'keydown', 'touchstart'].forEach((t) => window.addEventListener(t, init, { passive: true }));
@@ -127,7 +172,7 @@ const AUDIO = (() => {
   };
 
   function play(name, x, y) {
-    if (!ac || mode === 'off' || !SFX[name]) return;
+    if (!ac || !snd.sfx || !SFX[name]) return;
     // 距離越遠越小聲(自己附近最大聲)
     let v = 1;
     if (x !== undefined && typeof player !== 'undefined' && player) {
@@ -169,7 +214,7 @@ const AUDIO = (() => {
     if (ac) nextT = ac.currentTime + 0.1;
   }
   function schedule() {
-    if (!ac || !song || mode !== 'all') { if (ac) nextT = ac.currentTime + 0.1; return; }
+    if (!ac || !song || !snd.music) { if (ac) nextT = ac.currentTime + 0.1; return; }
     const { S, melody } = song;
     const bpm = S.bpm * (fast ? 1.18 : 1);
     const dur16 = 60 / bpm / 4;
@@ -213,18 +258,19 @@ const AUDIO = (() => {
     schedule();
   }, 100);
 
-  // 🔊 按鈕
-  const btn = document.getElementById('btn-sound');
-  if (btn) btn.addEventListener('click', () => {
-    init();
-    mode = mode === 'all' ? 'sfx' : mode === 'sfx' ? 'off' : 'all';
-    try { localStorage.setItem('bbw.sound', mode); } catch { /* 無痕模式 */ }
-    applyMode();
-    btn.blur();
-  });
+  // 🔊 按鈕 / 主選單「聲音設定」:打開設定面板
+  for (const id of ['btn-sound', 'btn-settings']) {
+    const b = document.getElementById(id);
+    if (b) b.addEventListener('click', (e) => {
+      e.stopPropagation();
+      init();
+      openPanel(panel && panel.classList.contains('hidden'));
+      b.blur();
+    });
+  }
   applyMode();
 
-  return { play, init };
+  return { play, init, openPanel };
 })();
 
 // 遊戲內呼叫:播放音效;房主連線時記下來,隨快照送給其他玩家

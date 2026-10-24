@@ -874,3 +874,27 @@ button.big:disabled { opacity: .45; cursor: not-allowed; }
   .su-foot { position: sticky; bottom: 0; padding: 10px 0; background: var(--sky); }
 }
 .su-foot .start-btn, .result-box .start-btn { letter-spacing: .08em; white-space: nowrap; }
+
+/* ===== 聲音設定面板 ===== */
+.sound-panel {
+  position: fixed; top: 70px; right: 16px; z-index: 60; width: 320px; box-sizing: border-box;
+  background: #fff; color: var(--ink); border: 3px solid var(--ink); box-shadow: 6px 6px 0 rgba(0,0,0,.3);
+  padding: 12px 14px; display: flex; flex-direction: column; gap: 12px;
+}
+.sound-panel.hidden { display: none; }
+.sp-head { display: flex; align-items: center; justify-content: space-between; }
+.sp-head b { font-size: 16px; font-weight: 900; }
+.sp-head button { width: 36px; height: 36px; border: 2px solid var(--ink); background: #fff; font-size: 16px; cursor: pointer; }
+.sp-row { display: grid; grid-template-columns: 92px minmax(0, 1fr) 34px; align-items: center; gap: 10px; }
+.sp-switch { display: flex; align-items: center; gap: 8px; font-size: 15px; font-weight: 900; cursor: pointer; white-space: nowrap; }
+.sp-switch input { position: absolute; opacity: 0; width: 1px; height: 1px; }
+.sp-switch span { position: relative; width: 44px; height: 24px; flex: none; background: var(--sky-2); border: 2px solid var(--ink); border-radius: 14px; transition: background .15s; }
+.sp-switch span::after { content: ""; position: absolute; top: 2px; left: 2px; width: 16px; height: 16px; border-radius: 50%; background: #fff; border: 2px solid var(--ink); box-sizing: border-box; transition: left .15s; }
+.sp-switch input:checked + span { background: var(--accent); }
+.sp-switch input:checked + span::after { left: 22px; }
+.sp-switch input:focus-visible + span { outline: 3px solid var(--blue); outline-offset: 2px; }
+.sp-row input[type=range] { width: 100%; accent-color: #262626; }
+.sp-row input[type=range]:disabled { opacity: .35; }
+.sp-num { font: 700 14px var(--font-num); text-align: right; }
+.sp-note { margin: 0; font-size: 12px; font-weight: 500; color: var(--muted); line-height: 1.5; }
+@media (max-width: 560px) { .sound-panel { left: 8px; right: 8px; width: auto; top: 60px; } }
