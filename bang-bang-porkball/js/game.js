@@ -14,7 +14,7 @@ const MB_SPRITE = Array.from({ length: 13 }, (_, i) => 'mb_' + (i + 1));
 // 各主題的地圖物件圖:有多款時依格子座標固定挑一款(外圈用 wall,左右兩側用轉 90° 的 wallSide,內部柱子用 solid)
 const TILE_SPRITES = {
   park:   { floor: ['floor1', 'floor2'], wall: ['wall'], solid: ['stone'], brick: ['crate', 'crate2'],
-            trash: ['trashcan'], bush: ['bush', 'bush2'] },
+            trash: ['trashcan'], bush: ['bush', 'bush2'], bench: ['bench_n', 'bench_s', 'bench_e', 'bench_w'] },
   market: { floor: ['market_floor1', 'market_floor2'], wall: ['market_wall', 'market_wall2'],
             wallSide: ['market_wall_side', 'market_wall2_side'], solid: ['market_stall'],
             brick: ['market_crate', 'market_crate2', 'market_crate3'], trash: ['market_trash'], bush: ['market_pile'] },
@@ -91,8 +91,10 @@ let grid = []; // grid[r][c] = TILE.*
 function teamSpawns() {
   const mid = Math.floor(ROWS / 2);
   const n = (typeof MATCH !== 'undefined' && MATCH.size) || 3;
-  const blue = [[1, 1], [1, ROWS - 2], [1, mid]].slice(0, n);
-  const red = (n === 1 ? [[COLS - 2, ROWS - 2]] : [[COLS - 2, 1], [COLS - 2, ROWS - 2], [COLS - 2, mid]]).slice(0, n);
+  // 每隊 4 人時沿左右兩側平均分開(1、4、8、11 列);3 人以下維持角落 + 中間
+  const rows = n === 4 ? [1, 4, ROWS - 5, ROWS - 2] : [1, ROWS - 2, mid];
+  const blue = rows.map((r) => [1, r]).slice(0, n);
+  const red = (n === 1 ? [[COLS - 2, ROWS - 2]] : rows.map((r) => [COLS - 2, r])).slice(0, n);
   return blue.map(([col, row], i) => ({ col, row, team: 'blue', human: i === 0 }))
     .concat(red.map(([col, row]) => ({ col, row, team: 'red' })));
 }
@@ -142,6 +144,21 @@ function generateMap() {
       placed++;
     }
   }
+  // 長椅(公園):放在左右或上下兩根柱子之間;椅背朝其中一側,另一側是可以走進去的正面
+  benches = {};
+  for (let tries = 0; tries < 300 && Object.keys(benches).length < (th.benchCount || 0); tries++) {
+    const horiz = Math.random() < 0.5;
+    const c = horiz ? 3 + 2 * rand((COLS - 5) / 2) : 2 + 2 * rand((COLS - 3) / 2);
+    const r = horiz ? 2 + 2 * rand((ROWS - 3) / 2) : 3 + 2 * rand((ROWS - 5) / 2);
+    if (r < 1 || c < 1 || r > ROWS - 2 || c > COLS - 2 || isSpawn(r, c)) continue;
+    const back = horiz ? (Math.random() < 0.5 ? 'n' : 's') : (Math.random() < 0.5 ? 'w' : 'e');
+    const [fc, fr] = { n: [c, r + 1], s: [c, r - 1], w: [c + 1, r], e: [c - 1, r] }[back];
+    if (grid[fr][fc] === TILE.SOLID || isSpawn(fr, fc)) continue;
+    if (Object.values(benches).some((b) => Math.abs(b.c - c) + Math.abs(b.r - r) <= 2)) continue;   // 不要擠在一起
+    grid[r][c] = TILE.BENCH;
+    benches[r * COLS + c] = { c, r, back, fc, fr };
+  }
+
   // 在空地灑草叢/菜堆/紙箱堆(可通行,可能驚動野生老鼠/蟑螂)
   let bushes = 0;
   for (let tries = 0; tries < 400 && bushes < th.bushCount; tries++) {
@@ -222,14 +239,14 @@ function updateAlien(dt) {
     if (f === player) updateHud();
   }
 }
-// 畫面變黑的程度:被墨魚貢丸炸到、火山灰(等同吃了一隻墨魚的透明度)取較黑的
+// 畫面變黑的程度:被墨魚貢丸炸到、火山灰取較黑的
 function blindAlpha() {
   if (!player) return 0;
   let a = 0;
   if (player.alive && player.blindT > 0) a = Math.max(0.25, 0.92 - player.inkEaten * 0.15) * clamp(player.blindT / 0.6, 0, 1);
   if (weatherDef().ash) {
     const k = clamp(env.t / 1.2, 0, 1) * clamp(env.left / 0.8, 0, 1);    // 噴發時漸暗、快結束時漸亮
-    a = Math.max(a, Math.max(0.15, 0.92 - (player.inkEaten + 1) * 0.15) * k);
+    a = Math.max(a, Math.max(0.7, 0.92 - player.inkEaten * 0.06) * k);   // 幾乎全黑;吃墨魚只稍微減輕
   }
   return a;
 }
@@ -262,6 +279,10 @@ let gameState = 'menu'; // menu | playing | win | lose | draw
 let elapsed = 0;
 let matchTime = MATCH_TIME;
 let usedBush = new Set();  // 已驚動過野生生物的草叢(每叢只觸發一次)
+let benches = {};          // 長椅:key = r*COLS+c → {c, r, back(椅背朝向 n/s/e/w), fc, fr(正面那一格)}
+const benchAt = (c, r) => benches[r * COLS + c] || null;
+// 正躺在長椅上(站定在長椅格、沒在移動)
+const onBench = (e) => !!(e && e.alive && !e.mvTarget && grid[e.row] && grid[e.row][e.col] === TILE.BENCH);
 let wildCritters = [];     // 被草叢驚動的野生老鼠/蟑螂(攻擊一次後自生自滅)
 
 // 危險地圖:danger[r][c] = 幾秒後會被爆炸波及(Infinity = 安全)
@@ -622,6 +643,7 @@ function placeMeatball(p) {
   if (!p.alive) return; // 倒下後不能再放貢丸
   if (p.bombsPlaced() >= p.maxBombs) return;
   const c = p.col, r = p.row;
+  if (grid[r][c] === TILE.BENCH) { hint(p, '長椅上不能放貢丸'); return; }
   // 該格已有貢丸則不放
   if (meatballs.some((m) => m.col === c && m.row === r)) return;
   // 吃過黑豬肉:這一顆一定是黑豬肉貢丸,放完恢復原本的選擇
@@ -783,6 +805,23 @@ function spawnItem(c, r, key) {
 function itemDef(key) { return ITEMS[key] || TOOLS[key]; }
 
 const pick = (arr) => arr[rand(arr.length)];
+
+// 開局撒食物(菜市場):在沒有木箱的空地(不含出生點)隨機放 n 個,種類盡量不重複
+function spawnStartFood(n) {
+  if (!n) return;
+  const spawnCells = new Set(teamSpawns().map((s) => s.row * COLS + s.col));
+  const open = [];
+  for (let r = 1; r < ROWS - 1; r++) for (let c = 1; c < COLS - 1; c++) {
+    if (grid[r][c] === TILE.EMPTY && !spawnCells.has(r * COLS + c)) open.push([c, r]);
+  }
+  const kinds = FOOD_DROP_KEYS.concat('skewer');
+  let bag = [];
+  for (let i = 0; i < n && open.length; i++) {
+    if (!bag.length) bag = kinds.slice().sort(() => Math.random() - 0.5);   // 一輪種類用完才重複
+    const [c, r] = open.splice(rand(open.length), 1)[0];
+    spawnItem(c, r, bag.pop());
+  }
+}
 
 // 木箱掉的工具(永久卡較稀有)
 function toolDrop() {
@@ -1462,6 +1501,13 @@ function tapCell(c, r, double) {
   setTapPath(player, c, r);
 }
 function setTapPath(p, c, r) {
+  const b = grid[r] && grid[r][c] === TILE.BENCH ? benchAt(c, r) : null;
+  if (b) {
+    const path = p.col === b.fc && p.row === b.fr ? [] : aiPath(p, (cc, rr) => cc === b.fc && rr === b.fr, 64, 0);
+    if (path) { p.autoPath = path.concat([[c, r]]); return; }
+    if (p === player) spawnText(tileCenter(c), tileCenter(r), '走不到', '#bbb');
+    return;
+  }
   if (!isFloor(c, r)) return;
   const dx = c - p.col, dy = r - p.row;
   if (Math.abs(dx) + Math.abs(dy) === 1 && ballAt(c, r)) {   // 點旁邊的貢丸
@@ -1497,6 +1543,12 @@ canvas.addEventListener('pointerdown', (ev) => {
 
 // 目標格是否可進入(牆/磚/垃圾桶或有貢丸都不行;貢丸在腳下不算,因為目標一定是相鄰格)
 function canEnterTile(e, c, r) {
+  const here = e instanceof Player && grid[e.row] && grid[e.row][e.col] === TILE.BENCH ? benchAt(e.col, e.row) : null;
+  if (here) return c === here.fc && r === here.fr;            // 躺在長椅上:只能往正面離開
+  if (grid[r] && grid[r][c] === TILE.BENCH) {                  // 走進長椅:只能從正面進去(椅背、扶手側都擋住)
+    const b = benchAt(c, r);
+    return e instanceof Player && !!b && e.col === b.fc && e.row === b.fr;
+  }
   if (isBlocked(c, r)) return false;
   for (const m of meatballs) {
     if (m.exploded || m.held) continue;
@@ -1664,6 +1716,13 @@ function update(dt) {
     if (f.skillCd > 0) f.skillCd = Math.max(0, f.skillCd - dt);
     if (f.dashT > 0) f.dashT = Math.max(0, f.dashT - dt);
     if (f.spaceT > 0) { f.spaceT -= dt; if (f.spaceT <= 0) { f.spaceT = 0; placeMeatball(f); } } // 只按一下:放貢丸
+    if (onBench(f)) {                                          // 躺在長椅上:每秒回 1 HP
+      f.restT = (f.restT || 0) + dt;
+      if (f.restT >= 1) {
+        f.restT -= 1;
+        if (f.hp < f.maxHp) { f.hp = Math.min(f.maxHp, f.hp + BENCH_HEAL); spawnText(f.x, f.y - TS * 0.6, '💤 +1 HP', '#81c784'); if (f === player) updateHud(); }
+      }
+    } else f.restT = 0;
     if (f.alive) f.mp = Math.min(f.mp + MP_REGEN * dt, f.maxMp);
   }
 
@@ -1833,6 +1892,11 @@ function draw() {
       if (t === TILE.EMPTY) continue;
       const edge = r === 0 || c === 0 || r === ROWS - 1 || c === COLS - 1;
       const side = (c === 0 || c === COLS - 1) && r !== 0 && r !== ROWS - 1; // 左右兩側(不含四角)
+      if (t === TILE.BENCH) {
+        const b = benchAt(c, r);
+        spriteRect('tiles/bench_' + (b ? b.back : 'n'), c * TS, (r + 1) * TS - tallH, TS, tallH);
+        continue;
+      }
       const list = t === TILE.SOLID ? (side && ts.wallSide ? ts.wallSide : edge ? ts.wall : ts.solid)
         : t === TILE.BRICK ? ts.brick : t === TILE.TRASH ? ts.trash : ts.bush;
       spriteRect('tiles/' + pickVar(list, c, r), c * TS, (r + 1) * TS - tallH, TS, tallH);
@@ -1844,7 +1908,7 @@ function draw() {
   explosions.forEach(drawExplosion);
   if (env.weather === 'rain') drawRainStreaks();
   if (weatherDef().snow) drawFlakes(90, 'rgba(255,255,255,0.9)', 2.2, 38);
-  if (weatherDef().ash) drawFlakes(70, 'rgba(60,52,48,0.85)', 1.8, 55);
+  if (weatherDef().ash) drawFlakes(140, 'rgba(70,60,55,0.95)', 2.2, 55);
   if (env.abduct) drawAlien();
 
   // 飄字
@@ -2072,12 +2136,26 @@ function drawCharacter(e) {
   const size = TS * 1.55, footY = e.y + TS * 0.42;
   const img = ASSETS[charSprite(e)];
   ctx.globalAlpha = e.alive ? 1 : 0.4;
+  const lying = onBench(e) ? benchAt(e.col, e.row) : null;
   if (img && img.complete && img.naturalWidth) {
     ctx.save();
-    ctx.translate(e.x, footY - size / 2);
-    if (e.dir && e.dir.x < 0) ctx.scale(-1, 1);
-    ctx.drawImage(img, -size / 2, -size / 2, size, size);
+    if (lying) {                                  // 躺在長椅上:身體轉成橫的(順著長椅方向)
+      const horiz = lying.back === 'n' || lying.back === 's';
+      ctx.translate(e.x, e.y - TS * 0.32);
+      if (horiz) ctx.rotate(-Math.PI / 2); else ctx.scale(1, 0.62);
+      ctx.drawImage(img, -size * 0.42, -size * 0.42, size * 0.84, size * 0.84);
+    } else {
+      ctx.translate(e.x, footY - size / 2);
+      if (e.dir && e.dir.x < 0) ctx.scale(-1, 1);
+      ctx.drawImage(img, -size / 2, -size / 2, size, size);
+    }
     ctx.restore();
+    if (lying && e.alive) {
+      ctx.font = 'bold 14px sans-serif'; ctx.textAlign = 'center';
+      ctx.globalAlpha = 0.6 + 0.4 * Math.sin(elapsed * 3);
+      ctx.fillText('💤', e.x + TS * 0.3, e.y - TS * 0.75 - (elapsed * 8 % 6));
+      ctx.globalAlpha = 1;
+    }
   }
   ctx.globalAlpha = 1;
   const headY = footY - size * 0.93;
@@ -2242,9 +2320,10 @@ function updateHud() {
   ];
   ['stat-hp', 'stat-mp', 'stat-power', 'stat-speed', 'stat-bombs'].forEach((id, i) => setHtml(id, statBar(...bars[i].slice(0, 8))));
 
+  const wxFixed = env.left > 1e5;   // 固定涼爽 / 教學:不會變天
   // ---- 天氣卡:效果標籤化
   setHtml('stat-weather',
-    `<div class="wx-head"><span>${isDisaster(w) ? '災害' : '現在天氣'}・${theme().name}</span><span>${Math.max(0, Math.ceil(env.left))} 秒後變天</span></div>` +
+    `<div class="wx-head"><span>${isDisaster(w) ? '災害' : '現在天氣'}・${theme().name}</span><span>${wxFixed ? '固定天氣' : Math.max(0, Math.ceil(env.left)) + ' 秒後變天'}</span></div>` +
     `<div class="wx-now"><span class="wx-icon">${w.icon}</span><b>${w.name}</b></div>` +
     `<div class="wx-chips">${weatherChips(true)}</div>` +
     `<div class="bar thin"><div class="fill" style="width:${Math.round(clamp(env.left / WEATHER_MAX, 0, 1) * 100)}%;background:#8a8f95"></div></div>`);
@@ -2291,7 +2370,7 @@ function updateHud() {
   // ---- 手機:天氣 + 五項迷你條、底部操作列
   if (isPhone()) {
     setHtml('m-status',
-      `<div class="ms-wx"><span class="wx-icon">${w.icon}</span><b>${w.name}</b>${weatherChips(false)}<span class="ms-left">${Math.max(0, Math.ceil(env.left))}s 後變天</span></div>` +
+      `<div class="ms-wx"><span class="wx-icon">${w.icon}</span><b>${w.name}</b>${weatherChips(false)}<span class="ms-left">${wxFixed ? '固定' : Math.max(0, Math.ceil(env.left)) + 's 後變天'}</span></div>` +
       '<div class="ms-stats">' + bars.map((b) => {
         const pct = (v) => Math.round(clamp(v / b[3], 0, 1) * 100);
         return `<div class="ms"><div class="ms-row"><span>${b[0] === '貢丸數' ? '貢丸' : b[0]}</span><b>${b[8]}</b></div>` +
@@ -2501,6 +2580,7 @@ function restart() {
   randomizeWeather();
   if (MATCH.wx === 'calm') { setWeather('cool'); env.left = 1e9; }   // 對戰設定:固定涼爽
   meatballs = []; explosions = []; items = []; particles = [];
+  spawnStartFood(theme().startFood || 0);
   matchTime = MATCH.time || MATCH_TIME;
   usedBush = new Set(); wildCritters = [];
 

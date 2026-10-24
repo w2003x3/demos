@@ -7,7 +7,7 @@
 // ====================================================================
 const MATCH_OPTS = {
   map:    { label: '地圖', opts: [['park', '公園'], ['market', '菜市場'], ['night', '夜市'], ['random', '隨機']] },
-  size:   { label: '人數', opts: [[1, '1 對 1'], [2, '2 對 2'], [3, '3 對 3']] },
+  size:   { label: '人數', opts: [[1, '1 對 1'], [2, '2 對 2'], [3, '3 對 3'], [4, '4 對 4']] },
   rounds: { label: '勝負', opts: [[1, '單局'], [3, '三戰兩勝'], [5, '五戰三勝']] },
   time:   { label: '每局', opts: [[60, '1 分鐘'], [120, '2 分鐘'], [180, '3 分鐘'], [300, '5 分鐘']] },
   ai:     { label: '電腦', opts: [['easy', '簡單'], ['normal', '普通'], ['hard', '困難']] },
@@ -189,7 +189,7 @@ const setupUI = {
   // 連線時:真人數量決定人數下限
   minSize() {
     if (!NET.online) return 1;
-    const h = Math.min(6, NET.roster().length);
+    const h = Math.min(8, NET.roster().length);
     return MATCH.teams === 'coop' ? Math.max(1, h) : Math.max(1, Math.ceil(h / 2));
   },
   render() {

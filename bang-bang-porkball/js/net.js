@@ -275,6 +275,7 @@ function buildSnapshot() {
     env: [env.weather, r1(env.left), r1(env.t)],
     ab: env.abduct ? [nid(env.abduct.f), r1(env.abduct.t)] : 0,   // 外星人光束鎖定的人
     g: grid.map((row) => row.join('')).join(''),
+    bn: Object.values(benches).map((b) => [b.c, b.r, b.back]),
     f: all.map((f) => ({
       i: nid(f), n: f.netId || (f === player ? NET.id : null),
       lb: f === player ? (f.netName || f.label) : f.label, tm: f.team, hu: f.isHuman ? 1 : 0,
@@ -341,6 +342,13 @@ const guest = {
       for (let r = 0; r < ROWS; r++) for (let c = 0; c < COLS; c++) {
         const v = +flat[r * COLS + c];
         if (grid[r][c] !== v) grid[r][c] = v;
+      }
+    }
+    if (Array.isArray(s.bn)) {                       // 長椅位置與方向
+      benches = {};
+      for (const [c, r, back] of s.bn) {
+        const [fc, fr] = { n: [c, r + 1], s: [c, r - 1], w: [c + 1, r], e: [c - 1, r] }[back] || [c, r + 1];
+        benches[r * COLS + c] = { c, r, back, fc, fr };
       }
     }
     const prevWx = env.weather;
@@ -534,7 +542,7 @@ const lobbyUI = {
       const code = new URLSearchParams(location.search).get('room') || '';
       panel.innerHTML =
         '<div class="logo">🌐 多人連線</div>' +
-        '<p class="sub">和朋友一起玩,最多 6 人;不足的位置由電腦補上</p>' +
+        '<p class="sub">和朋友一起玩,最多 8 人;不足的位置由電腦補上</p>' +
         `<label class="ol-field">暱稱 <input id="ol-name" maxlength="12" placeholder="你的名字" value="${esc(this.savedName())}"></label>` +
         `<p class="mini">你的角色:<b>${charDef(myChar).name}</b>(在主選單更換)</p>` +
         '<button type="button" class="big primary" data-ol="create">🏮 開攤(建立攤位)</button>' +
@@ -547,7 +555,7 @@ const lobbyUI = {
     }
     const host = NET.role === 'host';
     const plan = [];
-    NET.roster().slice(0, 6).forEach((p, i) => plan.push({ ...p, team: NET.teamOf(i) }));
+    NET.roster().slice(0, 8).forEach((p, i) => plan.push({ ...p, team: NET.teamOf(i) }));
     const rows = plan.map((p) =>
       `<li class="team-${p.team}"><span>${p.team === 'blue' ? '🔵' : '🔴'}</span>` +
       `<b>${esc(p.name)}</b>${p.host ? '<em>攤主</em>' : ''}${p.id === NET.id ? '<em>你</em>' : ''}</li>`).join('');

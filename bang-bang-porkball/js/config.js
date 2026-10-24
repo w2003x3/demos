@@ -13,7 +13,9 @@ const TILE = {
   BRICK: 2, // 木箱(可破壞,掉裝備/防護)
   TRASH: 3, // 垃圾桶(可破壞,掉食用道具)
   BUSH: 4,  // 草叢(可通行,可能驚動野生老鼠/蟑螂;可炸掉變草地)
+  BENCH: 5, // 長椅(公園):炸不壞、火焰可穿透;只能從椅子正面走進去,躺著每秒回 1 HP
 };
+const BENCH_HEAL = 1;     // 躺在長椅上每秒回幾 HP
 
 // ===== 道具定義 =====
 // 每種道具的圖示與效果
@@ -259,7 +261,7 @@ const MAPS = {
     name: '公園', icon: '🌳',
     tiles: { floor1: 'floor1', floor2: 'floor2', solid: 'stone',
              brick: 'crate', trash: 'trashcan', bush: 'bush' },
-    brickRate: 0.72, trashCount: 7, bushCount: 9,
+    brickRate: 0.72, trashCount: 7, bushCount: 9, benchCount: 4,
     // 公園野餐:早餐店奶茶常見
     snackWeights: { chicken: 1, bloodcake: 1, milktea: 3, boba: 1, tofu: 1 },
   },
@@ -267,7 +269,7 @@ const MAPS = {
     name: '菜市場', icon: '🥬',
     tiles: { floor1: 'market_floor1', floor2: 'market_floor2', solid: 'market_stall',
              brick: 'market_crate', trash: 'market_trash', bush: 'market_pile' },
-    brickRate: 0.75, trashCount: 10, bushCount: 7,
+    brickRate: 0.75, trashCount: 10, bushCount: 7, startFood: 16,   // 開局在空地撒 16 個食物
     // 市場現宰現做:雞排、豬血糕常見
     snackWeights: { chicken: 3, bloodcake: 3, milktea: 1, boba: 1, tofu: 1 },
   },

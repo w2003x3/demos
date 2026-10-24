@@ -1,7 +1,7 @@
 // ====================================================================
 //  新手教學關卡(2D / 3D 共用)
 //  固定的小練習場,一步一步完成任務才進下一步;不計時、被炸到會原地重來
-//  內容:基本操作 → 踢/丟 → 貢丸 → 食物/小吃 → 工具卡牌 → 寵物卡牌 → 實戰
+//  內容:基本操作 → 踢/丟 → 貢丸 → 地圖特色 → 食物/小吃 → 工具卡牌 → 寵物卡牌 → 實戰
 //  game.js 的 update() 在教學中改呼叫 tutorial.update(),restart() 會結束教學
 // ====================================================================
 (function () {
@@ -167,6 +167,28 @@
       setup(s) { T.nightOK = true; bots = []; buildRoster(); },
       update(s) { watchBalls(s, [13]); },
       done(s) { return [...(s.seen || [])].some((m) => m.exploded); },
+    },
+
+    // ---------- 地圖特色 ----------
+    {
+      title: '🌳 公園長椅',
+      text: '公園地圖有 4 張<b>長椅</b>:炸不壞、火焰會穿過去。從椅子<b>正面</b>走進去就會躺下,<b>每秒回 1 HP</b>(還是會被炸到)。<br>你現在只剩 1 HP:走到右上長椅的正下方,再往上走進去躺好,把血回滿。椅背那側走不進去。',
+      setup(s) {
+        T.nightOK = false;
+        grid[4][11] = TILE.BENCH; grid[5][11] = TILE.EMPTY;
+        benches = { [4 * COLS + 11]: { c: 11, r: 4, back: 'n', fc: 11, fr: 5 } };
+        player.maxHp = Math.max(player.maxHp, 3); player.hp = 1;
+      },
+      done() { return onBench(player) && player.hp >= player.maxHp; },
+    },
+    {
+      title: '🥬 菜市場:開局滿地食物',
+      text: '菜市場開局會在沒有箱子的空地撒 <b>16 個食物</b>,一開始先搶先贏!<br>下面撒了 4 個,全部撿起來。(夜市的香腸、米腸剛剛已經學過了)',
+      setup(s) {
+        grid[4][11] = TILE.EMPTY; benches = {};
+        s.list = [put(3, 9, 'mushroom'), put(5, 9, 'cilantro'), put(9, 9, 'taro'), put(11, 9, 'chili')];
+      },
+      done(s) { return gone(s.list); },
     },
 
     // ---------- 食物、小吃、防護 ----------
@@ -346,6 +368,7 @@
       startMatch();              // 借用一般開局流程(隱藏選單、建立玩家)
       applyCharacter(player, 'aman', false); // 教學固定用阿丸(數值和說明一致)
       buildArena();
+      benches = {};             // 教學場地沒有長椅(只有長椅那一步會放)
       bots = [];
       meatballs = []; items = []; explosions = [];
       setWeather('cool'); env.left = 1e9; // 教學固定涼爽:貢丸約 3.6 秒才爆、不變天

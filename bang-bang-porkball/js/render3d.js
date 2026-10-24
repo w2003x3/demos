@@ -1117,6 +1117,19 @@
       const blink = f.alive && f.invuln > 0 && Math.floor(f.invuln * 12) % 2 === 0;
       // 第一人稱時隱藏自己的模型(不擋視線)
       g.visible = !blink && !(camMode === 'fps' && f === player);
+      // 躺在長椅上:人物轉成順著長椅、仰躺在椅面上
+      const bench = typeof onBench === 'function' && onBench(f) ? benchAt(f.col, f.row) : null;
+      if (u.real && u.model) {
+        if (!u.modelPos) u.modelPos = u.model.position.clone();
+        if (bench) {
+          g.rotation.y = (bench.back === 'n' || bench.back === 's') ? Math.PI / 2 : 0;
+          u.model.rotation.x = -Math.PI / 2;
+          u.model.position.set(u.modelPos.x, u.modelPos.y + 0.36, u.modelPos.z + 0.5);
+        } else if (u.model.rotation.x) {
+          u.model.rotation.x = 0;
+          u.model.position.copy(u.modelPos);
+        }
+      }
       if (u.real) {
         animateRealChar(f, g);
       } else {
@@ -1784,6 +1797,33 @@
     }
   }
 
+  // ---------- 公園長椅(extra.glb 的 prop_bench,椅背預設朝北;方向隨地圖)----------
+  const benchGroup = new THREE.Group();
+  scene.add(benchGroup);
+  let benchKey = '';
+  const BENCH_YAW = { n: 0, s: Math.PI, e: -Math.PI / 2, w: Math.PI / 2 };
+  function syncBenches() {
+    const list = typeof benches === 'object' ? Object.values(benches) : [];
+    const key = list.map((b) => b.c + ',' + b.r + b.back).join('|') + (extraLib.ready ? '+' : '-');
+    if (key === benchKey) return;
+    benchKey = key;
+    while (benchGroup.children.length) benchGroup.remove(benchGroup.children[0]);
+    for (const b of list) {
+      let o = extraLib.ready && extraLib.nodes.prop_bench ? cloneNode(extraLib.nodes.prop_bench) : null;
+      if (!o) {   // 模型還沒載入:先用木色方塊代替
+        o = new THREE.Group();
+        const box = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.3, 0.36), new THREE.MeshStandardMaterial({ color: 0x7a4a24 }));
+        box.position.y = 0.15;
+        o.add(box);
+      }
+      o.position.set(b.c + 0.5, 0, b.r + 0.5);
+      o.rotation.y = BENCH_YAW[b.back] || 0;
+      o.traverse((m) => { if (m.isMesh) { m.castShadow = true; m.receiveShadow = true; } });
+      benchGroup.add(o);
+    }
+    renderer.shadowMap.needsUpdate = true;
+  }
+
   // ---------- 下雪(雪花 + 地面雪跡)、火山灰、外星人飛碟 ----------
   const FLAKE_N = 500;
   const flakePos = new Float32Array(FLAKE_N * 3);
@@ -1879,6 +1919,7 @@
       return;
     }
     syncBoard();
+    syncBenches();
     if (propsJustLoaded) { // 模型庫剛載入:清掉替代模型,下面的 sync 會用正式模型重建
       propsJustLoaded = false;
       for (const cache of [ballCache, itemCache, petCache, wildCache]) {
