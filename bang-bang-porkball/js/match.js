@@ -59,6 +59,8 @@ function startRound() {
 // ---------------------------------------------------------------- 一局結束
 // 單機與攤主:算比分;連線玩家:等攤主送 series 訊息
 function onRoundEnd() {
+  // 連線玩家:比分由攤主送來;在那之前先依畫面上的勝負顯示標題(避免閃過「平手」)
+  if (NET.online && NET.role !== 'host') SERIES.last = gameState === 'win' ? 'blue' : gameState === 'lose' ? 'red' : null;
   if (!NET.online || NET.role === 'host') {
     const w = gameState === 'win' ? 'blue' : gameState === 'lose' ? 'red' : null;
     SERIES.last = w;

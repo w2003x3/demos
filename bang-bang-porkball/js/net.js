@@ -228,6 +228,21 @@ const NET = {
         if (gameState === 'playing' || document.getElementById('result-overlay').className.indexOf('hidden') < 0) refreshRoomUi();
         else lobbyUI.render();
         return;
+      case 'host-changed': {
+        // 攤主斷線,伺服器把攤主交給最早加入的玩家
+        this.players = msg.players || [];
+        const by = (this.players.find((p) => p.id === msg.id) || {}).name || '玩家';
+        if (msg.id === this.id) this.becomeHost(msg.old, msg.oldName);
+        else {
+          if (this.hostPeer) this.hostPeer.close();
+          this.hostPeer = null;
+          this.lastSnap = 0; this.hostSeenAt = performance.now(); this.timeoutSent = false;
+          setTimeout(() => this.startRtc(), 800);           // 和新攤主重新建立直連(先走伺服器轉送)
+          refreshRoomUi();
+        }
+        showToast(`⚠️ 攤主 ${msg.oldName || ''} 斷線了,改由 ${msg.id === this.id ? '你' : by} 當攤主`, true);
+        return;
+      }
       case 'host-left':
         this.ws = null;
         if (gameState === 'playing') { this.takeover('攤主斷線了'); return; }
@@ -341,6 +356,53 @@ const NET = {
       showToast(`📣 ${msg.by} 催促了 ${names.join('、')}`);
     }
   },
+  // 同步來的物件轉成本機可以繼續模擬的狀態(插值位置對齊格子、補上缺的欄位)
+  adoptLocalState() {
+    const playing = gameState === 'playing';
+    for (const f of fighters()) {
+      if (!f) continue;
+      f.tx = f.ty = undefined;
+      if (playing) { f.x = tileCenter(f.col); f.y = tileCenter(f.row); f.mvTarget = null; f.autoPath = null; }
+    }
+    for (const m of meatballs) {
+      m.moving = false; m.vx = m.vy = 0; m.fly = null; m.jump = 0; m.tx = m.ty = undefined;
+      if (!m.held) { m.x = tileCenter(m.col); m.y = tileCenter(m.row); }
+    }
+    for (const it of items) { it.tx = it.ty = undefined; }
+    for (const w of wildCritters) { w.vx = 0; w.vy = 0; w.wt = 0; w.tx = w.ty = undefined; if (!(w.life > 0)) w.life = 1; }
+    for (const p of allPets()) { p.tx = p.ty = undefined; }
+  },
+  // 攤主轉移:我被選為新攤主 → 接著計算遊戲、送快照給其他人;舊攤主的角色改由電腦接手
+  becomeHost(oldId, oldName) {
+    this.role = 'host';
+    if (this.hostPeer) this.hostPeer.close();
+    this.hostPeer = null; this.peers = {};
+    delete this.picks[oldId]; delete this.ready[oldId];
+    this.picks[this.id] = myChar;
+    // 物件編號沿用(其他人的畫面不用重建),新物件從目前最大編號之後開始
+    let maxId = 0;
+    for (const o of [...fighters(), ...meatballs, ...items, ...allPets(), ...wildCritters]) if (o && o._nid > maxId) maxId = o._nid;
+    netSeq = Math.max(netSeq, maxId + 1000);
+    this.snapSeq = this.lastSnap + 1000;
+    this.adoptLocalState();
+    const ids = new Set(this.players.map((p) => p.id));
+    for (const f of fighters()) {
+      if (!f || f === player) { if (f) f.remote = false; continue; }
+      f.netWant = null;
+      if (f.netId && f.netId !== oldId && ids.has(f.netId)) f.remote = true;   // 其他真人:照常由他們操作
+      else {
+        if (f.netId === oldId && !/電腦/.test(f.label || '')) f.label = (oldName || f.label || '攤主') + '(電腦)';
+        f.remote = false; f.netId = null;                                       // 舊攤主、斷線的人:電腦接手
+      }
+    }
+    guest.clear();
+    buildRoster();
+    this.sendCfg(); this.sendPicks();
+    if (gameState === 'playing') { this.snapT = SNAP_INTERVAL; this.hostTick(0); }
+    else if (document.getElementById('result-overlay').className.indexOf('hidden') < 0) resultUI.render();
+    if (setupUI.visible()) setupUI.render();
+    updateHud();
+  },
   // 對戰中斷線:離開連線,其他真人角色全部改由電腦接手,自己在本機把這局打完;這局結束就不再繼續
   takeover(reason) {
     if (this.ws) { const w = this.ws; this.ws = null; try { w.close(); } catch { /* 已關閉 */ } }
@@ -350,21 +412,12 @@ const NET = {
     this.online = false; this.role = null; this.id = null; this.players = [];
     this.picks = {}; this.ready = {};
     guest.clear();
+    this.adoptLocalState();
     for (const f of fighters()) {
-      if (!f) continue;
-      f.x = tileCenter(f.col); f.y = tileCenter(f.row);         // 從插值位置對齊到格子,給本機模擬接手
-      f.mvTarget = null; f.autoPath = null; f.tx = f.ty = undefined;
-      if (f !== player) {
-        if ((f.isHuman || f.remote || f.netId) && !/電腦/.test(f.label || '')) f.label = (f.label || '玩家') + '(電腦)';
-        f.remote = false; f.netWant = null; f.netId = null;
-      }
+      if (!f || f === player) continue;
+      if ((f.isHuman || f.remote || f.netId) && !/電腦/.test(f.label || '')) f.label = (f.label || '玩家') + '(電腦)';
+      f.remote = false; f.netWant = null; f.netId = null;
     }
-    for (const m of meatballs) {
-      m.moving = false; m.vx = m.vy = 0; m.fly = null; m.jump = 0; m.tx = m.ty = undefined;
-      if (!m.held) { m.x = tileCenter(m.col); m.y = tileCenter(m.row); }
-    }
-    for (const it of items) { it.tx = it.ty = undefined; }
-    for (const w of wildCritters) { w.vx = 0; w.vy = 0; w.wt = 0; w.tx = w.ty = undefined; if (!(w.life > 0)) w.life = 1; }   // 同步來的只有位置,補上本機模擬需要的欄位
     SERIES.offline = true;
     buildRoster();
     showNetBanner(`⚠️ ${reason}:這局改由電腦接手,打完就回主選單`);
@@ -417,6 +470,7 @@ const NET = {
 
   // ====================== 一般玩家 ======================
   guestMessage(msg) {
+    this.hostSeenAt = performance.now(); this.timeoutSent = false;
     if (msg.t === 'rtc') { this.onRtcSignal('host', msg.d); return; }
     if (msg.t === 'cfg') { applyCfg(msg.cfg); refreshRoomUi(); return; }
     if (msg.t === 'picks') { this.picks = msg.picks || {}; this.ready = msg.ready || {}; this.links = msg.links || {}; refreshRoomUi(); return; }
@@ -467,7 +521,15 @@ const NET = {
     this.raw({ t: 'in', mv: want ? [want[0], want[1], keep ? 1 : 0] : null });
   },
   sendTap(c, r) { this.raw({ t: 'in', go: [c, r] }); },
-  guestUpdate(dt) { if (spotT > 0) spotT -= dt; guest.update(dt); },
+  guestUpdate(dt) {
+    if (spotT > 0) spotT -= dt;
+    // 對戰中攤主 6 秒沒消息:回報伺服器(伺服器也確認攤主沒動靜才會轉移攤主)
+    if (gameState === 'playing' && guest.ready && !this.timeoutSent && performance.now() - (this.hostSeenAt || performance.now()) > 6000) {
+      this.timeoutSent = true;
+      if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify({ t: 'host-timeout' }));
+    }
+    guest.update(dt);
+  },
 
   // 舊介面相容(單機時不做事)
   send() {},
@@ -535,6 +597,7 @@ const guest = {
       const fresh = !o;
       if (fresh) o = make(d);
       fill(o, d, fresh);
+      o._nid = d.i;
       next.set(d.i, o);
       out.push(o);
     }
