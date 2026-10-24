@@ -19,6 +19,73 @@ const ONLINE_SERVER = (() => {
 })();
 
 const SNAP_INTERVAL = 1 / 15;   // 房主送快照的間隔(秒)
+// ====================================================================
+//  WebRTC 直連(攤主 ↔ 每位玩家,星狀)
+//  - 交換連線資訊(offer / answer / ICE)走原本的連線伺服器:玩家 → 攤主、攤主 → 指定玩家({to})
+//  - 每條直連兩個通道:state(不保證順序、不重傳,送每秒 15 次的快照)、events(可靠,送按鍵/移動)
+//  - 沒連上、逾時或中斷:那位玩家自動改回伺服器轉送(原本的 WebSocket),不影響遊戲
+//  - 只用免費的公開 STUN,不用 TURN 中繼
+// ====================================================================
+const RTC_ICE = [{ urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'] }];
+const RTC_TIMEOUT = 10000;
+const RTC_OFF = new URLSearchParams(location.search).get('rtc') === '0';   // ?rtc=0 強制只用伺服器轉送(測試用;載入時就讀,加入攤位後網址會變)
+const rtcSupported = () => typeof RTCPeerConnection === 'function' && !RTC_OFF;
+
+class RtcPeer {
+  constructor(id, signal, onMsg, onStatus) {
+    this.id = id; this.signal = signal; this.onMsg = onMsg; this.onStatus = onStatus;
+    this.status = 'connecting'; this.pending = [];
+    const pc = this.pc = new RTCPeerConnection({ iceServers: RTC_ICE });
+    this.state = pc.createDataChannel('state', { negotiated: true, id: 0, ordered: false, maxRetransmits: 0 });
+    this.events = pc.createDataChannel('events', { negotiated: true, id: 1, ordered: true });
+    for (const ch of [this.state, this.events]) {
+      ch.onmessage = (e) => { let m; try { m = JSON.parse(e.data); } catch { return; } this.onMsg(m); };
+      ch.onopen = () => this.check();
+      ch.onclose = () => this.fail();
+    }
+    pc.onicecandidate = (e) => { if (e.candidate) this.signal({ cand: e.candidate.toJSON ? e.candidate.toJSON() : e.candidate }); };
+    pc.onconnectionstatechange = () => { if (pc.connectionState === 'failed' || pc.connectionState === 'closed') this.fail(); };
+    this.timer = setTimeout(() => { if (this.status !== 'open') this.fail(); }, RTC_TIMEOUT);
+  }
+  get open() { return this.status === 'open' && this.state.readyState === 'open' && this.events.readyState === 'open'; }
+  check() {
+    if (this.status === 'connecting' && this.state.readyState === 'open' && this.events.readyState === 'open') {
+      this.status = 'open'; clearTimeout(this.timer); this.onStatus(this);
+    }
+  }
+  fail() {
+    if (this.status === 'failed') return;
+    this.status = 'failed'; clearTimeout(this.timer);
+    try { this.pc.close(); } catch { /* 已關閉 */ }
+    this.onStatus(this);
+  }
+  async offer() {
+    try {
+      await this.pc.setLocalDescription(await this.pc.createOffer());
+      this.signal({ sdp: { type: this.pc.localDescription.type, sdp: this.pc.localDescription.sdp } });
+    } catch { this.fail(); }
+  }
+  async handle(d) {
+    const pc = this.pc;
+    try {
+      if (d.sdp) {
+        await pc.setRemoteDescription(d.sdp);
+        if (d.sdp.type === 'offer') {
+          await pc.setLocalDescription(await pc.createAnswer());
+          this.signal({ sdp: { type: pc.localDescription.type, sdp: pc.localDescription.sdp } });
+        }
+        for (const c of this.pending.splice(0)) await pc.addIceCandidate(c).catch(() => {});
+      } else if (d.cand) {
+        if (pc.remoteDescription) await pc.addIceCandidate(d.cand).catch(() => {});
+        else this.pending.push(d.cand);
+      }
+    } catch { this.fail(); }
+  }
+  // 快照:通道塞車(瀏覽器還有大量資料沒送出)就跳過這一張,下一張會帶最新狀態
+  sendState(json) { if (this.state.bufferedAmount < 256 * 1024) this.state.send(json); }
+  close() { this.status = 'failed'; clearTimeout(this.timer); try { this.pc.close(); } catch { /* 已關閉 */ } }
+}
+
 const ACTION_KEYS = new Set([' ', 'e', 'j', 'q', 'f', 'g', 't', 'v', 'z', 'x', 'c', 'k', 'l', 'o', 'p',
   '1', '2', '3', '4', '5', '6', '7', '8', '9']);
 
@@ -29,6 +96,11 @@ const NET = {
   name: '',
   code: '',
   players: [],       // 房間名單 [{id, name, host}]
+  peers: {},         // 攤主:每位玩家的 WebRTC 直連 {id: RtcPeer}
+  hostPeer: null,    // 玩家:和攤主的直連
+  links: {},         // 每位玩家目前的連線方式 {id: 'p2p' | 'relay'}(攤主算好廣播)
+  snapSeq: 0,        // 攤主:快照流水號
+  lastSnap: 0,       // 玩家:收到的最新快照流水號(直連不保證順序,舊的丟掉)
   picks: {},         // 每位玩家選的角色 {id: 角色}(攤主收集後廣播)
   ready: {},         // 每位玩家是否按了「準備」{id: true}
   cfg: { map: 'park', teams: 'split' },
@@ -71,13 +143,58 @@ const NET = {
     if (!silent) lobbyUI.render();
   },
   reset() {
+    for (const p of Object.values(this.peers)) p.close();
+    if (this.hostPeer) this.hostPeer.close();
+    this.peers = {}; this.hostPeer = null; this.links = {}; this.snapSeq = 0; this.lastSnap = 0;
     this.online = false; this.role = null; this.id = null; this.players = [];
     this.fx = []; this.sq = []; this.lastMove = ''; this.resultShown = false; this.picks = {}; this.ready = {};
     guest.clear();
     restoreResultButtons();
   },
   raw(msg) {
+    // 玩家的按鍵 / 移動:直連通了就走直連的可靠通道
+    if (msg.t === 'in' && this.role === 'guest' && this.hostPeer && this.hostPeer.open) {
+      this.hostPeer.events.send(JSON.stringify(msg));
+      return;
+    }
     if (this.ws && this.ws.readyState === 1) this.ws.send(JSON.stringify(msg));
+  },
+  // ---------- WebRTC 直連 ----------
+  // 玩家進攤位後主動向攤主發起直連
+  startRtc() {
+    if (this.role !== 'guest' || !rtcSupported()) return;
+    if (this.hostPeer && this.hostPeer.status !== 'failed') return;
+    this.hostPeer = new RtcPeer('host', (d) => this.raw({ t: 'rtc', d }),
+      (m) => this.guestMessage(m), () => refreshRoomUi());
+    this.hostPeer.offer();
+  },
+  // 收到對方的連線資訊(攤主:來自哪位玩家;玩家:來自攤主)
+  onRtcSignal(from, d) {
+    if (!d || !rtcSupported()) return;
+    if (this.role === 'host') {
+      let p = this.peers[from];
+      if (d.sdp && d.sdp.type === 'offer') {               // 新的直連請求(重新連線就換掉舊的)
+        if (p) p.close();
+        p = this.peers[from] = new RtcPeer(from, (x) => this.raw({ t: 'rtc', to: from, d: x }),
+          (m) => this.hostMessage({ ...m, from }), () => this.sendPicks());
+      }
+      if (p) p.handle(d);
+    } else if (this.hostPeer) this.hostPeer.handle(d);
+  },
+  linkOf(id) { return this.peers[id] && this.peers[id].open ? 'p2p' : 'relay'; },
+  // 攤主送快照:直連的玩家走直連,其他人走伺服器(全部都沒直連就廣播一次)
+  sendSnap(snap) {
+    snap.sn = ++this.snapSeq;
+    const json = JSON.stringify(snap);
+    const guests = this.players.filter((p) => !p.host).map((p) => p.id);
+    const relay = [];
+    for (const id of guests) {
+      const p = this.peers[id];
+      if (p && p.open) p.sendState(json); else relay.push(id);
+    }
+    if (!relay.length || !this.ws || this.ws.readyState !== 1) return;
+    if (relay.length === guests.length) this.ws.send(json);
+    else for (const id of relay) this.ws.send(json.slice(0, -1) + ',"to":"' + id + '"}');
   },
 
   onMessage(msg) {
@@ -93,7 +210,8 @@ const NET = {
         this.players = msg.players;
         lobbyUI.lastError = '';
         lobbyUI.msg = ''; lobbyUI.msgErr = false;
-        this.picks = { [this.id]: myChar }; this.ready = {};
+        this.picks = { [this.id]: myChar }; this.ready = {}; this.lastSnap = 0;
+        if (this.role === 'guest') setTimeout(() => this.startRtc(), 300);   // 試著和攤主直連
         if (this.role === 'guest') this.raw({ t: 'pick', c: myChar }); // 告訴攤主我選的角色
         history.replaceState(null, '', '?room=' + this.code + (new URLSearchParams(location.search).get('server') ? '&server=' + new URLSearchParams(location.search).get('server') : ''));
         lobbyUI.render();
@@ -171,7 +289,10 @@ const NET = {
   sendPicks() {
     if (this.role !== 'host') return;
     this.picks[this.id] = myChar;
-    this.raw({ t: 'picks', picks: this.picks, ready: this.ready });
+    const links = {};
+    for (const p of this.players) if (!p.host) links[p.id] = this.linkOf(p.id);
+    this.links = links;
+    this.raw({ t: 'picks', picks: this.picks, ready: this.ready, links });
     refreshRoomUi();
   },
   sendSeries() {
@@ -182,11 +303,13 @@ const NET = {
     if (this.role === 'guest') this.raw({ t: 'ready', v: !!v });
   },
   hostMessage(msg) {
+    if (msg.t === 'rtc') { this.onRtcSignal(msg.from, msg.d); return; }
     if (msg.t === 'peer-left') {
       // 對戰中有人離開:改由電腦接手
       const f = bots.find((b) => b.netId === msg.id);
       if (f) { f.remote = false; f.netWant = null; f.label += '(電腦)'; buildRoster(); }
       delete this.ready[msg.id]; delete this.picks[msg.id];
+      if (this.peers[msg.id]) { this.peers[msg.id].close(); delete this.peers[msg.id]; }
       return;
     }
     if (msg.t === 'pick') { if (CHARACTERS[msg.c]) { this.picks[msg.from] = msg.c; this.sendPicks(); } return; }
@@ -207,7 +330,7 @@ const NET = {
     this.snapT += dt;
     if (this.snapT < SNAP_INTERVAL && gameState === 'playing') return;
     this.snapT = 0;
-    this.raw(buildSnapshot());
+    this.sendSnap(buildSnapshot());
   },
   onResult() {
     if (this.role === 'host') this.hostTick(SNAP_INTERVAL); // 把結算狀態送出去
@@ -215,8 +338,9 @@ const NET = {
 
   // ====================== 一般玩家 ======================
   guestMessage(msg) {
+    if (msg.t === 'rtc') { this.onRtcSignal('host', msg.d); return; }
     if (msg.t === 'cfg') { applyCfg(msg.cfg); refreshRoomUi(); return; }
-    if (msg.t === 'picks') { this.picks = msg.picks || {}; this.ready = msg.ready || {}; refreshRoomUi(); return; }
+    if (msg.t === 'picks') { this.picks = msg.picks || {}; this.ready = msg.ready || {}; this.links = msg.links || {}; refreshRoomUi(); return; }
     if (msg.t === 'series') {
       const s = msg.s || {};
       SERIES.round = s.round; SERIES.wins = s.wins || { blue: 0, red: 0 }; SERIES.last = s.last; SERIES.over = !!s.over;
@@ -241,8 +365,16 @@ const NET = {
       lobbyUI.hide();
       return;
     }
-    if (msg.t === 'open') { gameState = 'menu'; this.ready = {}; showOverlay('result-overlay', false); setupUI.open(); return; }
-    if (msg.t === 'snap') guest.apply(msg);
+    if (msg.t === 'open') {
+      gameState = 'menu'; this.ready = {}; showOverlay('result-overlay', false); setupUI.open();
+      if (!this.hostPeer || this.hostPeer.status === 'failed') this.startRtc();   // 回到攤位時再試一次直連
+      return;
+    }
+    if (msg.t === 'snap') {
+      if (msg.sn && msg.sn <= this.lastSnap) return;   // 直連不保證順序:比手上舊的快照丟掉
+      if (msg.sn) this.lastSnap = msg.sn;
+      guest.apply(msg);
+    }
   },
   sendKey(k) {
     if (ACTION_KEYS.has(k)) this.raw({ t: 'in', k });

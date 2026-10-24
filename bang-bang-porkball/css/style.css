@@ -907,3 +907,6 @@ body.mode-3d #lowhp-overlay.on {
   animation: lowhp 1.6s ease-in-out infinite;
 }
 @keyframes lowhp { 0%, 100% { opacity: .65; } 50% { opacity: 1; } }
+
+.su-players em.p2p { background: #e3f0fd; color: #1f5e9e; }
+.su-players em.relay { background: #f1f1f1; color: var(--muted); }

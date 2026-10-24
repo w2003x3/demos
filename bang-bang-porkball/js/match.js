@@ -218,7 +218,9 @@ const setupUI = {
         const team = slot < n ? 'blue' : 'red';
         const ch = CHARACTERS[NET.picks[p.id]] ? CHARACTERS[NET.picks[p.id]].name : '選角中';
         const ok = p.host || NET.ready[p.id];
-        return `<li class="team-${team}"><b>${escHtml(p.name)}</b><span>${ch}</span>${p.host ? '<em>攤主</em>' : `<em class="${ok ? 'ok' : ''}">${ok ? '已準備' : '未準備'}</em>`}${p.id === NET.id ? '<em>你</em>' : ''}</li>`;
+        const link = p.host ? '' : NET.links[p.id] === 'p2p' ? '<em class="p2p" title="和攤主直接連線(延遲較低)">直連</em>'
+          : '<em class="relay" title="經過伺服器轉送">轉送</em>';
+        return `<li class="team-${team}"><b>${escHtml(p.name)}</b><span>${ch}</span>${p.host ? '<em>攤主</em>' : `<em class="${ok ? 'ok' : ''}">${ok ? '已準備' : '未準備'}</em>`}${link}${p.id === NET.id ? '<em>你</em>' : ''}</li>`;
       }).join('');
       const extra = NET.roster().length - Object.keys(plan).length;
       const link = location.origin + location.pathname + '?room=' + NET.code;
