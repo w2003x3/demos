@@ -226,12 +226,14 @@ export class UI {
         ${`<div class="seg seg-sound" id="sound-seg"><span>🔊 聲音</span>${[['both', '預錄優先'], ['files', '只用預錄'], ['browser', '瀏覽器發音'], ['mute', '靜音']].map(([v, t]) => `<button data-c="${v}" class="${info.sound === v ? 'on' : ''}">${t}</button>`).join('')}</div>`}
         <button id="quality-btn" class="ghost">畫質:${esc(info.quality)}</button>
         ${`<div class="seg" id="curtain-seg"><span>🪟 窗簾</span><button data-v="0" class="${info.curtains ? '' : 'on'}">拉開</button><button data-v="1" class="${info.curtains ? 'on' : ''}">拉下</button></div>`}
+        <div class="seg" id="mini-seg" title="移軸景深、光暈與調色,畫面像鐵道模型;電腦較慢可關閉"><span>✨ 微縮風格</span><button data-v="0" class="${info.miniature ? '' : 'on'}">關</button><button data-v="1" class="${info.miniature ? 'on' : ''}">開</button></div>
         <span class="muted-txt">語音來源:${esc(info.voice)}</span>
       </div>`, 'menu');
     s.querySelectorAll('.mission:not(.locked)').forEach((b) => b.addEventListener('click', () => onPick(missions[+b.dataset.i])));
     this._bindChoice($('#sound-seg', s), info.onSound);
     $('#quality-btn', s).addEventListener('click', (e) => { e.target.textContent = `畫質:${info.onQuality()}`; });
     this._bindSeg($('#curtain-seg', s), () => info.curtains, info.onCurtains, (v) => { info.curtains = v; });
+    this._bindSeg($('#mini-seg', s), () => info.miniature, info.onMiniature, (v) => { info.miniature = v; });
     $('#help-btn', s).addEventListener('click', () => info.onHelp());
     $('#reset-btn', s).addEventListener('click', () => { if (confirm('確定要重置職涯紀錄?')) onResetCareer(); });
   }
@@ -361,6 +363,7 @@ export class UI {
       <div class="settings">
         <button class="ghost" id="b-quality">畫質:${esc(st.quality || '')}</button>
         ${`<div class="seg" id="b-curtain"><span>🪟 窗簾</span><button data-v="0" class="${st.curtains ? '' : 'on'}">拉開</button><button data-v="1" class="${st.curtains ? 'on' : ''}">拉下</button></div>`}
+        <div class="seg" id="b-mini"><span>✨ 微縮風格</span><button data-v="0" class="${st.miniature ? '' : 'on'}">關</button><button data-v="1" class="${st.miniature ? 'on' : ''}">開</button></div>
         <div class="seg" id="b-view"><span>🎥 視角</span><button data-v="0" class="${st.firstPerson ? '' : 'on'}">第三人稱</button><button data-v="1" class="${st.firstPerson ? 'on' : ''}">第一人稱</button></div>
         ${`<div class="seg seg-sound" id="b-sound"><span>🔊 聲音</span>${[['both', '預錄優先'], ['files', '只用預錄'], ['browser', '瀏覽器發音'], ['mute', '靜音']].map(([v, t]) => `<button data-c="${v}" class="${st.sound === v ? 'on' : ''}">${t}</button>`).join('')}</div>`}
         <button class="ghost" id="b-help">📖 操作說明</button>
@@ -371,6 +374,7 @@ export class UI {
     $('#b-quit', s).addEventListener('click', onQuit);
     $('#b-quality', s).addEventListener('click', (e) => { e.target.textContent = `畫質:${st.onQuality()}`; });
     this._bindSeg($('#b-curtain', s), () => st.curtains, st.onCurtains, (v) => { st.curtains = v; });
+    this._bindSeg($('#b-mini', s), () => st.miniature, st.onMiniature, (v) => { st.miniature = v; });
     this._bindSeg($('#b-view', s), () => st.firstPerson, st.onView, (v) => { st.firstPerson = v; });
     this._bindChoice($('#b-sound', s), st.onSound);
     $('#b-help', s).addEventListener('click', () => st.onHelp());

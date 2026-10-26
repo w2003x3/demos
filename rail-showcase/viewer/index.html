@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>鐵道模型展示台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=Noto+Serif+TC:wght@700&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#e9e3d6;--dim:#9a937f;--line:rgba(233,227,214,.14);--chip:rgba(18,20,26,.62);--acc:#e8b46a}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:#07090d;overflow:hidden;color:var(--ink);
+ font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
+canvas:active{cursor:grabbing}
+#title{position:fixed;left:28px;top:24px;pointer-events:none;user-select:none}
+#title .k{font-family:"Noto Serif TC","Songti TC","PMingLiU",serif;font-size:30px;letter-spacing:.42em;font-weight:700}
+#title .e{font-size:10.5px;letter-spacing:.32em;color:var(--dim);margin-top:6px;text-transform:uppercase}
+#title .s{font-size:12.5px;letter-spacing:.12em;color:var(--dim);margin-top:12px;padding-top:10px;border-top:1px solid var(--line);max-width:300px;line-height:1.7}
+#pick{position:fixed;right:20px;top:20px;display:flex;flex-direction:column;align-items:flex-end;gap:8px}
+#pick select{font:inherit;font-size:12.5px;letter-spacing:.08em;color:var(--ink);background:var(--chip);border:1px solid var(--line);
+ padding:8px 14px;border-radius:999px;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);max-width:calc(100vw - 40px);cursor:pointer}
+#pick select option,#pick select optgroup{background:#12141a;color:var(--ink)}
+#fps{font:11px ui-monospace,Menlo,monospace;color:var(--dim);letter-spacing:.05em}
+#panel{position:fixed;right:20px;bottom:20px;display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;max-width:calc(100vw - 40px)}
+#panel button{font:inherit;font-size:12px;letter-spacing:.08em;color:var(--dim);background:var(--chip);border:1px solid var(--line);
+ padding:7px 12px;border-radius:999px;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:color .2s,border-color .2s}
+#panel button.on{color:var(--ink);border-color:rgba(232,180,106,.55)}
+#panel button.on::before{content:"";display:inline-block;width:6px;height:6px;border-radius:50%;background:var(--acc);margin-right:7px;vertical-align:1px;box-shadow:0 0 8px var(--acc)}
+#hint{position:fixed;left:28px;bottom:22px;font-size:11.5px;letter-spacing:.14em;color:var(--dim);pointer-events:none}
+#load{position:fixed;inset:0;display:grid;place-items:center;font-size:12px;letter-spacing:.3em;color:var(--dim);pointer-events:none;transition:opacity .4s}
+#load.done{opacity:0}
+@media (max-width:640px){#title{left:16px;top:16px}#title .k{font-size:22px}#title .s{display:none}#hint{display:none}
+ #pick{right:12px;top:auto;bottom:64px;left:12px;align-items:stretch}#panel{right:12px;bottom:12px;left:12px;justify-content:center}}
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="title">
+  <div class="k" id="tk">鐵道模型</div>
+  <div class="e" id="te">Rail Assets · Diorama Showcase</div>
+  <div class="s" id="ts">rail-assets 共用模型庫的微縮展示台</div>
+</div>
+<div id="pick"><select id="sel" aria-label="展示內容"></select><div id="fps"></div></div>
+<div id="hint">拖曳旋轉 · 右鍵／雙指平移 · 滾輪縮放 · 雙擊重置</div>
+<div id="panel"></div>
+<div id="load">LOADING</div>
+<script>window.RAIL_BASE = "../../route-map/v3/assets/rail";</script>
+<script type="module" src="viewer.js"></script>
+</body>
+</html>

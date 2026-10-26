@@ -1,11 +1,11 @@
 // 外牆攀爬:四肢(Q 左手、E 右手、Z 左腳、C 右腳)按住=放開伸展,放開按鍵=抓住。
 // 四肢同時放開 → 墜落;墜落時 5 秒心算題,答對開降落傘。
 import * as THREE from 'three';
-import { towerSections, CROWN_Y, SPIRE_TOP, BASE_HW0, floorAtY, ROOF_Y } from '../config.js?v=4d1cca2';
-import { createCharacter, poseIdle, poseWalk, poseCheer, resetPose } from '../world/character.js?v=4d1cca2';
-import { OrbitCam, buildParachute } from './common.js?v=4d1cca2';
-import { askQuiz, fmtTime } from '../ui/ui.js?v=4d1cca2';
-import { VIS } from '../ui/tutorial.js?v=4d1cca2';
+import { towerSections, CROWN_Y, SPIRE_TOP, BASE_HW0, floorAtY, ROOF_Y } from '../config.js?v=4ec109e';
+import { createCharacter, poseIdle, poseWalk, poseCheer, resetPose } from '../world/character.js?v=4ec109e';
+import { OrbitCam, buildParachute } from './common.js?v=4ec109e';
+import { askQuiz, fmtTime } from '../ui/ui.js?v=4ec109e';
+import { VIS } from '../ui/tutorial.js?v=4ec109e';
 
 const LIMBS = [
   { id: 'LH', key: 'KeyQ', label: 'Q', name: '左手', hand: true, side: -1 },

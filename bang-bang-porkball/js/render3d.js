@@ -34,16 +34,29 @@
   renderer.outputEncoding = THREE.sRGBEncoding;
   container.appendChild(renderer.domElement);
 
+  // ---------- 微縮模型風格(vendor/miniature-look.js):移軸景深、光暈、調色、暗角、顆粒 ----------
+  //  全景/俯視 = 盤面(只模糊盤面外的上下緣)、跟隨 = 輕移軸、第一人稱 = 只調色;省電畫質不套用
+  let miniOn = true;
+  try { miniOn = localStorage.getItem('bbw3d_mini') !== '0'; } catch (e) { /* 無痕模式 */ }
+  const look = window.MiniatureLook
+    ? MiniatureLook.createMiniatureLook(THREE, renderer, { preset: 'board', samples: Q.soft ? 4 : 0, bloom: Q.fx > 1 })
+    : null;
+  const lookActive = () => !!look && miniOn && qualityLevel !== 'off';
+  // 材質精修(粗糙度變化、微凹凸、烤漆清漆):只在載入時為中/高畫質時套用(會增加像素著色成本)
+  const refineOn = !!window.MiniatureLook && (qualityLevel === 'mid' || qualityLevel === 'high');
+
   const scene = new THREE.Scene();
-  const camera = new THREE.PerspectiveCamera(50, 1, 0.1, 200);
+  // 全景/俯視用 30° 窄視角(微縮模型的望遠感),鏡頭距離依視角放大,畫面範圍與原本 50° 相同
+  const FREE_FOV = 30, FREE_K = Math.tan(25 * Math.PI / 180) / Math.tan(FREE_FOV / 2 * Math.PI / 180);
+  const camera = new THREE.PerspectiveCamera(FREE_FOV, 1, 0.1, 200);
   const CX = COLS / 2, CZ = ROWS / 2;
   const controls = new THREE.OrbitControls(camera, renderer.domElement);
   controls.target.set(CX, 0, CZ);
   controls.enableDamping = true;
   controls.dampingFactor = 0.12;
   controls.maxPolarAngle = Math.PI * 0.49;
-  controls.minDistance = 4;
-  controls.maxDistance = 40;
+  controls.minDistance = 4 * FREE_K;
+  controls.maxDistance = 40 * FREE_K;
 
   // ---------- 鏡頭模式:free(全景/俯視,可拖曳環繞)/ follow(第三人稱跟隨)/ fps(第一人稱) ----------
   let camMode = 'free';
@@ -55,8 +68,8 @@
     camMode = m;
     controls.enabled = (m === 'free'); // 跟隨/第一人稱時停用滑鼠環繞
   }
-  function viewOverview() { setCamMode('free'); camera.position.set(CX, 12, CZ + 10.5); controls.target.set(CX, 0, CZ); }
-  function viewTop() { setCamMode('free'); camera.position.set(CX, 17, CZ + 0.01); controls.target.set(CX, 0, CZ); }
+  function viewOverview() { setCamMode('free'); camera.position.set(CX, 12 * FREE_K, CZ + 10.5 * FREE_K); controls.target.set(CX, 0, CZ); }
+  function viewTop() { setCamMode('free'); camera.position.set(CX, 17 * FREE_K, CZ + 0.01); controls.target.set(CX, 0, CZ); }
 
   // 視角選單:4 種視角卡片 + 只在該視角出現的選項 + 方向鍵說明
   const CAM_NAMES = { overview: '全景', top: '俯視', follow: '跟隨', fps: '第一人稱' };
@@ -123,8 +136,8 @@
   // 依模式驅動鏡頭(每幀)
   const camTmp = new THREE.Vector3();
   function updateCamera() {
-    // 視野角:第一人稱 72°(廣角 100°),其他模式 50°;平滑過渡
-    const targetFov = camMode === 'fps' ? (fpsWide ? 100 : 72) : 50;
+    // 視野角:第一人稱 72°(廣角 100°),跟隨 50°,全景/俯視 30°;平滑過渡
+    const targetFov = camMode === 'fps' ? (fpsWide ? 100 : 72) : camMode === 'follow' ? 50 : FREE_FOV;
     if (Math.abs(camera.fov - targetFov) > 0.5) {
       camera.fov += (targetFov - camera.fov) * 0.15;
       camera.updateProjectionMatrix();
@@ -397,6 +410,8 @@
         m.toneMapped = false;
       }
     });
+    // 不轉成 MeshPhysicalMaterial(pbrMats / floorMats 持有材質參照)
+    if (refineOn) MiniatureLook.refineMaterials(THREE, root, { physical: false });
   }
 
   // 依格子座標產生穩定的亂數(同一格每次重建長相一致)
@@ -1751,8 +1766,44 @@
       charCache.clear();
     }
     needRebuild = true;          // 造景數量、燈光
+    if (look) { look.setSamples(Q.soft ? 4 : 0); look.bloomEnabled = Q.fx > 1; }
     applyThemeLight();
     updateQualityUi();
+  }
+  // 微縮模型風格開關(頂列「微縮」按鈕)
+  const miniBtn = document.getElementById('mini-btn');
+  function updateMiniUi() {
+    if (!miniBtn) return;
+    miniBtn.hidden = !look;
+    miniBtn.classList.toggle('active', miniOn);
+    miniBtn.setAttribute('aria-pressed', miniOn ? 'true' : 'false');
+  }
+  if (miniBtn) {
+    miniBtn.addEventListener('click', () => {
+      miniOn = !miniOn;
+      try { localStorage.setItem('bbw3d_mini', miniOn ? '1' : '0'); } catch (e) { /* 忽略 */ }
+      updateMiniUi();
+      miniBtn.blur();
+    });
+  }
+  updateMiniUi();
+  // 依鏡頭模式與主題選微縮風格(夜間地圖:光暈門檻較低,燈籠會暈開)
+  let lookKey = '';
+  function updateLook() {
+    if (!look) return;
+    const preset = camMode === 'free' ? 'board' : camMode === 'follow' ? 'soft' : 'grade';
+    const key = preset + currentMapId;
+    if (key === lookKey) return;
+    const first = !lookKey;
+    lookKey = key;
+    look.setPreset(preset, first);
+    if (currentMapId === 'night') look.set({ threshold: 0.75, bloom: 0.45 });
+    if (preset === 'soft') look.set({ center: 0.42 });   // 跟隨:人物在畫面中央偏下
+  }
+  function draw() {
+    updateLook();
+    if (lookActive()) look.render(scene, camera);
+    else renderer.render(scene, camera);
   }
   function updateQualityUi() {
     if (!qSel) return;
@@ -1970,7 +2021,7 @@
     requestAnimationFrame(frame);
     if (window.VIEW && VIEW.mode !== '3d') return; // 2D 模式:3D 暫停,不耗效能
     if (typeof player === 'undefined' || !player || !grid.length) {
-      renderer.render(scene, camera);
+      draw();
       return;
     }
     syncBoard();
@@ -1998,7 +2049,7 @@
     if (inkEl) inkEl.style.opacity = blindAlpha(); // 墨魚黑畫面 / 火山灰
     updateCamera();
     updateOcclusion();
-    renderer.render(scene, camera);
+    draw();
     trackFps();
   }
   frame();

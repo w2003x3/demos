@@ -1,10 +1,10 @@
 // 樓梯登高賽:J/K(或 ←/→)左右腳交替,L 拉扶手。心率過高效率下降,補水站按 E。
 import * as THREE from 'three';
-import { RACES, RACE_STEPS_TOTAL, WATER_FLOORS } from '../config.js?v=4d1cca2';
-import { U_PER_FLOOR, stairPath } from '../world/stairwell.js?v=4d1cca2';
-import { createCharacter, poseStairs, poseTired, poseCheer, poseIdle } from '../world/character.js?v=4d1cca2';
-import { fmtTime } from '../ui/ui.js?v=4d1cca2';
-import { VIS } from '../ui/tutorial.js?v=4d1cca2';
+import { RACES, RACE_STEPS_TOTAL, WATER_FLOORS } from '../config.js?v=4ec109e';
+import { U_PER_FLOOR, stairPath } from '../world/stairwell.js?v=4ec109e';
+import { createCharacter, poseStairs, poseTired, poseCheer, poseIdle } from '../world/character.js?v=4ec109e';
+import { fmtTime } from '../ui/ui.js?v=4ec109e';
+import { VIS } from '../ui/tutorial.js?v=4ec109e';
 
 const RIVALS = [
   { name: '林志遠', shirt: 0x1f6fb2, cad: 5.3 },

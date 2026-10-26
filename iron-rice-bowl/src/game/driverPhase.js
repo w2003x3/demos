@@ -101,7 +101,7 @@ export class DriverPhase {
     this.stations = stations;
     const termName = stations[n - 1].name;
     const world = this.world = new DriveWorld(el.querySelector('[data-canvas]'), {
-      route, env, time: L.time, quality: g.quality.shadows ? 'high' : g.qualityKey === 'low' ? 'low' : 'medium', stations, spec, assets, platformSide: side,
+      route, env, time: L.time, quality: g.quality.shadows ? 'high' : g.qualityKey === 'low' ? 'low' : 'medium', miniature: g.settings.miniature !== false, stations, spec, assets, platformSide: side,
       overhead: true, limitSigns, destText: `往 ${termName}`, noPsd: true, train: this.trainDef,
       makeDriver: () => this._driverFigure(),
     });

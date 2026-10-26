@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 import { RectAreaLightUniformsLib } from 'three/addons/lights/RectAreaLightUniformsLib.js';
+import { createMiniatureLook, refineMaterials } from './core/miniature-look.js';
 import { MISSIONS, ROLE_MISSIONS, KITCHEN_MISSIONS, STATION_MISSIONS, CHASE_MISSIONS } from './config/missions.js';
 import { StationExplorePhase } from './game/stationExplorePhase.js';
 import { StationChasePhase } from './game/stationChasePhase.js';
@@ -50,6 +51,8 @@ class Game {
     renderer.toneMappingExposure = 0.95;
     document.getElementById('app').appendChild(renderer.domElement);
     RectAreaLightUniformsLib.init();
+    // 微縮模型風格後製(移軸景深、光暈、AO、調色、暗角);畫質決定 MSAA/光暈/AO
+    this.look = createMiniatureLook(THREE, renderer, { preset: 'grade', samples: 4, ao: true, aoRadius: 0.5 });
 
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color('#0d1015');
@@ -63,7 +66,7 @@ class Game {
     this.ui = new UI(document.getElementById('ui'));
     this.ui.bindInput(this.input);
     // 遊戲中可切換的設定(窗簾);存在瀏覽器
-    this.settings = { curtains: false, voiceMode: 'both', ...load(SETTINGS_KEY, {}) };
+    this.settings = { curtains: false, voiceMode: 'both', miniature: true, ...load(SETTINGS_KEY, {}) };
     this.voice = new Voice(VOICE_BASE, (s) => {
       if (s.channel === 'announce') this.ui.announce(s.label, s.text);
       else this.ui.bubble({ text: s.text, label: s.label, anchor: s.anchor });
@@ -178,6 +181,8 @@ class Game {
       onQuality: () => this.cycleQuality(),
       curtains: this.settings.curtains,
       onCurtains: () => this.toggleCurtains(),
+      miniature: this.settings.miniature,
+      onMiniature: () => this.toggleMiniature(),
       onHelp: () => this.ui.tutorial(() => this.menu()),
       voice: this.voice.source,
       career: {
@@ -204,6 +209,9 @@ class Game {
     this.renderer.setPixelRatio(Math.min(devicePixelRatio, this.quality.maxDpr));
     this.renderer.shadowMap.enabled = this.quality.shadows;
     this.renderer.setSize(innerWidth, innerHeight);
+    this.look.setSamples(key === 'high' ? 4 : 0);   // 半浮點 MSAA 最吃效能:中/低畫質改用 FXAA
+    this.look.bloomEnabled = key !== 'low';
+    this.look.setAO(key === 'high');
     // 陰影開關會改變 shader,已載入模型的材質需重新編譯
     this.assetCache?.forEach((set) => Object.values(set).forEach((root) => root.traverse?.((o) => {
       if (o.material) o.material.needsUpdate = true;
@@ -215,6 +223,28 @@ class Game {
     const keys = Object.keys(QUALITY);
     this.setQuality(keys[(keys.indexOf(this.qualityKey) + 1) % keys.length]);
     return this.quality.label;
+  }
+
+  /** 微縮模型風格(移軸景深、光暈、調色);司機員關卡的駕駛場景同步切換。 */
+  toggleMiniature() {
+    this.settings.miniature = !this.settings.miniature;
+    save(SETTINGS_KEY, this.settings);
+    this.phase?.world?.setMiniature?.(this.settings.miniature);
+    return this.settings.miniature;
+  }
+
+  /** 依關卡與鏡頭選微縮風格:車站/調度 = 輕移軸;廚房(上方工作站名牌要清楚)、車廂內、售票、第一人稱 = 只調色 */
+  _lookPreset() {
+    if (this.phase?.cam?.mode === 'first') return 'grade';
+    return { station: 'soft', stationExplore: 'soft', stationmaster: 'soft', troublemaker: 'soft', dispatch: 'soft' }[this.phaseType] || 'grade';
+  }
+
+  _applyLook(instant) {
+    const p = this._lookPreset();
+    if (p === this.look.preset && !instant) return;
+    this.look.setPreset(p, instant);
+    // 廚房俯視:清晰帶對準畫面中下方的廚師與工作台
+    if (this.phaseType === 'kitchen' && p === 'soft') this.look.set({ center: 0.42, band: 0.26 }, instant);
   }
 
   /** 窗簾(拉下 = 不繪製窗外景色);遊戲中立即套用。 */
@@ -268,6 +298,7 @@ class Game {
     this.state = 'loading';
     const cfg = this.mission.phases[this.phaseIndex];
     const Phase = PHASES[cfg.type];
+    this.phaseType = cfg.type;
     this.phase = new Phase(this, cfg);
     // 整備畫面:模型與全部語音音檔都載入完成才開始(期間可瀏覽菜色)
     this.foodThumbs ??= renderFoodThumbs();
@@ -287,6 +318,9 @@ class Game {
       await this.prep.ready();
       this.prep = null;
       this.sfx.unlock();
+      // 材質精修(粗糙度變化、微凹凸);不轉 Physical,關卡持有的材質參照(燈、門、玻璃)不受影響
+      if (this.qualityKey !== 'low') refineMaterials(THREE, this.scene, { physical: false });
+      this._applyLook(true);
       this.phase.begin?.();
     } catch (e) {
       this.prep = null;
@@ -348,7 +382,12 @@ class Game {
       if (inp.wasPressed('Enter', 'NumpadEnter') && this.mission.phases[0].type === this.career.rank.phase) this.play(this.mission);
     }
     inp.endFrame();
-    if (this.phase && this.state !== 'loading' && !this.phase.ownRender) this.renderer.render(this.scene, this.camera);
+    if (this.phase && this.state !== 'loading' && !this.phase.ownRender) {
+      if (this.settings.miniature) {
+        this._applyLook(false);
+        this.look.render(this.scene, this.camera);
+      } else this.renderer.render(this.scene, this.camera);
+    }
   }
 
   _pauseMenu() {
@@ -357,6 +396,8 @@ class Game {
       onQuality: () => this.cycleQuality(),
       curtains: this.settings.curtains,
       onCurtains: () => this.toggleCurtains(),
+      miniature: this.settings.miniature,
+      onMiniature: () => this.toggleMiniature(),
       sound: this.soundChoice(),
       onSound: (c) => this.setSound(c),
       firstPerson: this.phase?.cam?.mode === 'first',

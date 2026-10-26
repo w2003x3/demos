@@ -1,5 +1,6 @@
 // 從各專案資料夾複製/打包可執行的網站檔案到本 repo,供 GitHub Pages 發布。
-// 用法(在 D:\開發專案\作品展示 底下):node publish.mjs
+// 用法(在 D:\開發專案\作品展示 底下):node publish.mjs            全部
+//                                        node publish.mjs t101 …   只更新指定的輸出資料夾(其他工作階段的改動不受影響)
 // 之後 git add -A && git commit && git push 即更新網站。
 import fs from 'node:fs';
 import path from 'node:path';
@@ -9,18 +10,30 @@ import { fileURLToPath } from 'node:url';
 const here = path.dirname(fileURLToPath(import.meta.url));
 const projects = path.resolve(here, '..');
 
-// 輸出資料夾 ← 來源專案;files 為要複製的檔案/資料夾(相對於來源);redirect 為輸出資料夾首頁要導向的子路徑
+// 輸出資料夾 ← 來源專案;files 為要複製的檔案/資料夾(相對於來源);redirect 為輸出資料夾首頁要導向的子路徑;after 為複製後的額外處理
 const sites = [
   { out: 'route-map', src: '路網連連看', files: ['v2', 'v3'], redirect: 'v3/', exclude: /[\\/]tests($|[\\/])|\.blend$/ },
   { out: 't101', src: 'T101', files: ['index.html', 'style.css', 'src', 'assets'], stamp: true },
   { out: 'iron-rice-bowl', src: '火車便當', files: ['index.html', 'style.css', 'drive.css', 'src', 'assets'] },
+  // 鐵道模型展示台:模型庫直接用路網連連看已發布的 assets/rail(同一份 rail-assets,不重複放 48 MB)
+  { out: 'rail-showcase', src: '鐵路模型資源', files: ['viewer', 'adapters/three'], redirect: 'viewer/',
+    after: (out) => {
+      const f = path.join(out, 'viewer', 'index.html');
+      fs.writeFileSync(f, fs.readFileSync(f, 'utf8').replace('<script type="module" src="viewer.js"></script>',
+        '<script>window.RAIL_BASE = "../../route-map/v3/assets/rail";</script>\n<script type="module" src="viewer.js"></script>'));
+    } },
   { out: '3d-box', src: '3D紙箱', files: ['index.html', 'app.js', 'styles.css'] },
   { out: 'zhu-ying-tai', src: '注英台', files: ['index.html', 'styles.css', 'app.js', 'data'] },
   { out: 'muse-ripple', src: '一詞春水', build: true },
   { out: 'bang-bang-porkball', src: '20260613爆爆丸', files: ['index.html', '3d.html', 'css', 'js', 'assets', 'models', 'vendor'], exclude: /[\\/]models[\\/](Duck\.glb|models\.js)$|[\\/]assets[\\/]preview\.html$/ },
 ];
 
+const only = process.argv.slice(2);
+const unknown = only.filter((o) => !sites.some((s) => s.out === o));
+if (unknown.length) throw new Error(`沒有這個輸出資料夾:${unknown.join(', ')}`);
+
 for (const s of sites) {
+  if (only.length && !only.includes(s.out)) continue;
   const src = path.join(projects, s.src);
   const out = path.join(here, s.out);
   if (!fs.existsSync(src)) throw new Error(`找不到專案資料夾:${src}`);
@@ -35,6 +48,7 @@ for (const s of sites) {
     const filter = s.exclude ? (from) => !s.exclude.test(from) : undefined;
     for (const f of s.files) fs.cpSync(path.join(src, f), path.join(out, f), { recursive: true, filter });
   }
+  if (s.after) s.after(out);
   if (s.stamp) stampVersion(src, out);
   if (s.redirect) {
     fs.writeFileSync(path.join(out, 'index.html'),

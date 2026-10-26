@@ -1,30 +1,31 @@
 // 台北101 攀登挑戰 — 進入點:建立世界、主選單、模式切換與主迴圈。
 import * as THREE from 'three';
-import { Input } from './core/input.js?v=4d1cca2';
-import { Audio } from './core/audio.js?v=4d1cca2';
-import { UI, fmtTime } from './ui/ui.js?v=4d1cca2';
-import { setAnisotropy } from './world/textures.js?v=4d1cca2';
-import { createSky, createLights, buildGround, buildTerrain, buildCity, buildTrees, buildTraffic, applyTime, TIMES } from './world/environment.js?v=4d1cca2';
-import { buildTower, buildPodium } from './world/tower.js?v=4d1cca2';
-import { buildInteriors } from './world/interiors.js?v=4d1cca2';
-import { buildLandmarks, landmarkZones, buildNanShan, buildSkyline } from './world/landmarks.js?v=4d1cca2';
-import { loadXinyi, buildXinyi } from './world/xinyi.js?v=4d1cca2';
-import { applyOsmLandmarks, applyOsmBuildings, GEO } from './world/geo.js?v=4d1cca2';
-import { Fireworks } from './world/fireworks.js?v=4d1cca2';
-import { buildElevatorScene } from './world/elevator.js?v=4d1cca2';
-import { buildStairScene } from './world/stairwell.js?v=4d1cca2';
-import { ClimbMode } from './modes/climb.js?v=4d1cca2';
-import { RaceMode } from './modes/race.js?v=4d1cca2';
-import { ExploreMode } from './modes/explore.js?v=4d1cca2';
-import { HeliMode } from './modes/heli.js?v=4d1cca2';
-import { GlideMode } from './modes/glide.js?v=4d1cca2';
-import { RACES } from './config.js?v=4d1cca2';
-import { Tutorial } from './ui/tutorial.js?v=4d1cca2';
-import { TowerLights } from './world/towerLights.js?v=4d1cca2';
+import { Input } from './core/input.js?v=4ec109e';
+import { Audio } from './core/audio.js?v=4ec109e';
+import { UI, fmtTime } from './ui/ui.js?v=4ec109e';
+import { setAnisotropy } from './world/textures.js?v=4ec109e';
+import { createSky, createLights, buildGround, buildTerrain, buildCity, buildTrees, buildTraffic, applyTime, TIMES } from './world/environment.js?v=4ec109e';
+import { buildTower, buildPodium } from './world/tower.js?v=4ec109e';
+import { buildInteriors } from './world/interiors.js?v=4ec109e';
+import { buildLandmarks, landmarkZones, buildNanShan, buildSkyline } from './world/landmarks.js?v=4ec109e';
+import { loadXinyi, buildXinyi } from './world/xinyi.js?v=4ec109e';
+import { applyOsmLandmarks, applyOsmBuildings, GEO } from './world/geo.js?v=4ec109e';
+import { Fireworks } from './world/fireworks.js?v=4ec109e';
+import { buildElevatorScene } from './world/elevator.js?v=4ec109e';
+import { buildStairScene } from './world/stairwell.js?v=4ec109e';
+import { ClimbMode } from './modes/climb.js?v=4ec109e';
+import { RaceMode } from './modes/race.js?v=4ec109e';
+import { ExploreMode } from './modes/explore.js?v=4ec109e';
+import { HeliMode } from './modes/heli.js?v=4ec109e';
+import { GlideMode } from './modes/glide.js?v=4ec109e';
+import { RACES } from './config.js?v=4ec109e';
+import { Tutorial } from './ui/tutorial.js?v=4ec109e';
+import { TowerLights } from './world/towerLights.js?v=4ec109e';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
+import { createMiniatureLook, refineMaterials, LOOK_PRESETS } from './vendor/miniature-look.js?v=4ec109e';
 
 const store = {
   get(k, d) { try { const v = localStorage.getItem('t101.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
@@ -51,7 +52,7 @@ class Game {
     addEventListener('pointerdown', () => this.audio.unlock(), { once: false });
     addEventListener('keydown', () => this.audio.unlock());
     this.timeKey = store.get('time', 'day');
-    this.settings = { sfx: 90, voice: 100, muted: false, quality: matchMedia('(pointer: coarse)').matches ? 'mid' : 'high', fps: false, ...store.get('settings', {}) };
+    this.settings = { sfx: 90, voice: 100, muted: false, quality: matchMedia('(pointer: coarse)').matches ? 'mid' : 'high', fps: false, miniature: true, ...store.get('settings', {}) };
     this.audio.setVolume(this.settings.sfx / 100);
     this.audio.setVoiceVolume(this.settings.voice / 100);
     this.audio.setMuted(this.settings.muted);
@@ -135,6 +136,10 @@ class Game {
     this.composer.addPass(this.renderPass);
     this.composer.addPass(this.bloom);
     this.composer.addPass(new OutputPass());
+    // 微縮模型風格:移軸景深、光暈、ACES、調色、暗角(對數深度緩衝 → 不做 AO)
+    this.look = createMiniatureLook(THREE, this.renderer, { preset: 'diorama', samples: 4 });
+    // 材質精修(粗糙度變化、微凹凸);不轉 Physical,玻璃材質清單(煙火反射)仍指向原材質
+    if (this.settings.quality !== 'low') for (const sc of [scene, this.stair.scene, this.elevator.scene]) refineMaterials(THREE, sc, { physical: false });
     this.setTime(this.timeKey);
     this.applyQuality(this.settings.quality);
     await step(100);
@@ -216,14 +221,31 @@ class Game {
     if (st.phase === 'show' ? this.fwFrame % 2 === 0 : this.fwFrame % 30 === 0) this.fwCube.update(this.renderer, this.scene);
   }
 
-  /** 夜晚且中高畫質時用光暈後製,其他情況直接繪製。 */
+  /** 微縮模型風格開啟時走自寫後製;否則夜晚且中高畫質時用光暈後製,其他情況直接繪製。 */
   draw(scene, camera) {
+    if (this.look && this.settings.miniature) {
+      this.updateLook(scene);
+      this.look.render(scene, camera);
+      return;
+    }
     if (scene === this.scene && this.night > 0.3 && this.settings.quality !== 'low') {
       this.renderPass.scene = scene;
       this.renderPass.camera = camera;
       this.bloom.strength = 0.35 + this.night * 0.3;
       this.composer.render();
     } else this.renderer.render(scene, camera);
+  }
+
+  /** 依模式與視角選微縮風格:主選單/俯瞰/遠景 = 完整微縮,追蹤/側面 = 輕移軸,第一人稱/機艙/室內 = 只調色。 */
+  updateLook(scene) {
+    let p = 'grade';
+    if (scene === this.scene) {
+      const v = (this.mode && this.mode.views && this.mode.views[this.mode.view]?.name) || '';
+      p = !this.mode || /俯瞰|俯視|遠景/.test(v) ? 'diorama' : /第一人稱|機艙/.test(v) ? 'grade' : 'soft';
+    }
+    if (p !== this.look.preset) this.look.setPreset(p);
+    const n = scene === this.scene ? this.night || 0 : 0;
+    this.look.set({ bloom: LOOK_PRESETS[p].bloom + n * 0.6, threshold: n > 0.3 ? 0.85 : LOOK_PRESETS[p].threshold });
   }
 
   /** 讓陰影範圍跟著焦點移動。 */
@@ -354,6 +376,7 @@ class Game {
           <label class="set-row"><span>語音音量</span><input type="range" id="s-voice" min="0" max="100" value="${s.voice}"><output id="o-voice">${s.voice}</output></label>
           <label class="check"><input type="checkbox" id="s-mute" ${s.muted ? 'checked' : ''}>全部靜音</label>
           <div class="set-row" style="grid-template-columns:88px minmax(0,1fr)"><span>畫質</span><div class="seg" role="group" aria-label="畫質">${q('low', '低 · 流暢')}${q('mid', '中')}${q('high', '高 · 精緻')}</div></div>
+          <label class="check"><input type="checkbox" id="s-mini" ${s.miniature ? 'checked' : ''}>微縮模型風格(移軸景深、光暈、調色)</label>
           <label class="check"><input type="checkbox" id="s-fps" ${s.fps ? 'checked' : ''}>顯示 FPS</label>
           <div class="small" style="line-height:1.7"><kbd>Esc</kbd> 開關設定 · <kbd>V</kbd> 切換視角 · <kbd>1</kbd>~<kbd>5</kbd> 指定視角 · 拖曳轉視角、滾輪縮放</div>
           <div class="row">
@@ -370,6 +393,7 @@ class Game {
     range('sfx', 'sfx', (v) => { this.audio.setVolume(v); this.audio.click(); });
     range('voice', 'voice', (v) => this.audio.setVoiceVolume(v));
     el.querySelector('#s-mute').addEventListener('change', (e) => { s.muted = e.target.checked; this.audio.setMuted(s.muted); save(); });
+    el.querySelector('#s-mini').addEventListener('change', (e) => { s.miniature = e.target.checked; save(); });
     el.querySelector('#s-fps').addEventListener('change', (e) => { s.fps = e.target.checked; if (!s.fps) this.ui.set('fps', ''); save(); });
     el.querySelectorAll('[data-q]').forEach((b) => b.addEventListener('click', () => {
       s.quality = b.dataset.q;
@@ -388,6 +412,7 @@ class Game {
     r.setPixelRatio({ low: Math.min(dpr, 1) * 0.75, mid: Math.min(dpr, 1.25), high: Math.min(dpr, 2) }[q]);
     r.setSize(innerWidth, innerHeight);
     if (this.composer) { this.composer.setPixelRatio(r.getPixelRatio()); this.composer.setSize(innerWidth, innerHeight); }
+    if (this.look) { this.look.setSamples(q === 'high' ? 4 : 0); this.look.bloomEnabled = q !== 'low'; this.look.setResolution(q === 'low' ? 0.75 : 1); }
     const shadows = q !== 'low';
     const type = q === 'high' ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
     const size = q === 'high' ? 2048 : 1024;
@@ -437,16 +462,17 @@ class Game {
       const r = this.mode.update(dt, rawDt);
       if (r) { scene = r.scene || scene; camera = r.camera || camera; }
     } else {
-      // 主選單:環繞 101 的空拍
+      // 主選單:環繞 101 的空拍(32° 窄視角 + 拉遠,微縮模型的望遠感;畫面範圍與原本 55° 相近)
       this.menuT += rawDt;
       const a = this.menuT * 0.04 + 0.5;
-      const cp = new THREE.Vector3(Math.sin(a) * 820, 300 + Math.sin(this.menuT * 0.1) * 25, Math.cos(a) * 820);
+      const K = Math.tan(27.5 * Math.PI / 180) / Math.tan(16 * Math.PI / 180);
+      const cp = new THREE.Vector3(Math.sin(a) * 820 * K, 250 + (50 + Math.sin(this.menuT * 0.1) * 25) * K, Math.cos(a) * 820 * K);
       this.camera.position.copy(cp);
       // 讓 101 落在畫面右側
       const side = new THREE.Vector3(Math.cos(a), 0, -Math.sin(a));
       this.camera.lookAt(new THREE.Vector3(0, 250, 0).addScaledVector(side, -240));
       this.focusShadow(new THREE.Vector3(0, 0, 0));
-      this.camera.fov = 55;
+      this.camera.fov = 32;
       this.camera.updateProjectionMatrix();
     }
     this.ui.update(rawDt);

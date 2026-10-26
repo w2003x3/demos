@@ -6,7 +6,7 @@
 //  網址 ?view=3d 可直接以 3D 開啟;選擇會記在瀏覽器。
 // ====================================================================
 const VIEW = (() => {
-  const V = '20261025n';
+  const V = '20261026a';
   // 3D 需要的腳本(依序執行);size 是大約大小,用來估算進度
   const SCRIPTS_3D = [
     ['assets/atlas.js', 350e3],
@@ -17,6 +17,7 @@ const VIEW = (() => {
     ['vendor/OrbitControls.js', 30e3],
     ['vendor/GLTFLoader.js', 100e3],
     ['vendor/SkeletonUtils.js', 10e3],
+    ['vendor/miniature-look.js?v=' + V, 25e3],
     ['js/render3d.js?v=' + V, 90e3],
   ];
   const total = SCRIPTS_3D.reduce((s, x) => s + x[1], 0);

@@ -71,6 +71,7 @@ export async function openDriveSetup(ctx) {
                 <div class="field"><label>停車容許誤差</label><select class="sel" id="dv-tol">${opt(TOLS, prev.tol || 1)}</select></div>
                 <div class="field"><label>畫質</label><select class="sel" id="dv-quality">${opt(QUALITIES, prev.quality || 'medium')}</select></div>
             </div>
+            <div class="toggle-row"><span>微縮模型風格(移軸景深、光暈、調色;空拍與車外視角像鐵道模型)</span><label class="switch"><input type="checkbox" id="dv-mini" ${prev.miniature !== false ? 'checked' : ''}><span></span></label></div>
             <div class="toggle-row"><span>英文廣播</span><label class="switch"><input type="checkbox" id="dv-en" ${prev.english !== false ? 'checked' : ''}><span></span></label></div>
             <div class="toggle-row"><span>駕駛輔助(建議制動檔位、限速預告)</span><label class="switch"><input type="checkbox" id="dv-assist" ${prev.assist !== false ? 'checked' : ''}><span></span></label></div>
             <div class="toggle-row"><span>ATP 列車自動防護(關閉時超速不會自動制動,彎道過速可能出軌)</span><label class="switch"><input type="checkbox" id="dv-atp" ${prev.atp !== false ? 'checked' : ''}><span></span></label></div>
@@ -132,10 +133,10 @@ export async function openDriveSetup(ctx) {
                     lineId, fromId: $('#dv-from').value, toId: $('#dv-to').value, trainId: $('#dv-train').value,
                     env: $('#dv-env').value, time: $('#dv-time').value, side: $('#dv-side').value,
                     scale: parseFloat($('#dv-scale').value) || 1, tol: parseFloat($('#dv-tol').value) || 1, quality: $('#dv-quality').value,
-                    english: $('#dv-en').checked, assist: $('#dv-assist').checked, atp: $('#dv-atp').checked
+                    english: $('#dv-en').checked, assist: $('#dv-assist').checked, atp: $('#dv-atp').checked, miniature: $('#dv-mini').checked
                 };
                 if (!planLeg(ctx.view, c.lineId, c.fromId, c.toId)) { toast('起訖站相同(非環狀線)或路段無法行駛', { warn: true }); return; }
-                sessionStorage.setItem('drive-setup', JSON.stringify({ env: c.env, time: c.time, side: c.side, tol: c.tol, quality: c.quality, english: c.english, assist: c.assist, atp: c.atp }));
+                sessionStorage.setItem('drive-setup', JSON.stringify({ env: c.env, time: c.time, side: c.side, tol: c.tol, quality: c.quality, english: c.english, assist: c.assist, atp: c.atp, miniature: c.miniature }));
                 announcer.unlock();
                 close(c);
             };
@@ -333,7 +334,7 @@ async function startDrive(ctx, cfg, announcer) {
     // 捷運高運量為第三軌供電(無架空線);輕軌、台鐵、高鐵有架空線
     const termName = stations[stations.length - 1].name;
     const world = new DriveWorld(el.querySelector('[data-canvas]'), {
-        route, env, time: cfg.time, quality: cfg.quality || 'medium', stations, spec, assets, platformSide: side,
+        route, env, time: cfg.time, quality: cfg.quality || 'medium', miniature: cfg.miniature !== false, stations, spec, assets, platformSide: side,
         overhead: trainDef ? trainDef.collect === 'pan' : line.type !== 'metro', noPsd: trainDef ? trainDef.system === 'tra' || trainDef.system === 'thsr' : false, train: trainDef, limitSigns, destText: `${line.code ? line.code + ' ' : ''}往 ${termName}`
     });
     setLoad(0.97, '載入天空與環境光');

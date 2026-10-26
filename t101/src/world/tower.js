@@ -1,8 +1,8 @@
 // 台北101 外觀(程序化):鋸齒內縮轉角的正方形斷面,基座內收、8 節竹節外擴、塔頂、頂冠、塔尖。
 import * as THREE from 'three';
-import { towerSections, BASE_TOP, SEG_COUNT, SEG_H, TOP_Y, ROOF_Y, CROWN_Y, SPIRE_TOP, SEG_HW0, SEG_HW1, BASE_HW1, TOP_HW0, TOP_HW1, halfWidthAt, floorY, FH } from '../config.js?v=4d1cca2';
-import { facadeTextures, canvasTex } from './textures.js?v=4d1cca2';
-import { applyInterior } from './interior.js?v=4d1cca2';
+import { towerSections, BASE_TOP, SEG_COUNT, SEG_H, TOP_Y, ROOF_Y, CROWN_Y, SPIRE_TOP, SEG_HW0, SEG_HW1, BASE_HW1, TOP_HW0, TOP_HW1, halfWidthAt, floorY, FH } from '../config.js?v=4ec109e';
+import { facadeTextures, canvasTex } from './textures.js?v=4ec109e';
+import { applyInterior } from './interior.js?v=4ec109e';
 
 /** 斷面多邊形:正方形四角各兩階鋸齒(101 的「竹節」轉角)。回傳 [[x,z],...]。 */
 export function towerPolygon(h, notch = 0.11) {

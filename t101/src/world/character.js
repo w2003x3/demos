@@ -1,6 +1,6 @@
 // 程序化人物:關節式骨架 + 走路/跑樓梯/攀爬/坐姿等動作。人物面向 +Z,左側為 +X。
 import * as THREE from 'three';
-import { canvasTex } from './textures.js?v=4d1cca2';
+import { canvasTex } from './textures.js?v=4ec109e';
 
 const lerp = THREE.MathUtils.lerp;
 

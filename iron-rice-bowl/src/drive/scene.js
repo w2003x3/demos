@@ -14,6 +14,7 @@ import { buildCab } from './cab.js';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { RailAssets } from '../core/railAssets.js';
 import { poseAt, heightAt, sectionKind, COVER_DEPTH } from './route3d.js';
+import { createMiniatureLook, refineMaterials } from '../core/miniature-look.js';
 
 const CHUNK = 100;
 const BEHIND = 250;
@@ -35,12 +36,15 @@ export const TIMES = {
     night: { hdri: 'night', fog: 0x10141C, hemi: [0x34405A, 0x0A0A0A, 0.25], sun: [0x8090B0, 0.12], env: 0.7, night: 1, exposure: 1.15, sky: 0x0B1222 }
 };
 
-/** 畫質:像素比、陰影、人物/街景密度 */
+/** 畫質:像素比、陰影、人物/街景密度;refine 材質精修、ao 環境光遮蔽(微縮模型風格) */
 export const QUALITY = {
-    high: { pixel: 2, shadow: 2048, people: 1, street: 1, aa: true, ahead: 1600 },
-    medium: { pixel: 1.25, shadow: 0, people: 0.7, street: 0.8, aa: true, ahead: 1200 },
+    high: { pixel: 2, shadow: 2048, people: 1, street: 1, aa: true, ahead: 1600, refine: true, ao: true },
+    medium: { pixel: 1.25, shadow: 0, people: 0.7, street: 0.8, aa: true, ahead: 1200, refine: true },
     low: { pixel: 1, shadow: 0, people: 0.35, street: 0.5, aa: false, ahead: 900 }
 };
+
+/** 空拍鏡頭:視角與高度倍率(原 50° → 30°,高度 × tan25°/tan15°) */
+const AERIAL_FOV = 30, AERIAL_K = Math.tan(25 * Math.PI / 180) / Math.tan(15 * Math.PI / 180);
 
 /** 決定性亂數(同一段每次產生相同街景) */
 function rng(seed) {
@@ -358,6 +362,9 @@ export class DriveWorld {
         if (this.Q.shadow) { r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap; }
         host.appendChild(r.domElement);
         this.host = host;
+        // 微縮模型風格後製(this.look 是鏡頭角度,後製用 this.mini):空拍 = 完整微縮、車外 = 輕移軸、駕駛室 = 只調色
+        this.mini = createMiniatureLook(THREE, r, { preset: 'grade', samples: this.Q === QUALITY.high ? 4 : 0, bloom: this.Q !== QUALITY.low, ao: !!this.Q.ao, aoRadius: 1.2 });
+        this.mini.enabled = cfg.miniature !== false;
 
         const scene = this.scene = new THREE.Scene();
         const T = this.T = TIMES[cfg.time] || TIMES.day;
@@ -422,6 +429,7 @@ export class DriveWorld {
         this.camera = new THREE.PerspectiveCamera(68, 1, 0.05, 3000);
         this.cab = new THREE.Group();
         const cab = buildCab();   // 程序化駕駛室(前擋、A 柱、遮陽捲簾、操作台、側窗、後牆門…)
+        this._refine(cab);
         this.cab.add(cab);
         this.lever = cab.getObjectByName('MasterLever');
         this._SpeedScreen = cab.getObjectByName('SpeedScreen');
@@ -527,7 +535,7 @@ export class DriveWorld {
         g.rotation.x = -Math.PI / 2;
         g.position.y = -0.36;
         g.receiveShadow = true;
-        this.scene.add(g);
+        this.scene.add(this._refine(g));
         this.ground = g;
     }
 
@@ -623,8 +631,11 @@ export class DriveWorld {
         if (this.driver) this.driver.visible = v === 'third';
         this.consist.visible = !inCab;
         this.camera.up.set(0, 1, 0);
-        this.camera.fov = v === 'aerial' ? 50 : v === 'third' ? 78 : 68;
+        // 空拍用 30° 窄視角(高度同步放大,畫面範圍不變),微縮模型的望遠感
+        this.camera.fov = v === 'aerial' ? AERIAL_FOV : v === 'third' ? 78 : 68;
         this.camera.updateProjectionMatrix();
+        this.mini.setPreset(v === 'aerial' ? 'diorama' : inCab ? 'grade' : 'soft');
+        if (v === 'chase' || v === 'side') this.mini.set({ center: 0.56 });   // 列車在畫面中央偏上
         if (inCab) this.cab.add(this.camera); else this.scene.add(this.camera);
     }
 
@@ -860,7 +871,7 @@ export class DriveWorld {
         if (!this.allUnder && !allTunnel) this._buildStreet(g, s0, s1, R, side, has('viaduct') && !has('ground'), has('tunnel') || has('trough') || has('station-under'));
         if (this.T.night && A.rail) A.rail.setNight(g, this.T.night);
         this._shadowify(g);
-        this.scene.add(g);
+        this.scene.add(this._refine(g));
         return g;
     }
 
@@ -1113,7 +1124,7 @@ export class DriveWorld {
         g.add(light);
         if (A.rail && (under || this.T.night)) A.rail.setNight(g, under ? 1 : this.T.night);
         this._shadowify(g);
-        this.scene.add(g);
+        this.scene.add(this._refine(g));
         return g;
     }
 
@@ -1127,7 +1138,7 @@ export class DriveWorld {
         }
         this.chunks.forEach((g, k) => {
             if (k < k0 - 1 || k > k1 + 1) { this._dispose(g); this.chunks.delete(k); return; }
-            if (g && !g.userData.detailBuilt && Math.abs((k + 0.5) * CHUNK - s) < DETAIL) this._buildDetail(g);
+            if (g && !g.userData.detailBuilt && Math.abs((k + 0.5) * CHUNK - s) < DETAIL) { this._buildDetail(g); this._refine(g); }
         });
         this.cfg.stations.forEach((st, i) => {
             const vis = st.p1 > s - BEHIND - 100 && st.p0 < s + this.ahead;
@@ -1174,7 +1185,7 @@ export class DriveWorld {
             this._oncomingWait = (this._oncomingWait ?? 25) - dt;
             if (this._oncomingWait > 0 || s + 1400 > this.route.length) return;
             const g = this._makeConsist(false);
-            this.scene.add(g);
+            this.scene.add(this._refine(g));
             this.oncoming = { g, s: s + 1400, v: 16 };
             return;
         }
@@ -1235,7 +1246,7 @@ export class DriveWorld {
             this._poseConsist(this.consist, st.s, lat, 1);
             // 空拍:列車正上方往下看,畫面上方為行進方向;拖曳左右旋轉、上下調整高度
             const c = poseAt(route, Math.max(0, st.s - 25));
-            const h = 90 * Math.exp(-this.look.pitch * 2.2);
+            const h = 90 * AERIAL_K * Math.exp(-this.look.pitch * 2.2);
             const ang = Math.atan2(c.tx, c.tz) + this.look.yaw;
             this.camera.position.set(c.x, Math.max(c.y, 0) + h, c.z);
             this.camera.up.set(-Math.sin(ang), 0, -Math.cos(ang));
@@ -1292,10 +1303,21 @@ export class DriveWorld {
         this.stream(st.s);
         if (this.speedTex) this.speedTex.needsUpdate = !!st.screensDirty;
         if (this.infoTex) this.infoTex.needsUpdate = !!st.screensDirty;
-        this.renderer.render(this.scene, this.camera);
+        if (this.T.night > 0.5) this.mini.set({ threshold: 0.8 });
+        this.mini.render(this.scene, this.camera);
+    }
+
+    /** 微縮模型風格開關 */
+    setMiniature(on) { this.mini.enabled = !!on; }
+
+    /** 材質精修(粗糙度變化、微凹凸、金屬/玻璃/烤漆分類);不轉 Physical,保留材質參照(隧道 X 光、號誌燈) */
+    _refine(g) {
+        if (g && this.Q.refine) refineMaterials(THREE, g, { physical: false });
+        return g;
     }
 
     dispose() {
+        this.mini.dispose();
         this.chunks.forEach(g => this._dispose(g));
         this.stationGroups.forEach(g => this._dispose(g));
         this.renderer.dispose();
