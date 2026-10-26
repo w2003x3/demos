@@ -1552,3 +1552,6 @@ body.online .topbar .view-toggle button:not([aria-pressed="true"]) { opacity: .3
 #setup-overlay .su-view button { min-width: 52px; min-height: 40px; border: 0; background: transparent; color: var(--s-ink); font-family: "Luckiest Guy", sans-serif; font-size: 19px; cursor: pointer; padding: 3px 10px 0; }
 #setup-overlay .su-view button[aria-pressed="true"] { background: var(--s-yellow); }
 @media (max-width: 560px) { #setup-overlay .su-view { margin-left: 0; } }
+/* 主選單底部:回 YRYG 遊戲首頁(低調的小字連結,放在最右邊) */
+.mb-home { order: 3; flex: none; color: rgba(255, 244, 218, .5); font-size: 12px; font-weight: 700; letter-spacing: .04em; text-decoration: none; padding: 8px 2px; white-space: nowrap; }
+.mb-home:hover, .mb-home:focus-visible { color: #ffcf2e; text-decoration: underline; }
