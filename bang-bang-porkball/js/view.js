@@ -6,7 +6,7 @@
 //  網址 ?view=3d 可直接以 3D 開啟;選擇會記在瀏覽器。
 // ====================================================================
 const VIEW = (() => {
-  const V = '20261026q';
+  const V = '20261026t';
   // 3D 需要的腳本(依序執行);size 是大約大小,用來估算進度
   const SCRIPTS_3D = [
     ['assets/atlas.js', 350e3],
@@ -27,14 +27,44 @@ const VIEW = (() => {
     mode: '2d',
     set(mode) {
       if (mode === this.mode && (mode === '2d' || loaded3d)) return;
+      // 連線對戰進行中(含局間倒數)不能切換:切到 3D 要下載素材,期間畫面會卡住;
+      // 準備階段(攤位的對戰設定、整場結算後)可以各自選 2D/3D
+      const inPlay = typeof gameState !== 'undefined' && (gameState === 'playing' || (typeof SERIES !== 'undefined' && SERIES.nextAt));
+      if (typeof NET !== 'undefined' && NET.online && inPlay) {
+        if (typeof showToast === 'function') showToast('對戰中不能切換 2D/3D,請在準備時切換');
+        return;
+      }
       if (mode === '3d' && !loaded3d) { load3d(); return; }
       apply(mode);
     },
     toggle() { this.set(this.mode === '3d' ? '2d' : '3d'); },
   };
 
+  // 切到 3D 時在「視角」鈕下方跳出提示(6 秒或點任何地方就收起)
+  let tipTimer = 0;
+  function camTip(show) {
+    const pick = document.querySelector('.cam-pick');
+    if (!pick) return;
+    let tip = pick.querySelector('.cam-tip');
+    clearTimeout(tipTimer);
+    if (!show) { if (tip) tip.remove(); return; }
+    if (document.querySelector('.screen:not(.hidden)')) return;   // 主選單/設定/結算畫面上不提示,只在遊戲畫面
+    if (!tip) {
+      tip = document.createElement('div');
+      tip.className = 'cam-tip';
+      tip.setAttribute('role', 'status');
+      tip.innerHTML = '<b>點這裡切換視角</b>全景・俯視・跟隨・第一人稱';
+      pick.appendChild(tip);
+    }
+    tipTimer = setTimeout(() => camTip(false), 6000);
+    setTimeout(() => document.addEventListener('pointerdown', () => camTip(false), { once: true }), 0);
+  }
+
   function apply(mode) {
+    const was = V3.mode;
     V3.mode = mode;
+    if (mode === '3d' && was !== '3d' && loaded3d) setTimeout(() => camTip(true), 400);
+    if (mode !== '3d') camTip(false);
     document.body.classList.toggle('mode-3d', mode === '3d');
     document.querySelectorAll('[data-view]').forEach((b) => {
       b.classList.toggle('active', b.dataset.view === mode);
@@ -97,6 +127,7 @@ const VIEW = (() => {
       }
       V3.busy = false;
       if (box) box.classList.add('hidden');
+      setTimeout(() => camTip(true), 400);
     })();
     return loading;
   }

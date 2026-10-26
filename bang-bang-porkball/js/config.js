@@ -351,7 +351,7 @@ const CHARACTERS = {
   xiaoyu:   { name: '小芋', title: '芋圓妹',     role: '速度', hp: 3, mp: 90,  speed: 175, power: 2, bombs: 2, skill: 'dash' },
   pangshu:  { name: '胖叔', title: '豬肉攤老闆', role: '坦克', hp: 4, mp: 80,  speed: 130, power: 2, bombs: 2, skill: 'heal' },
   xiaola:   { name: '小辣', title: '麻辣鍋千金', role: '火力', hp: 3, mp: 100, speed: 145, power: 3, bombs: 2, skill: 'detonate' },
-  aren:     { name: '阿忍', title: '夜市忍者',   role: '機動', hp: 3, mp: 100, speed: 160, power: 2, bombs: 2, skill: 'blink' },
+  aren:     { name: '阿忍', title: '味蕾忍者',   role: '機動', hp: 3, mp: 100, speed: 160, power: 2, bombs: 2, skill: 'blink' },
   bingbing: { name: '冰冰', title: '剉冰店妹',   role: '控制', hp: 3, mp: 150, speed: 140, power: 2, bombs: 3, skill: 'freeze' },
 };
 const CHAR_IDS = Object.keys(CHARACTERS);
@@ -367,7 +367,8 @@ const charDef = (id) => CHARACTERS[id] || CHARACTERS.aman;
 const skillOf = (p) => SKILLS[charDef(p.char).skill];
 // 主選單選的角色(記在瀏覽器)
 let myChar = 'aman';
-try { const c = localStorage.getItem('bbw_char'); if (CHARACTERS[c]) myChar = c; } catch (e) { /* 無痕模式 */ }
+// 每次打開遊戲都隨機一位角色(主選單一開始就展示不同角色;玩家可再自行切換)
+myChar = Object.keys(CHARACTERS)[Math.floor(Math.random() * Object.keys(CHARACTERS).length)];
 const env = {
   weather: 'cool',   // 目前天氣
   left: 40,          // 距離下次變天(秒)

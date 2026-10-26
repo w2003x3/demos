@@ -1436,3 +1436,119 @@ body.map-night #app { --g-shadow: #0c1230; background-color: #1a2550; background
   /* 重新開始鈕拿掉(R 鍵仍可重新開始) */
   #app .act.restart.wide { display: none; }
 }
+/* 切到 3D 時的視角提示泡泡 */
+.cam-tip { position: absolute; z-index: 60; top: calc(100% + 12px); left: 50%; transform: translateX(-50%); width: max-content; max-width: 240px;
+  background: #ffcf2e; color: #17161c; border: 3px solid #17161c; box-shadow: 4px 4px 0 #17161c; padding: 6px 12px; font-size: 12px; font-weight: 700;
+  line-height: 1.4; text-align: center; pointer-events: none; animation: camTipIn .25s ease-out, camTipBob 1.2s ease-in-out .25s infinite; }
+.cam-tip b { display: block; font-size: 15px; font-weight: 900; }
+.cam-tip::before { content: ""; position: absolute; left: 50%; top: -11px; margin-left: -9px; border: 9px solid transparent; border-top: 0; border-bottom: 10px solid #17161c; }
+.cam-tip::after { content: ""; position: absolute; left: 50%; top: -6px; margin-left: -6px; border: 6px solid transparent; border-top: 0; border-bottom: 7px solid #ffcf2e; }
+@keyframes camTipIn { from { opacity: 0; transform: translate(-50%, -6px); } to { opacity: 1; transform: translate(-50%, 0); } }
+@keyframes camTipBob { 50% { transform: translate(-50%, 3px); } }
+@media (max-width: 560px) { .cam-tip { left: auto; right: -8px; transform: none; animation: none; } .cam-tip::before, .cam-tip::after { left: auto; right: 28px; } }
+
+/* =====================================================================
+   局間 / 結算畫面改版:依勝負換放射底(贏黃、輸深夜藍、平手藍),左主角形象圖 + 右米色格
+   ===================================================================== */
+#result-overlay { --r-ink: #17161c; --r-cream: #fff4da; --r-yellow: #ffcf2e; --r-red: #e43d30; --r-blue: #2e8bea;
+  background: repeating-conic-gradient(from 0deg at 34% 50%, #3a97f0 0deg 8deg, #2e8bea 8deg 16deg); overflow-y: auto; padding: 24px 0; box-sizing: border-box; }
+#result-overlay.rs-win { background: repeating-conic-gradient(from 0deg at 34% 50%, #ffcf2e 0deg 8deg, #ffb21f 8deg 16deg); }
+#result-overlay.rs-lose { background: repeating-conic-gradient(from 0deg at 34% 50%, #222f63 0deg 8deg, #1a2550 8deg 16deg); }
+#result-overlay::before { content: ""; position: fixed; inset: 0; pointer-events: none;
+  background-image: radial-gradient(rgba(255,255,255,.26) 2px, transparent 2.6px); background-size: 16px 16px; }
+#result-overlay.rs-lose::before { background-image: radial-gradient(rgba(255,207,46,.14) 2px, transparent 2.6px); background-size: 18px 18px; }
+#result-overlay .result-rays { display: none; }
+#result-overlay .result-box { width: min(1140px, 100%); padding: 0 32px; box-sizing: border-box; flex-direction: row; align-items: center; justify-content: center; gap: 24px 40px; text-align: left; margin: auto; }
+/* 主角形象圖 + 對話框 */
+#result-overlay .rs-hero { flex: 0 1 400px; position: relative; display: grid; place-items: center; min-height: 420px; }
+#result-overlay .rs-hero::before, #result-overlay .rs-hero::after { content: ""; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  clip-path: polygon(50% 0%,59% 16%,77% 6%,76% 25%,96% 22%,86% 39%,100% 50%,86% 61%,96% 78%,76% 75%,77% 94%,59% 84%,50% 100%,41% 84%,23% 94%,24% 75%,4% 78%,14% 61%,0% 50%,14% 39%,4% 22%,24% 25%,23% 6%,41% 16%); }
+#result-overlay .rs-hero::before { width: 420px; height: 420px; background: var(--r-ink); }
+#result-overlay .rs-hero::after { width: 396px; height: 396px; background: repeating-conic-gradient(from 0deg at 50% 50%, #fff4da 0deg 9deg, #ffe7a8 9deg 18deg); }
+#result-overlay.rs-lose .rs-hero::after { background: repeating-conic-gradient(from 0deg at 50% 50%, #3a4a86 0deg 9deg, #2e3d75 9deg 18deg); }
+#result-overlay .rs-hero img { position: relative; z-index: 1; width: 360px; height: 360px; object-fit: contain; filter: drop-shadow(8px 10px 0 rgba(23,22,28,.35)); }
+#result-overlay.rs-lose .rs-hero img { filter: grayscale(.35) drop-shadow(8px 10px 0 rgba(0,0,0,.4)); transform: rotate(-6deg); }
+#result-overlay .rs-bubble { position: absolute; z-index: 2; right: 2%; top: 6%; background: var(--r-cream); border: 4px solid var(--r-ink); padding: 8px 14px;
+  font-weight: 900; font-size: 18px; box-shadow: 4px 4px 0 var(--r-ink); transform: rotate(5deg); white-space: nowrap; }
+/* 右側:標題 + 米色格 */
+#result-overlay .rs-main { flex: 1 1 520px; max-width: 620px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+#result-overlay .rs-kicker { align-self: flex-start; background: var(--r-ink); color: var(--r-yellow); font-weight: 900; font-size: 15px; letter-spacing: .16em;
+  padding: 4px 26px 5px 14px; clip-path: polygon(0 0, 100% 0, 92% 100%, 0 100%); }
+#result-overlay .rs-title { margin: 0; color: var(--r-cream); font-size: clamp(32px, 5vw, 54px); font-weight: 900; letter-spacing: .06em; line-height: 1.15;
+  -webkit-text-stroke: 10px var(--r-ink); paint-order: stroke fill; }
+#result-overlay .rs-sheet { background: var(--r-cream); border: 5px solid var(--r-ink); box-shadow: 8px 8px 0 var(--r-ink); padding: 18px 20px; display: flex; flex-direction: column; gap: 12px; color: var(--r-ink); }
+/* 比分:藍隊格 | 星芒 | 紅隊格 */
+#result-overlay .rs-score { display: flex; align-items: center; justify-content: center; }
+#result-overlay .rs-side { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 8px 10px; border: 4px solid var(--r-ink); color: var(--r-cream); }
+#result-overlay .rs-side.blue { background: var(--r-blue); border-right: 0; }
+#result-overlay .rs-side.red { background: var(--r-red); border-left: 0; }
+#result-overlay .rs-side.mine { box-shadow: inset 0 -5px 0 var(--r-yellow); }
+#result-overlay .rs-tn { font-weight: 900; font-size: 15px; -webkit-text-stroke: 4px var(--r-ink); paint-order: stroke fill; }
+#result-overlay .rs-tn em { font-style: normal; margin-left: 6px; background: var(--r-yellow); color: var(--r-ink); -webkit-text-stroke: 0; font-size: 11px; padding: 1px 5px; vertical-align: 2px; }
+#result-overlay .rs-faces { display: flex; gap: 3px; }
+#result-overlay .rs-faces i { width: 34px; height: 34px; border-radius: 50%; overflow: hidden; border: 3px solid var(--r-ink); background: var(--r-cream); box-sizing: border-box; }
+#result-overlay .rs-faces i.me { border-color: var(--r-yellow); }
+#result-overlay .rs-faces i.out { opacity: .4; filter: grayscale(1); }
+#result-overlay .rs-faces img { width: 100%; height: 100%; object-fit: cover; display: block; }
+#result-overlay .rs-pips { display: flex; gap: 5px; }
+#result-overlay .rs-pips i { width: 16px; height: 16px; border: 3px solid var(--r-ink); background: var(--r-cream); border-radius: 50%; box-sizing: border-box; }
+#result-overlay .rs-pips i.on { background: var(--r-yellow); }
+#result-overlay .rs-burst { position: relative; z-index: 1; flex: none; width: 128px; height: 96px; margin: 0 -14px; display: flex; flex-direction: column; align-items: center; justify-content: center; isolation: isolate; line-height: 1; }
+#result-overlay .rs-burst::before, #result-overlay .rs-burst::after { content: ""; position: absolute; z-index: -1;
+  clip-path: polygon(50% 0%,59% 16%,77% 6%,76% 25%,96% 22%,86% 39%,100% 50%,86% 61%,96% 78%,76% 75%,77% 94%,59% 84%,50% 100%,41% 84%,23% 94%,24% 75%,4% 78%,14% 61%,0% 50%,14% 39%,4% 22%,24% 25%,23% 6%,41% 16%); }
+#result-overlay .rs-burst::before { inset: 0; background: var(--r-ink); }
+#result-overlay .rs-burst::after { inset: 5px 6px; background: var(--r-yellow); }
+#result-overlay .rs-burst b { font-family: "Luckiest Guy", var(--font-num); font-weight: 400; font-size: 36px; letter-spacing: .04em; padding-top: 4px; }
+#result-overlay .rs-burst small { font-size: 11px; font-weight: 900; }
+#result-overlay .rs-sub { margin: 0; display: flex; align-items: center; justify-content: center; gap: 6px; flex-wrap: wrap; font-size: 15px; font-weight: 900; }
+/* 局間倒數 */
+#result-overlay .rs-next { display: flex; align-items: center; justify-content: center; gap: 12px; font-size: 18px; font-weight: 900; }
+#result-overlay .rs-next b { margin-left: 6px; color: var(--r-red); }
+#result-overlay .rs-count { position: relative; width: 74px; height: 74px; display: grid; place-items: center; isolation: isolate; }
+#result-overlay .rs-count::before { content: ""; position: absolute; inset: 0; z-index: -1; background: var(--r-ink);
+  clip-path: polygon(50% 0%,61% 18%,82% 12%,80% 33%,100% 42%,84% 57%,94% 78%,72% 80%,62% 100%,50% 85%,38% 100%,28% 80%,6% 78%,16% 57%,0% 42%,20% 33%,18% 12%,39% 18%); }
+#result-overlay .rs-count b { margin: 0; color: var(--r-yellow); font-family: "Luckiest Guy", var(--font-num); font-weight: 400; font-size: 34px; padding-top: 4px; }
+/* 選角:頭像 */
+#result-overlay .rs-label { font-size: 13px; font-weight: 900; color: #4a4650; text-align: center; }
+#result-overlay .rs-chars { gap: 8px; }
+#result-overlay .rs-chars button { padding: 6px 0 4px; gap: 3px; border: 3px solid var(--r-ink); background: #fff; box-shadow: 3px 3px 0 var(--r-ink); }
+#result-overlay .rs-chars button.active { background: var(--r-yellow); box-shadow: 0 0 0 3px var(--r-red), 4px 4px 0 3px var(--r-ink); }
+#result-overlay .rs-chars img { width: 62%; aspect-ratio: 1; border-radius: 50%; border: 3px solid var(--r-ink); object-fit: cover; object-position: center; background: var(--r-cream); box-sizing: border-box; }
+/* 按鈕 */
+#result-overlay .start-btn { height: 70px; background: var(--r-red); color: var(--r-cream); border: 5px solid var(--r-ink); box-shadow: 7px 7px 0 var(--r-ink); font-size: 28px; letter-spacing: .16em;
+  transition: transform .12s, box-shadow .12s; }
+#result-overlay .start-btn:hover { transform: translate(3px, 3px); box-shadow: 4px 4px 0 var(--r-ink); }
+#result-overlay .start-btn.done { background: #2f9e57; }
+#result-overlay .home-btn { height: 56px; background: var(--r-cream); color: var(--r-ink); border: 4px solid var(--r-ink); box-shadow: 4px 4px 0 var(--r-ink); font-size: 18px; font-weight: 900; }
+#result-overlay .home-btn:hover { background: var(--r-yellow); }
+#result-overlay .result-hint { margin: 0; text-align: center; color: #4a4650; }
+#result-overlay .rs-ready span { border: 2px solid var(--r-ink); color: var(--r-ink); }
+#result-overlay .rs-ready span.ok { background: #7be39a; }
+@media (max-width: 860px) {
+  #result-overlay .result-box { flex-direction: column; padding: 0 16px; gap: 6px; }
+  #result-overlay .rs-hero { flex: none; min-height: 0; height: 190px; width: 100%; }
+  #result-overlay .rs-hero::before { width: 200px; height: 200px; }
+  #result-overlay .rs-hero::after { width: 186px; height: 186px; }
+  #result-overlay .rs-hero img { width: 180px; height: 180px; }
+  #result-overlay .rs-bubble { right: 4%; top: 4%; font-size: 15px; }
+  #result-overlay .rs-main { flex: none; width: 100%; }
+  #result-overlay .rs-kicker { align-self: center; }
+  #result-overlay .rs-title { text-align: center; -webkit-text-stroke-width: 8px; }
+  #result-overlay .rs-sheet { padding: 14px 12px; box-shadow: 5px 5px 0 var(--r-ink); }
+  #result-overlay .rs-faces i { width: 26px; height: 26px; border-width: 2px; }
+  #result-overlay .rs-burst { width: 100px; height: 80px; margin: 0 -10px; }
+  #result-overlay .rs-burst b { font-size: 28px; }
+  #result-overlay .start-btn { height: 60px; font-size: 22px; }
+}
+@media (max-width: 860px) {
+  #result-overlay .rs-faces { flex-wrap: wrap; justify-content: center; max-width: 100%; }
+  #result-overlay .rs-faces i { width: 22px; height: 22px; }
+}
+/* 連線中不能切換 2D/3D:未選的那顆變淡 */
+body.online .topbar .view-toggle button:not([aria-pressed="true"]) { opacity: .35; cursor: not-allowed; }
+/* 對戰設定標題旁的 2D/3D 選擇(準備時各自選) */
+#setup-overlay .su-view { margin-left: auto; display: flex; align-items: stretch; gap: 0; padding: 0; background: var(--s-cream); border: 3px solid var(--s-ink); box-shadow: 3px 3px 0 var(--s-ink); }
+#setup-overlay .su-view span { display: flex; align-items: center; padding: 0 10px; font-size: 13px; font-weight: 900; background: var(--s-ink); color: var(--s-yellow); }
+#setup-overlay .su-view button { min-width: 52px; min-height: 40px; border: 0; background: transparent; color: var(--s-ink); font-family: "Luckiest Guy", sans-serif; font-size: 19px; cursor: pointer; padding: 3px 10px 0; }
+#setup-overlay .su-view button[aria-pressed="true"] { background: var(--s-yellow); }
+@media (max-width: 560px) { #setup-overlay .su-view { margin-left: 0; } }

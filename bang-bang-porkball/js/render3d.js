@@ -1155,6 +1155,9 @@
       if (g) return g;
     }
     const g = new THREE.Group();
+    // 身體零件包成一組(原點在腳底):躺長椅、倒地時整組轉倒;光圈等附件留在外層不跟著轉
+    const body = new THREE.Group();
+    g.add(body);
     const skin = 0xf2c9a0, shirt = 0xf5f5f5, hair = 0x2b2622, sock = 0xeeeeee, shoe = 0x333940;
     const { bottom, accent } = charColors(f);
     const legL = new THREE.Group(), legR = new THREE.Group();
@@ -1165,10 +1168,10 @@
     }
     legL.position.set(-0.11, 0.3, 0);
     legR.position.set(0.11, 0.3, 0);
-    g.add(legL, legR);
-    V(g, 0.4, 0.14, 0.26, bottom, 0, 0.37, 0);
-    V(g, 0.42, 0.3, 0.28, shirt, 0, 0.59, 0);
-    V(g, 0.1, 0.12, 0.02, accent, 0, 0.62, 0.15);
+    body.add(legL, legR);
+    V(body, 0.4, 0.14, 0.26, bottom, 0, 0.37, 0);
+    V(body, 0.42, 0.3, 0.28, shirt, 0, 0.59, 0);
+    V(body, 0.1, 0.12, 0.02, accent, 0, 0.62, 0.15);
     const armL = new THREE.Group(), armR = new THREE.Group();
     for (const a of [armL, armR]) {
       V(a, 0.11, 0.13, 0.12, shirt, 0, -0.05, 0);
@@ -1176,15 +1179,15 @@
     }
     armL.position.set(-0.27, 0.72, 0);
     armR.position.set(0.27, 0.72, 0);
-    g.add(armL, armR);
-    V(g, 0.36, 0.32, 0.34, skin, 0, 0.93, 0);
-    V(g, 0.38, 0.1, 0.36, hair, 0, 1.08, -0.01);
-    V(g, 0.38, 0.06, 0.36, hair, 0, 0.99, -0.06);
-    V(g, 0.4, 0.08, 0.38, accent, 0, 1.14, 0);
-    V(g, 0.2, 0.05, 0.16, accent, 0, 1.12, 0.24);
-    V(g, 0.05, 0.06, 0.02, 0x1a1a1a, -0.09, 0.93, 0.18);
-    V(g, 0.05, 0.06, 0.02, 0x1a1a1a, 0.09, 0.93, 0.18);
-    g.userData = { legL, legR, armL, armR };
+    body.add(armL, armR);
+    V(body, 0.36, 0.32, 0.34, skin, 0, 0.93, 0);
+    V(body, 0.38, 0.1, 0.36, hair, 0, 1.08, -0.01);
+    V(body, 0.38, 0.06, 0.36, hair, 0, 0.99, -0.06);
+    V(body, 0.4, 0.08, 0.38, accent, 0, 1.14, 0);
+    V(body, 0.2, 0.05, 0.16, accent, 0, 1.12, 0.24);
+    V(body, 0.05, 0.06, 0.02, 0x1a1a1a, -0.09, 0.93, 0.18);
+    V(body, 0.05, 0.06, 0.02, 0x1a1a1a, 0.09, 0.93, 0.18);
+    g.userData = { legL, legR, armL, armR, model: body };
     addCharExtras(g, accent);
     g.userData.marker.position.y = 1.42;
     return g;
@@ -1209,14 +1212,18 @@
       const blink = f.alive && f.invuln > 0 && Math.floor(f.invuln * 12) % 2 === 0;
       // 第一人稱時隱藏自己的模型(不擋視線)
       g.visible = !blink && !(camMode === 'fps' && f === player);
-      // 躺在長椅上:人物轉成順著長椅、仰躺在椅面上
+      // 躺在長椅上:人物轉成順著長椅、仰躺在椅面上(寫實人物與省電畫質的積木人都適用)
       const bench = typeof onBench === 'function' && onBench(f) ? benchAt(f.col, f.row) : null;
-      if (u.real && u.model) {
+      if (u.model) {
         if (!u.modelPos) u.modelPos = u.model.position.clone();
         if (bench) {
           g.rotation.y = (bench.back === 'n' || bench.back === 's') ? Math.PI / 2 : 0;
           u.model.rotation.x = -Math.PI / 2;
           u.model.position.set(u.modelPos.x, u.modelPos.y + 0.36, u.modelPos.z + 0.5);
+        } else if (!u.real && !f.alive) {
+          // 積木人沒有骨架動畫:出局時往後倒
+          u.model.rotation.x += (-Math.PI / 2 - u.model.rotation.x) * 0.25;
+          u.model.position.copy(u.modelPos);
         } else if (u.model.rotation.x) {
           u.model.rotation.x = 0;
           u.model.position.copy(u.modelPos);

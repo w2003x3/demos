@@ -796,6 +796,9 @@ const lobbyUI = {
   show() {
     const el = this.ensure();
     if (!el) return;
+    // 右側角色:每次打開隨機一位;用邀請連結來的(網址帶 room)台詞改成邀請語氣
+    this.heroChar = CHAR_IDS[Math.floor(Math.random() * CHAR_IDS.length)];
+    this.heroHost = !!new URLSearchParams(location.search).get('room');
     showOverlay('menu-overlay', false);
     el.classList.remove('hidden');
     this.render();
@@ -835,7 +838,7 @@ const lobbyUI = {
         '<button type="button" class="big" data-ol="join">加入</button></div>' +
         `<p class="ol-status${this.msgErr ? ' err' : ''}">${esc(this.msg)}</p>` +
         '<p class="mini">收到邀請連結的話,點開會直接帶入代碼。</p></div>' +
-        `<div class="ol-hero" aria-hidden="true"><img src="assets/art/${myChar}.webp" alt=""><span class="ol-bubble">快來陪我擺攤!</span></div></div>`;
+        `<div class="ol-hero" aria-hidden="true"><img src="assets/art/${this.heroChar}.webp" alt=""><span class="ol-bubble">${this.heroHost ? '快來陪我擺攤!' : '一起來開攤!'}</span></div></div>`;
       return;
     }
     const host = NET.role === 'host';

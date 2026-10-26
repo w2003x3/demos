@@ -86,19 +86,24 @@ setInterval(() => {
   if (left <= 0 && (!NET.online || NET.role === 'host')) { SERIES.nextAt = 0; startRound(); }
 }, 200);
 
-// 系列賽比分條
-function seriesBar() {
+// 系列賽比分條:藍隊格(頭像、勝場圓點)| 星芒比分 | 紅隊格;單局制改顯示存活人數
+function seriesBar(single) {
   const need = needWins();
-  const pips = (team) => Array.from({ length: need }, (_, i) =>
-    `<i class="${i < SERIES.wins[team] ? 'on ' + team : ''}"></i>`).join('');
-  return `<div class="rs-series"><span class="rs-team blue">🔵 藍隊</span><span class="rs-pips">${pips('blue')}</span>` +
-    `<b>${SERIES.wins.blue} : ${SERIES.wins.red}</b><span class="rs-pips">${pips('red')}</span><span class="rs-team red">紅隊 🔴</span></div>`;
+  const mine = player ? player.team : 'blue';
+  const pips = (team) => single ? '' : '<span class="rs-pips">' + Array.from({ length: need }, (_, i) =>
+    `<i class="${i < SERIES.wins[team] ? 'on ' + team : ''}"></i>`).join('') + '</span>';
+  const faces = (team) => '<span class="rs-faces">' + fighters().filter((f) => f.team === team).map((f) =>
+    `<i class="${f === player ? 'me' : ''}${f.alive ? '' : ' out'}"><img src="assets/avatars/${f.char || 'aman'}.webp" alt=""></i>`).join('') + '</span>';
+  const side = (team, name) => `<div class="rs-side ${team}${mine === team ? ' mine' : ''}">` +
+    `<span class="rs-tn">${name}${mine === team ? '<em>你</em>' : ''}</span>${faces(team)}${pips(team)}</div>`;
+  const score = single ? `${teamAlive('blue')}:${teamAlive('red')}` : `${SERIES.wins.blue}:${SERIES.wins.red}`;
+  return `<div class="rs-score">${side('blue', '藍隊')}<div class="rs-burst"><b>${score}</b><small>${single ? '存活' : '勝場'}</small></div>${side('red', '紅隊')}</div>`;
 }
 // 換角色(結算畫面直接換,下一輪生效)
 function miniCharPick() {
   return '<div class="rs-chars" role="group" aria-label="下一輪的角色">' + CHAR_IDS.map((id) =>
     `<button type="button" data-char="${id}" class="${id === myChar ? 'active' : ''}" title="${CHARACTERS[id].name}・${CHARACTERS[id].role}">` +
-    `<img src="assets/portraits/${id}.webp" alt=""><span>${CHARACTERS[id].name}</span></button>`).join('') + '</div>';
+    `<img src="assets/avatars/${id}.webp" alt=""><span>${CHARACTERS[id].name}</span></button>`).join('') + '</div>';
 }
 
 // ---------------------------------------------------------------- 結算畫面
@@ -108,47 +113,54 @@ const resultUI = {
     if (!box || !player) return;
     const w = SERIES.last;
     const mine = player.team;
-    const roundTitle = !w ? '這局平手' : w === mine ? '你的隊伍拿下這局!' : '對手拿下這局';
     const single = MATCH.rounds === 1 || SERIES.offline;
-    let html = '';
+    const sw = SERIES.wins.blue === SERIES.wins.red ? null : (SERIES.wins.blue > SERIES.wins.red ? 'blue' : 'red');
+    // 底色與台詞:這局(或整場)贏 = 黃色放射、輸 = 深夜藍、平手 = 藍色
+    const judge = SERIES.over && !single ? sw : w;
+    const mood = !judge ? 'draw' : judge === mine ? 'win' : 'lose';
+    const ov = document.getElementById('result-overlay');
+    if (ov) for (const m of ['win', 'lose', 'draw']) ov.classList.toggle('rs-' + m, m === mood);
+    const bubble = { win: SERIES.over ? '這攤我包了!' : '再一局就收工!', lose: SERIES.over ? '下一輪再來!' : '還沒結束!', draw: '不分上下!' }[mood];
+    const heroId = CHARACTERS[player.char] ? player.char : myChar;
+    const hero = `<div class="rs-hero" aria-hidden="true"><img src="assets/art/${heroId}.webp" alt=""><span class="rs-bubble">${bubble}</span></div>`;
+    let head, body = '';
     if (!SERIES.over) {
-      html += `<div class="result-kicker">第 ${SERIES.round} 局結束</div>` +
-        `<div class="result-title">${roundTitle}</div>` +
-        `<p class="result-sub">存活 🔵 ${teamAlive('blue')} vs 🔴 ${teamAlive('red')}・先拿 ${needWins()} 勝獲勝</p>` + seriesBar() +
-        `<div class="rs-next">下一局 <b id="rs-count">${ROUND_GAP}</b> 秒後開始</div>` +
+      const roundTitle = !w ? '這局平手' : w === mine ? '拿下這局!' : '對手拿下這局';
+      head = `<div class="rs-kicker">第 ${SERIES.round} 局結束</div><h2 class="rs-title">${roundTitle}</h2>`;
+      body = seriesBar(false) +
+        `<p class="rs-sub">這局存活 <i class="su-dot blue"></i>${teamAlive('blue')} : ${teamAlive('red')}<i class="su-dot red"></i>・先拿 ${needWins()} 勝獲勝</p>` +
+        `<div class="rs-next"><span class="rs-count"><b id="rs-count">${ROUND_GAP}</b></span><span>秒後開始<b>第 ${SERIES.round + 1} 局</b></span></div>` +
         (!NET.online ? '<button type="button" class="start-btn" data-rs="next">立即開始下一局</button>' : '');   // 連線:大家一起倒數,不提供提前開始
     } else {
-      const sw = SERIES.wins.blue === SERIES.wins.red ? null : (SERIES.wins.blue > SERIES.wins.red ? 'blue' : 'red');
-      const title = single ? (!w ? '🤝 平手!' : w === mine ? '你的隊伍獲勝!' : '你的隊伍輸了')
-        : (!sw ? '🤝 系列賽平手' : sw === mine ? '你的隊伍贏得比賽!' : '你的隊伍輸了這場比賽');
-      html += `<div class="result-kicker">${single ? 'MATCH END' : `比賽結束・共 ${SERIES.round} 局`}</div>` +
-        `<div class="result-title">${title}</div>` +
-        `<p class="result-sub">${single ? `存活 🔵 ${teamAlive('blue')} vs 🔴 ${teamAlive('red')}` : `${MATCH.rounds === 3 ? '三戰兩勝' : '五戰三勝'}・最後一局${!w ? '平手' : w === 'blue' ? '藍隊勝' : '紅隊勝'}`}</p>` +
-        (single ? '' : seriesBar()) +
+      const title = single ? (!w ? '平手!' : w === mine ? '你的隊伍獲勝!' : '你的隊伍輸了')
+        : (!sw ? '系列賽平手' : sw === mine ? '你的隊伍贏得比賽!' : '你的隊伍輸了這場比賽');
+      const sub = single ? '' : `<p class="rs-sub">${MATCH.rounds === 3 ? '三戰兩勝' : '五戰三勝'}・最後一局${!w ? '平手' : w === 'blue' ? '藍隊勝' : '紅隊勝'}</p>`;
+      head = `<div class="rs-kicker">${single ? '比賽結束' : `比賽結束・共 ${SERIES.round} 局`}</div><h2 class="rs-title">${title}</h2>`;
+      body = seriesBar(single) + sub +
         (SERIES.offline ? '' : `<div class="rs-label">下一輪的角色(點一下更換)</div>` + miniCharPick());
       if (SERIES.offline) {
-        html += '<p class="rs-offline">⚠️ 連線已中斷,這局打完就結束了</p>' +
+        body += '<p class="rs-offline">連線已中斷,這局打完就結束了</p>' +
           '<button type="button" class="start-btn" data-rs="menu">回主選單</button>';
       } else if (!NET.online) {
-        html += '<button type="button" class="start-btn" data-rs="again">再來一輪</button>' +
+        body += '<button type="button" class="start-btn" data-rs="again">再來一輪</button>' +
           '<div class="rs-row"><button type="button" class="home-btn" data-rs="setup">調整設定</button>' +
           '<button type="button" class="home-btn" data-rs="menu">回主選單</button></div>' +
           '<p class="result-hint">Enter 再來一輪・Esc 回主選單</p>';
       } else {
-        html += readyList();
+        body += readyList();
         if (NET.role === 'host') {
           const [n, total] = readyCount();
-          html += `<button type="button" class="start-btn" data-rs="again">開始下一輪(${n}/${total} 已準備)</button>` +
+          body += `<button type="button" class="start-btn" data-rs="again">開始下一輪(${n}/${total} 已準備)</button>` +
             '<div class="rs-row rs-row3"><button type="button" class="home-btn" data-rs="lobby">調整設定</button>' +
             nudgeButton('rs') + '<button type="button" class="home-btn" data-rs="quit">收攤</button></div>';
         } else {
           const ready = !!NET.ready[NET.id];
-          html += `<button type="button" class="start-btn${ready ? ' done' : ''}" data-rs="ready">${ready ? '✓ 已準備,等攤主開始' : '準備下一輪'}</button>` +
+          body += `<button type="button" class="start-btn${ready ? ' done' : ''}" data-rs="ready">${ready ? '✓ 已準備,等攤主開始' : '準備下一輪'}</button>` +
             '<div class="rs-row">' + nudgeButton('rs') + '<button type="button" class="home-btn" data-rs="quit">離開攤位</button></div>';
         }
       }
     }
-    box.innerHTML = html;
+    box.innerHTML = hero + `<div class="rs-main">${head}<div class="rs-sheet">${body}</div></div>`;
   },
   click(e) {
     const c = e.target.closest && e.target.closest('[data-char]');
@@ -207,6 +219,13 @@ function readyList() {
   }).join('') + '</div>';
 }
 const escHtml = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+
+// 畫面模式(2D/3D)選擇:準備時各自選,大家可以不同;對戰中不能切換
+function viewPick() {
+  const m = window.VIEW ? VIEW.mode : '2d';
+  return '<div class="view-toggle su-view" role="group" aria-label="畫面模式"><span>畫面</span>' +
+    ['2d', '3d'].map((v) => `<button type="button" data-view="${v}" aria-pressed="${m === v}" class="${m === v ? 'active' : ''}">${v.toUpperCase()}</button>`).join('') + '</div>';
+}
 
 // ---------------------------------------------------------------- 對戰設定畫面
 const setupUI = {
@@ -277,7 +296,8 @@ const setupUI = {
         `<button type="button" class="start-btn${ready ? ' done' : ''}" data-su="ready">${ready ? '✓ 已準備' : '準備好了'}</button>`;
     }
     box.innerHTML =
-      `<div class="su-head"><h2>對戰設定</h2><span>${online ? (host ? '你是攤主,可以調整規則' : '規則由攤主設定') : '單機對戰'}</span></div>` +
+      `<div class="su-head"><h2>對戰設定</h2><span>${online ? (host ? '你是攤主,可以調整規則' : '規則由攤主設定') : '單機對戰'}</span>` +
+      viewPick() + '</div>' +
       `<div class="su-body"><section class="su-chars"><div class="su-title">選角色</div><div class="su-char-grid">${chars}</div>` +
       `<div class="su-char-info"><b class="sci-name">${c.name}・${c.title}</b>` +
       [['HP', c.hp], ['MP', c.mp], ['速度', c.speed], ['威力', c.power], ['貢丸', c.bombs]].map(([k, v]) => `<span class="sci-chip">${k}<b>${v}</b></span>`).join('') +
