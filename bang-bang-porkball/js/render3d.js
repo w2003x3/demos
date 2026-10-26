@@ -1006,13 +1006,22 @@
     g2.beginPath(); g2.moveTo(r, 0); g2.lineTo(w - r, 0); g2.quadraticCurveTo(w, 0, w, r); g2.lineTo(w, 64 - r); g2.quadraticCurveTo(w, 64, w - r, 64);
     g2.lineTo(r, 64); g2.quadraticCurveTo(0, 64, 0, 64 - r); g2.lineTo(0, r); g2.quadraticCurveTo(0, 0, r, 0); g2.fill();
     g2.globalAlpha = 1;
-    if (border) { g2.strokeStyle = border; g2.lineWidth = 6; g2.stroke(); }   // 自己:金框 g2.fillStyle = '#fff'; g2.textAlign = 'center'; g2.textBaseline = 'middle';
+    if (border) { g2.strokeStyle = border; g2.lineWidth = 6; g2.stroke(); }   // 自己:金框
+    g2.textAlign = 'center'; g2.textBaseline = 'middle';
+    g2.lineWidth = 8; g2.lineJoin = 'round'; g2.strokeStyle = 'rgba(0,0,0,0.45)';   // 深色描邊:夜間、光暈下仍清楚
+    g2.strokeText(text, w / 2, 34);
+    g2.fillStyle = '#fff';
     g2.fillText(text, w / 2, 34);
     const tex = new THREE.CanvasTexture(cv);
-    const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, depthWrite: false, transparent: true }));
+    tex.encoding = THREE.sRGBEncoding;   // 畫布顏色是 sRGB;沒標記會被當成線性再轉一次而洗白
+    // 不受霧影響;亮度略壓(白字不超過夜間光暈門檻,不會暈開)
+    const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, depthWrite: false, transparent: true, fog: false });
+    mat.color.setScalar(0.85);
+    const sp = new THREE.Sprite(mat);
     sp.renderOrder = 10;
-    const hgt = 0.26;
+    const hgt = 0.18;   // 名牌高度(世界單位)
     sp.scale.set(hgt * w / 64, hgt, 1);
+    sp.userData.base = { x: sp.scale.x, y: sp.scale.y };
     return sp;
   }
 
@@ -1233,7 +1242,10 @@
         u.nameKey = nmKey;
       }
       u.nameSprite.visible = f.alive && !(camMode === 'fps' && f === player);
-      u.nameSprite.position.y = u.marker.position.y + 0.32;
+      // 名牌大小依鏡頭距離:近距離(跟隨)維持小尺寸,遠景(全景/俯視)放大到最多 2.2 倍,字在畫面上仍讀得出來
+      const nk = Math.min(2.2, Math.max(1, camera.position.distanceTo(g.position) / 12)), nb = u.nameSprite.userData.base;
+      u.nameSprite.scale.set(nb.x * nk, nb.y * nk, 1);
+      u.nameSprite.position.y = u.marker.position.y + 0.17 + nb.y * nk / 2;
       // 防護盾:金色護罩球(呼吸脈動);口罩:藍色地環(旋轉)
       u.shield.visible = f.alive && f.shieldT > 0;
       if (u.shield.visible) {
