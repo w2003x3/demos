@@ -382,9 +382,25 @@
     return lib;
   }
   // 材質後處理:去背貼圖改 alphaTest(葉片/菜籃格孔)、葉片法線不翻面、燈籠自發光、全部投影
+  // Q 版人物的反轉外殼描邊(17_build_roster.py):只改深度、畫面位置不變
+  //   chibi_outline     整體外殼:往後推 0.25,身體前方的部分會蓋掉內部線條 → 只剩外輪廓粗線
+  //   chibi_outline_acc 帽子/髮飾/道具:往鏡頭拉近 0.04,帽沿貼著臉的地方也露出細線
+  function prepOutline(o, m) {
+    o.castShadow = false; o.receiveShadow = false;
+    if (m.userData.outlined) return;
+    m.userData.outlined = true; m.userData.rfDone = true;   // 不做材質精修
+    const dz = m.name.indexOf('_acc') >= 0 ? 0.04 : -0.25;
+    m.onBeforeCompile = (sh) => {
+      sh.vertexShader = sh.vertexShader.replace('#include <project_vertex>', `#include <project_vertex>
+  { vec4 olp = mvPosition; olp.z += ${dz.toFixed(2)}; vec4 olc = projectionMatrix * olp; gl_Position.z = olc.z / olc.w * gl_Position.w; }`);
+    };
+    m.customProgramCacheKey = () => 'outline' + dz;
+    m.needsUpdate = true;
+  }
   function prepModel(root) {
     root.traverse((o) => {
       if (!o.isMesh) return;
+      if (o.material && /^chibi_outline/.test(o.material.name || '')) { prepOutline(o, o.material); return; }
       o.castShadow = true;
       o.receiveShadow = true;
       const m = o.material;
@@ -1075,8 +1091,9 @@
     model.scale.setScalar(CHAR_H / CHAR_SRC_H);
     model.traverse((o) => {
       if (!o.isMesh) return;
-      o.castShadow = Q.charShadow;
-      o.receiveShadow = true;
+      const outline = /^chibi_outline/.test(o.material.name || '');   // 描邊外殼不投影、不接影
+      o.castShadow = Q.charShadow && !outline;
+      o.receiveShadow = !outline;
       o.frustumCulled = false; // 骨架動畫會改變包圍盒
       const n = o.material.name || '';
       if (n.startsWith('outfit_team')) { o.material = o.material.clone(); o.material.color.set(bottom); }

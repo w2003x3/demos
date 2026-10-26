@@ -272,6 +272,9 @@ body.mode-3d #ink-overlay {
   clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
 }
 .menu-title h1 { font-weight: 900; white-space: nowrap; font-size: clamp(60px, 8.5vw, 110px); line-height: 1.05; letter-spacing: .04em; }
+/* 定稿 Logo(assets/logo.webp,由 定稿_標題_去背.webp 裁切縮小) */
+.menu-title h1.menu-logo { margin: 0 0 4px -2%; font-size: 0; line-height: 0; }
+.menu-logo img { display: block; width: min(100%, 480px); height: auto; filter: drop-shadow(4px 6px 0 rgba(0,0,0,.18)); }
 .menu-sub { font-size: 18px; font-weight: 700; color: #4a4a4a; }
 .start-btn {
   display: flex; align-items: center; justify-content: center; gap: 14px;
