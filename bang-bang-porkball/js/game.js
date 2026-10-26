@@ -8,10 +8,10 @@ const ctx = canvas.getContext('2d');
 canvas.width = W;
 canvas.height = H;
 
-// ---------- 2D 圖片資產(由 3D 寫實模型渲染,見 tools/sprites/)----------
+// ---------- 2D 圖片資產(由 3D 寫實模型渲染，見 tools/sprites/)----------
 // 貢丸 id(1~13)對應的圖檔名
 const MB_SPRITE = Array.from({ length: 13 }, (_, i) => 'mb_' + (i + 1));
-// 各主題的地圖物件圖:有多款時依格子座標固定挑一款(外圈用 wall,左右兩側用轉 90° 的 wallSide,內部柱子用 solid)
+// 各主題的地圖物件圖:有多款時依格子座標固定挑一款(外圈用 wall，左右兩側用轉 90° 的 wallSide，內部柱子用 solid)
 const TILE_SPRITES = {
   park:   { floor: ['floor1', 'floor2'], wall: ['wall'], solid: ['stone'], brick: ['crate', 'crate2'],
             trash: ['trashcan'], bush: ['bush', 'bush2'], bench: ['bench_n', 'bench_s', 'bench_e', 'bench_w'] },
@@ -22,7 +22,7 @@ const TILE_SPRITES = {
             wallSide: ['night_wall_side', 'night_wall2_side'], solid: ['night_stall'],
             brick: ['night_table', 'night_table2'], trash: ['night_trash'], bush: ['night_boxes'] },
 };
-// 地圖物件圖是 1 格寬、1.25 格高(65° 俯視);畫的時候把格子深度拉回正方形
+// 地圖物件圖是 1 格寬、1.25 格高(65° 俯視)；畫的時候把格子深度拉回正方形
 const TILE_IMG_H = 1.25 / Math.sin(65 * Math.PI / 180);
 const FX_VARIANTS = 4; // 爆炸波每種 4 張
 const ASSET_LIST = {
@@ -56,7 +56,7 @@ function loadAssets() {
   return Promise.all(jobs);
 }
 
-// 以中心點畫 sprite(保持像素硬邊);沒載到回 false
+// 以中心點畫 sprite(保持像素硬邊)；沒載到回 false
 function sprite(key, cx, cy, size) {
   const img = ASSETS[key];
   if (!img || !img.complete || !img.naturalWidth) return false;
@@ -86,8 +86,8 @@ const toRow = (y) => Math.floor(y / TS);
 // ---------- 地圖 ----------
 let grid = []; // grid[r][c] = TILE.*
 
-// 出生點:前 n 個藍隊、後 n 個紅隊(n = 每隊人數);第一個是本機玩家
-// 位置取自目前地圖的出生點表(MAPS[id].spawns,預設九宮格 8 格),每局隨機挑選並打亂,不分隊伍左右
+// 出生點:前 n 個藍隊、後 n 個紅隊(n = 每隊人數)；第一個是本機玩家
+// 位置取自目前地圖的出生點表(MAPS[id].spawns，預設九宮格 8 格)，每局隨機挑選並打亂，不分隊伍左右
 let spawnLayout = null;
 let spotT = 0;   // 開局「你在這裡」亮光剩餘秒數
 const mapSpawnSlots = () => (MAPS[currentMapId] && MAPS[currentMapId].spawns) || GRID9_SPAWNS;
@@ -101,7 +101,7 @@ function teamSpawns() {
   const n = (typeof MATCH !== 'undefined' && MATCH.size) || 3;
   return spawnLayout && spawnLayout.size === n && spawnLayout.map === currentMapId ? spawnLayout.list : baseSpawns();
 }
-// 未隨機前的預設排法:依出生點表順序,藍隊在前、紅隊在後(人數超過出生點數時以出生點數為上限)
+// 未隨機前的預設排法:依出生點表順序，藍隊在前、紅隊在後(人數超過出生點數時以出生點數為上限)
 function baseSpawns() {
   const slots = mapSpawnSlots();
   const n = Math.min((typeof MATCH !== 'undefined' && MATCH.size) || 3, Math.floor(slots.length / 2));
@@ -136,7 +136,7 @@ function generateMap() {
   const isSpawn = (r, c) => clear.some(([sr, sc]) => sr === r && sc === c);
 
   const th = theme();
-  // 在空地隨機灑可破壞物(木箱/蔬菜箱/摺疊桌,依主題)
+  // 在空地隨機灑可破壞物(木箱/蔬菜箱/摺疊桌，依主題)
   for (let r = 1; r < ROWS - 1; r++) {
     for (let c = 1; c < COLS - 1; c++) {
       if (grid[r][c] === TILE.EMPTY && !isSpawn(r, c) && Math.random() < th.brickRate) {
@@ -145,7 +145,7 @@ function generateMap() {
     }
   }
 
-  // 隨機放置垃圾桶(取代部分可破壞物),炸開掉食用道具
+  // 隨機放置垃圾桶(取代部分可破壞物)，炸開掉食用道具
   let placed = 0;
   for (let tries = 0; tries < 400 && placed < th.trashCount; tries++) {
     const r = 1 + rand(ROWS - 2);
@@ -155,7 +155,7 @@ function generateMap() {
       placed++;
     }
   }
-  // 長椅(公園):放在左右或上下兩根柱子之間;椅背朝其中一側,另一側是可以走進去的正面
+  // 長椅(公園):放在左右或上下兩根柱子之間；椅背朝其中一側，另一側是可以走進去的正面
   benches = {};
   for (let tries = 0; tries < 300 && Object.keys(benches).length < (th.benchCount || 0); tries++) {
     const horiz = Math.random() < 0.5;
@@ -170,7 +170,7 @@ function generateMap() {
     benches[r * COLS + c] = { c, r, back, fc, fr };
   }
 
-  // 在空地灑草叢/菜堆/紙箱堆(可通行,可能驚動野生老鼠/蟑螂)
+  // 在空地灑草叢/菜堆/紙箱堆(可通行，可能驚動野生老鼠/蟑螂)
   let bushes = 0;
   for (let tries = 0; tries < 400 && bushes < th.bushCount; tries++) {
     const r = 1 + rand(ROWS - 2);
@@ -184,11 +184,11 @@ function generateMap() {
 }
 
 // 開局躲爆炸的凹槽:每個出生點都要能「在出生點或旁邊放貢丸 → 3 步內躲到爆炸打不到的格子」。
-// 出生點在偶數列(如 13 列地圖的中間列)時左右是水泥柱,淨空區只有一條直線,沒有地方躲 → 清出轉角外側一格當凹槽
+// 出生點在偶數列(如 13 列地圖的中間列)時左右是水泥柱，淨空區只有一條直線，沒有地方躲 → 清出轉角外側一格當凹槽
 function ensureSpawnPockets() {
   const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
   const inside = (c, r) => r > 0 && c > 0 && r < ROWS - 1 && c < COLS - 1;
-  // 爆炸範圍(射程不設限,遇到可站立地面以外的格子停;長椅火焰可穿透)
+  // 爆炸範圍(射程不設限，遇到可站立地面以外的格子停；長椅火焰可穿透)
   const blastHits = (bc, br, c, r) => {
     if (c === bc && r === br) return true;
     if (c !== bc && r !== br) return false;
@@ -220,7 +220,7 @@ function ensureSpawnPockets() {
   };
   for (const s of teamSpawns()) {
     if (hasPocket(s)) continue;
-    // 出生點旁的空地 N,再往垂直方向一格 P(不在出生點的爆炸直線上)→ 清成空地
+    // 出生點旁的空地 N，再往垂直方向一格 P(不在出生點的爆炸直線上)→ 清成空地
     const cands = [];
     for (const [dc, dr] of DIRS) {
       const nc = s.col + dc, nr = s.row + dr;
@@ -247,7 +247,7 @@ function isBlocked(c, r) {
   return !isFloor(c, r);
 }
 
-// 天氣:時間到就隨機變天(地圖中央大字提示);颱風定時吹走貢丸、地震讓貢丸移位
+// 天氣:時間到就隨機變天(地圖中央大字提示)；颱風定時吹走貢丸、地震讓貢丸移位
 function updateWeather(dt) {
   env.t += dt;
   env.left -= dt;
@@ -280,7 +280,7 @@ function updateWeather(dt) {
     sfx('boom');
   }
 }
-// 外星人來襲:隨機鎖定一位還活著的玩家(含電腦),光束照射 ALIEN_BEAM 秒後抓走(直接死亡)
+// 外星人來襲:隨機鎖定一位還活著的玩家(含電腦)，光束照射 ALIEN_BEAM 秒後抓走(直接死亡)
 function updateAlien(dt) {
   if (env.abductDone) return;
   if (!env.abduct) {
@@ -299,14 +299,14 @@ function updateAlien(dt) {
   if (a.t >= ALIEN_BEAM) {
     const f = a.f;
     spawnText(f.x, f.y - TS * 0.6, '被外星人抓走了!3 秒後放回來', '#b2ff59');
-    // 暫時離場:沿用倒下的狀態(不會被炸、不能行動、不被鎖定),但不算死亡(不噴金針菇、存活照算)
+    // 暫時離場:沿用倒下的狀態(不會被炸、不能行動、不被鎖定)，但不算死亡(不噴金針菇、存活照算)
     f.shieldT = 0; f.ironT = 0; f.alive = false; f.away = ALIEN_AWAY;
     f.mvTarget = null; f.path = null; f.autoPath = null; f.held = null;
     env.abduct = null; env.abductDone = true;
     if (f === player) updateHud();
   }
 }
-// 外星人放人:隨機安全的空格(沒有貢丸、角色,不在爆炸範圍),HP 只剩 1,短暫無敵
+// 外星人放人:隨機安全的空格(沒有貢丸、角色，不在爆炸範圍),HP 只剩 1，短暫無敵
 const ALIEN_AWAY = 3;
 function returnFromAlien(f) {
   f.away = 0;
@@ -326,7 +326,7 @@ function returnFromAlien(f) {
   f.alive = true; f.hp = 1; f.invuln = Math.max(f.invuln, 1.5);
   sfx('whoosh', f.x, f.y);
   spawnText(f.x, f.y - TS * 0.7, '🛸被放回來了!HP 剩 1', '#b2ff59');
-  if (f === player) { spotT = Math.max(spotT, 1.5); updateHud(); }   // 自己回來時亮一下,方便找到位置
+  if (f === player) { spotT = Math.max(spotT, 1.5); updateHud(); }   // 自己回來時亮一下，方便找到位置
 }
 // 畫面變黑的程度:被墨魚貢丸炸到、火山灰取較黑的
 function blindAlpha() {
@@ -335,7 +335,7 @@ function blindAlpha() {
   if (player.alive && player.blindT > 0) a = Math.max(0.25, 0.92 - player.inkEaten * 0.15) * clamp(player.blindT / 0.6, 0, 1);
   if (weatherDef().ash) {
     const k = clamp(env.t / 1.2, 0, 1) * clamp(env.left / 0.8, 0, 1);    // 噴發時漸暗、快結束時漸亮
-    a = Math.max(a, Math.max(0.7, 0.92 - player.inkEaten * 0.06) * k);   // 幾乎全黑;吃墨魚只稍微減輕
+    a = Math.max(a, Math.max(0.7, 0.92 - player.inkEaten * 0.06) * k);   // 幾乎全黑；吃墨魚只稍微減輕
   }
   return a;
 }
@@ -411,7 +411,7 @@ function computeDanger() {
 
 // 所有參戰角色(玩家 + AI)
 function fighters() { return [player, ...bots]; }
-function teamAlive(team) { return fighters().filter((f) => f.team === team && (f.alive || f.away > 0)).length; }   // 被外星人抓走的會回來,照算存活
+function teamAlive(team) { return fighters().filter((f) => f.team === team && (f.alive || f.away > 0)).length; }   // 被外星人抓走的會回來，照算存活
 
 // ---------- 玩家 ----------
 class Player {
@@ -425,7 +425,7 @@ class Player {
     this.autoPath = null;        // 點擊地圖後的自動走路路徑
     this.isHuman = isHuman;
     this.color = color;
-    this.team = 'red';          // 'blue'(玩家隊)或 'red'(敵隊),於 restart 指定
+    this.team = 'red';          // 'blue'(玩家隊)或 'red'(敵隊)，於 restart 指定
     this.maxHp = 3; this.hp = 3;
     this.maxMp = 100; this.mp = 100;
     this.power = 2;              // 爆炸範圍
@@ -435,7 +435,7 @@ class Player {
     this.poisonT = 0;           // 黴毒剩餘秒數
     this.poisonTick = 0;        // 黴毒每秒結算用
     this.shieldT = 0;           // 防護盾剩餘秒數(期間擋一次爆炸)
-    this.immunity = 1;          // 免疫力:越高,負面狀態時效越短(白蘿蔔提升)
+    this.immunity = 1;          // 免疫力:越高，負面狀態時效越短(白蘿蔔提升)
     this.enokiEaten = 0;        // 吃過的金針菇數(死亡會噴出等量)
     this.fuseBonus = 0;         // 自己貢丸的額外時效(金針菇)
     this.inkEaten = 0;          // 吃過的墨魚數(減輕黑畫面)
@@ -449,7 +449,7 @@ class Player {
     this.aiTimer = 0;
     this.aiBombCd = 0;
     // 寵物與非食用道具(只有玩家有)
-    // 玩家擁有老鼠與蟑螂,可各自「放出 / 收起」,順序不拘;放出的會啃貢丸
+    // 玩家擁有老鼠與蟑螂，可各自「放出 / 收起」，順序不拘；放出的會啃貢丸
     this.pets = [];          // 目前放出在場上的寵物
     this.petState = {};      // 每種寵物狀態:stored(收起)/ out(放出)/ dead(昏倒)
     if (isHuman) {
@@ -457,7 +457,7 @@ class Player {
         this.petState[id] = { def: PETS[id], status: 'stored', pet: null };
       }
     }
-    // 工具卡牌:一次性工具記張數;永久卡(鋼頭鞋、隔熱手套)> 0 代表擁有
+    // 工具卡牌:一次性工具記張數；永久卡(鋼頭鞋、隔熱手套)> 0 代表擁有
     this.tools = isHuman ? { ...START_TOOLS } : {};
     this.spaceT = 0;            // 空白鍵連按判定(丟貢丸)
     this.pushT = 0;             // 往貢丸方向推的時間(踢貢丸)
@@ -473,7 +473,7 @@ class Player {
   hurt(dmg = 1) {
     if (!this.alive) return;
     if (this.invuln > 0) return;
-    // 防護盾作用中:擋下這次爆炸,盾立刻失效
+    // 防護盾作用中:擋下這次爆炸，盾立刻失效
     if (this.shieldT > 0) {
       this.shieldT = 0;
       this.invuln = INVULN_TIME;
@@ -544,7 +544,7 @@ class Meatball {
     this.moldy = false; // 貢丸不會發霉(發霉改在地上的道具)
     this.exploded = false;
     this.hp = MEATBALL_HP;      // 貢丸自己的 HP(只有寵物能咬)
-    this.eaten = false;         // 被寵物吃光 → 直接移除,不爆炸
+    this.eaten = false;         // 被寵物吃光 → 直接移除，不爆炸
     // 滑行(被踢)用
     this.vx = 0; this.vy = 0; this.moving = false;
     this.held = false; // 是否被食物夾夾著
@@ -557,7 +557,7 @@ class Meatball {
 }
 
 // ---------- 寵物 ----------
-// 自動衝向最近的貢丸啃咬;咬到貢丸 HP 歸零就吃掉(不會爆炸)
+// 自動衝向最近的貢丸啃咬；咬到貢丸 HP 歸零就吃掉(不會爆炸)
 class Pet {
   constructor(owner, def) {
     this.owner = owner;
@@ -566,7 +566,7 @@ class Pet {
     this.y = owner.y;
     this.r = TS * 0.2;
     this.target = null;
-    // 寵物也有 HP,會被爆炸/黴毒波及
+    // 寵物也有 HP，會被爆炸/黴毒波及
     this.maxHp = def.hp; this.hp = def.hp;
     this.alive = true;
     this.invuln = 0;
@@ -620,7 +620,7 @@ class Pet {
       }
     }
     const goal = this.target || this.owner; // 沒貢丸就跟著主人
-    // 沿通道移動(不能跨越牆/磚/垃圾桶);若目標被牆擋住就先跟著主人
+    // 沿通道移動(不能跨越牆/磚/垃圾桶)；若目標被牆擋住就先跟著主人
     if (!petStep(this, goal.x, goal.y, dt) && this.target) {
       petStep(this, this.owner.x, this.owner.y, dt);
     }
@@ -639,12 +639,12 @@ class Pet {
   }
 }
 
-// 寵物用:BFS 找從 (sc,sr) 到 (gc,gr) 的第一步方向(只能走空地);無路回 null
+// 寵物用:BFS 找從 (sc,sr) 到 (gc,gr) 的第一步方向(只能走空地)；無路回 null
 function bfsNextStep(sc, sr, gc, gr) {
   if (sc === gc && sr === gr) return null;
   const hasMeatball = (c, r) =>
     meatballs.some((m) => !m.exploded && !m.held && m.col === c && m.row === r);
-  // 寵物只能走地面(空地/草叢),不能穿越牆/木箱/垃圾桶,也不能穿越貢丸
+  // 寵物只能走地面(空地/草叢)，不能穿越牆/木箱/垃圾桶，也不能穿越貢丸
   const passable = (c, r) => isFloor(c, r) && !hasMeatball(c, r);
   const key = (c, r) => r * COLS + c;
   const prev = new Map();
@@ -675,7 +675,7 @@ function bfsNextStep(sc, sr, gc, gr) {
   return null;
 }
 
-// 讓寵物朝目標移動一步(同格則直接靠近);有移動回 true,無路可走回 false
+// 讓寵物朝目標移動一步(同格則直接靠近)；有移動回 true，無路可走回 false
 function petStep(pet, gx, gy, dt) {
   const sc = pet.col, sr = pet.row, gc = toCol(gx), gr = toRow(gy);
   let wx, wy;
@@ -683,7 +683,7 @@ function petStep(pet, gx, gy, dt) {
     wx = gx; wy = gy;
   } else {
     const step = bfsNextStep(sc, sr, gc, gr);
-    if (!step) return false;            // 被牆擋住,過不去
+    if (!step) return false;            // 被牆擋住，過不去
     wx = tileCenter(sc + step[0]);
     wy = tileCenter(sr + step[1]);
   }
@@ -724,7 +724,7 @@ class Item {
     }
     const sp = 45 * dt;
     const nx = this.x + this.vx * sp, ny = this.y + this.vy * sp;
-    // 限制在出生點附近,且不穿牆
+    // 限制在出生點附近，且不穿牆
     if (Math.hypot(nx - this.hx, ny - this.hy) > TS * 1.3 ||
         isBlocked(toCol(nx), toRow(ny))) {
       this.vx *= -1; this.vy *= -1;
@@ -734,7 +734,7 @@ class Item {
   }
 }
 
-// 彩虹天氣:整張地圖蓋一層淡淡的彩虹色(斜向漸層慢慢流動),剛變天時稍亮
+// 彩虹天氣:整張地圖蓋一層淡淡的彩虹色(斜向漸層慢慢流動)，剛變天時稍亮
 function drawRainbowTint() {
   const k = clamp(env.t / 1.2, 0, 1);
   const shift = (performance.now() / 6000) % 1;
@@ -768,7 +768,7 @@ function placeMeatball(p) {
   if (grid[r][c] === TILE.BENCH) { hint(p, '長椅上不能放貢丸'); return; }
   // 該格已有貢丸則不放
   if (meatballs.some((m) => m.col === c && m.row === r)) return;
-  // 吃過黑豬肉:這一顆一定是黑豬肉貢丸,放完恢復原本的選擇
+  // 吃過黑豬肉:這一顆一定是黑豬肉貢丸，放完恢復原本的選擇
   const pork = !!p.porkNext;
   let def = pork ? meatballById(10) : meatballById(p.selected);
   if (def.night && !nightFoodAllowed()) def = meatballById(1); // 夜市限定只能在夜市用
@@ -784,7 +784,7 @@ function placeMeatball(p) {
 // 某顆貢丸爆炸會波及的格子(依種類:十字 / 只垂直 / 只水平 / 3×3)
 function meatballCells(m) {
   const c = m.col, r = m.row;
-  if (m.def.behavior === 'square') { // 大腸包小腸:3×3 方格,無視柱子
+  if (m.def.behavior === 'square') { // 大腸包小腸:3×3 方格，無視柱子
     const cells = [];
     for (let dr = -1; dr <= 1; dr++) for (let dc = -1; dc <= 1; dc++) {
       const cc = c + dc, rr = r + dr;
@@ -795,12 +795,12 @@ function meatballCells(m) {
   return blastCells(c, r, m.power, m.def.behavior === 'pierce', m.def.axis);
 }
 
-// 夜市限定的香腸/米腸能不能用(夜市地圖,或教學示範時)
+// 夜市限定的香腸/米腸能不能用(夜市地圖，或教學示範時)
 function nightFoodAllowed() {
   return currentMapId === 'night' || !!(window.tutorial && tutorial.active && tutorial.nightOK);
 }
 
-// 香腸放在米腸旁(或反過來):香腸被米腸包住 → 大腸包小腸,引信重新計時
+// 香腸放在米腸旁(或反過來):香腸被米腸包住 → 大腸包小腸，引信重新計時
 function checkWrap(m) {
   const want = m.def.id === 11 ? 12 : 11;
   const other = meatballs.find((o) => o !== m && o.def.id === want && !o.exploded && !o.eaten &&
@@ -808,7 +808,7 @@ function checkWrap(m) {
   if (!other) return;
   const rice = m.def.id === 12 ? m : other;
   const saus = rice === m ? other : m;
-  // 香腸被吸進米腸 → 在米腸的位置換成一顆新的大腸包小腸(引信重新計時,算在完成合體的人身上)
+  // 香腸被吸進米腸 → 在米腸的位置換成一顆新的大腸包小腸(引信重新計時，算在完成合體的人身上)
   saus.eaten = true;
   rice.eaten = true;
   const wrap = new Meatball(rice.col, rice.row, meatballById(13), m.owner);
@@ -848,7 +848,7 @@ function explodeMeatball(m) {
   sfx(m.def.behavior === 'ink' ? 'splat' : 'boom', m.x, m.y);
 
   // 第一階段:連鎖引爆 + 摧毀爆炸範圍內「既有」道具
-  // (地形掉落與特殊噴出的新道具在下方才生成,不會被這裡誤刪)
+  // (地形掉落與特殊噴出的新道具在下方才生成，不會被這裡誤刪)
   for (const cell of cells) {
     if (cell.r < 0 || cell.c < 0 || cell.r >= ROWS || cell.c >= COLS) continue;
     for (const other of meatballs) {
@@ -886,7 +886,7 @@ function explodeMeatball(m) {
     }
   }
 
-  // 特殊貢丸:爆炸噴出對應道具(香菇/芋頭/香菜/辣椒,以及墨魚貢丸的墨魚)
+  // 特殊貢丸:爆炸噴出對應道具(香菇/芋頭/香菜/辣椒，以及墨魚貢丸的墨魚)
   if (m.def.drop) {
     const open = cells.filter(
       (cl) => grid[cl.r][cl.c] === TILE.EMPTY &&
@@ -928,7 +928,7 @@ function itemDef(key) { return ITEMS[key] || TOOLS[key]; }
 
 const pick = (arr) => arr[rand(arr.length)];
 
-// 開局撒食物(菜市場):在沒有木箱的空地(不含出生點)隨機放 n 個,種類盡量不重複
+// 開局撒食物(菜市場):在沒有木箱的空地(不含出生點)隨機放 n 個，種類盡量不重複
 function spawnStartFood(n) {
   if (!n) return;
   const spawnCells = new Set(teamSpawns().map((s) => s.row * COLS + s.col));
@@ -960,7 +960,7 @@ function snackDrop() {
   return pick(pool);
 }
 
-// 黑豬肉貢丸:一格一格彈跳追蹤最近的敵人,前面有障礙就跳過去;碰到敵人立刻爆
+// 黑豬肉貢丸:一格一格彈跳追蹤最近的敵人，前面有障礙就跳過去；碰到敵人立刻爆
 function updateHoming(m, dt) {
   if (m.hop) {                         // 飛行中
     m.hop.t += dt;
@@ -987,7 +987,7 @@ function updateHoming(m, dt) {
   if (!target) { m.hopT = 0.5; return; }
   if (best === 0) { m.fuse = Math.min(m.fuse, 0.02); return; }
   const dx = Math.sign(target.col - m.col), dy = Math.sign(target.row - m.row);
-  // 先走距離較遠的方向;走不了再試另一個方向
+  // 先走距離較遠的方向；走不了再試另一個方向
   const tries = Math.abs(target.col - m.col) >= Math.abs(target.row - m.row)
     ? [[dx, 0], [0, dy]] : [[0, dy], [dx, 0]];
   const free = (c, r) => isFloor(c, r) && !meatballs.some((o) => o !== m && !o.exploded && !o.eaten && o.col === c && o.row === r);
@@ -1002,13 +1002,13 @@ function updateHoming(m, dt) {
       }
     }
   }
-  m.hopT = 0.3; // 四周都跳不過去,等一下再試
+  m.hopT = 0.3; // 四周都跳不過去，等一下再試
 }
 
-// 小貢丸:未滿三顆相連前不會自己爆(引信不倒數),被其他爆炸波及才會跟著爆
+// 小貢丸:未滿三顆相連前不會自己爆(引信不倒數)，被其他爆炸波及才會跟著爆
 function isDormant(m) { return m.def.behavior === 'cluster' && !m.armed; }
 
-// 小貢丸:檢查是否有 N 顆相連(上下左右),相連才一起引爆
+// 小貢丸:檢查是否有 N 顆相連(上下左右)，相連才一起引爆
 function checkClusters() {
   const smalls = meatballs.filter(
     (m) => m.def.behavior === 'cluster' && !m.exploded && !m.moving
@@ -1089,7 +1089,7 @@ function updateMovingMeatball(m, dt) {
   m.x = cx; m.y = cy;
   const nc = m.col + m.vx;
   const nr = m.row + m.vy;
-  // 牆、其他貢丸、人(滑行中的貢丸不能穿過人體;放在腳下不受影響)都會擋住
+  // 牆、其他貢丸、人(滑行中的貢丸不能穿過人體；放在腳下不受影響)都會擋住
   const blocked = isBlocked(nc, nr) ||
     meatballs.some((o) => o !== m && !o.exploded && !o.eaten && o.col === nc && o.row === nr) ||
     fighters().some((f) => f.alive && f.col === nc && f.row === nr);
@@ -1143,7 +1143,7 @@ function throwMeatball(p, m) {
   spawnText(p.x, p.y - TS * 0.55, '🧤丟!', '#ffd54f');
 }
 
-// 空白鍵:手上夾著貢丸 → 放下;面向可丟的貢丸 → 等第二下(兩下 = 丟,一下 = 照常放貢丸)
+// 空白鍵:手上夾著貢丸 → 放下；面向可丟的貢丸 → 等第二下(兩下 = 丟，一下 = 照常放貢丸)
 function spacePress(p) {
   if (!p.alive) return;
   if (p.held) { dropHeld(p); return; }
@@ -1156,7 +1156,7 @@ function spacePress(p) {
   placeMeatball(p);
 }
 
-// 掃描某方向上的貢丸,遇到障礙物(柱子、箱子、垃圾桶)就停
+// 掃描某方向上的貢丸，遇到障礙物(柱子、箱子、垃圾桶)就停
 function scanLine(p, dx, dy, firstOnly) {
   const found = [];
   let c = p.col, r = p.row;
@@ -1218,7 +1218,7 @@ function dropHeld(p) {
   spawnText(m.x, m.y - 12, '放下', '#80d8ff');
 }
 
-// 找面向方向第一個人物(敵人或自己以外的人),回傳 {ent, c, r}
+// 找面向方向第一個人物(敵人或自己以外的人)，回傳 {ent, c, r}
 function firstCharacterAhead(p) {
   let c = p.col, r = p.row;
   for (let i = 0; i < Math.max(COLS, ROWS); i++) {
@@ -1232,7 +1232,7 @@ function firstCharacterAhead(p) {
   return null;
 }
 
-// 彈弓:把面向(或夾著)的貢丸射向前方第一人 → 落地立刻爆;沒人就射到最遠的空格
+// 彈弓:把面向(或夾著)的貢丸射向前方第一人 → 落地立刻爆；沒人就射到最遠的空格
 function fireSlingshot(p, m) {
   if (p.held === m) p.held = null;
   const hit = firstCharacterAhead(p);
@@ -1254,7 +1254,7 @@ function updateHeldMeatball(p) {
   p.held.y = p.y;
 }
 
-// 防護盾:花 MP 啟動,增加一次「抵免爆炸波」的護盾
+// 防護盾:花 MP 啟動，增加一次「抵免爆炸波」的護盾
 function activateShield(p) {
   if (p.shieldT > 0) {
     spawnText(p.x, p.y - TS * 0.5, '防護盾作用中', '#ffd54f');
@@ -1272,7 +1272,7 @@ function activateShield(p) {
 }
 
 // ---------- 角色 ----------
-// 套用角色的初始能力值;電腦玩家打折(血 −1、速度 ×0.65、貢丸數 −1),難度和以前差不多
+// 套用角色的初始能力值；電腦玩家打折(血 −1、速度 ×0.65、貢丸數 −1)，難度和以前差不多
 function applyCharacter(p, id, bot) {
   const c = charDef(id);
   p.char = CHARACTERS[id] ? id : 'aman';
@@ -1286,7 +1286,7 @@ function applyCharacter(p, id, bot) {
 }
 const randomChar = () => CHAR_IDS[rand(CHAR_IDS.length)];
 
-// 瞬步落點:前方第 2 格,不行就第 1 格(要能站的地面、沒有貢丸)
+// 瞬步落點:前方第 2 格，不行就第 1 格(要能站的地面、沒有貢丸)
 function blinkTarget(p) {
   for (const d of [2, 1]) {
     const c = p.col + p.dir.x * d, r = p.row + p.dir.y * d;
@@ -1309,14 +1309,14 @@ function useSkill(p) {
     p.dashT = sk.time;
     say('💨衝刺!', '#4fc3f7');
   } else if (id === 'heal') {
-    // 鐵肚皮:無敵 1 秒,期間每被一顆貢丸炸到 +1 HP(看準時機硬吃爆炸)
+    // 鐵肚皮:無敵 1 秒，期間每被一顆貢丸炸到 +1 HP(看準時機硬吃爆炸)
     p.ironT = sk.time;
     p.invuln = Math.max(p.invuln, sk.time);
     say('💪鐵肚皮!', '#81c784');
   } else if (id === 'detonate') {
     const mine = meatballs.filter((m) => m.owner === p && !m.exploded && !m.eaten && !m.held && !isDormant(m));
     if (!mine.length) { if (p === player) say('場上沒有你的貢丸', '#bdbdbd'); return; }
-    // 0.4 秒後才爆(留反應時間:鄰格的人來得及往外跑一步),之後每顆再間隔 0.08 秒
+    // 0.4 秒後才爆(留反應時間:鄰格的人來得及往外跑一步)，之後每顆再間隔 0.08 秒
     mine.forEach((m, i) => { m.fuse = Math.min(m.fuse, sk.delay + i * 0.08); });
     say('💥麻辣引爆!', '#ff5252');
   } else if (id === 'blink') {
@@ -1344,7 +1344,7 @@ function aiSkill(e) {
   if (e.skillCd > 0) return;
   const id = charDef(e.char).skill;
   const dHere = danger[e.row][e.col];
-  if (id === 'heal') { if (dHere < 0.9) useSkill(e); }           // 爆炸快來時硬吃,賺 HP
+  if (id === 'heal') { if (dHere < 0.9) useSkill(e); }           // 爆炸快來時硬吃，賺 HP
   else if (id === 'dash') { if (dHere < 2.5) useSkill(e); }        // 正在逃命就加速
   else if (id === 'freeze') { if (dHere < 1.6) useSkill(e); }
   else if (id === 'blink') {
@@ -1361,7 +1361,7 @@ function aiSkill(e) {
   }
 }
 
-// 寵物卡:按下就放出,放出後不能收回(卡牌消失)
+// 寵物卡:按下就放出，放出後不能收回(卡牌消失)
 function deployPet(p, id) {
   const s = p.petState[id];
   if (!s || s.status !== 'stored') return;
@@ -1384,13 +1384,13 @@ function recallPet(p, id) {
   updateHud();
 }
 
-// 草叢:角色踏入時有 40% 驚動野生老鼠/蟑螂,攻擊一次後野生生物自生自滅
+// 草叢:角色踏入時有 40% 驚動野生老鼠/蟑螂，攻擊一次後野生生物自生自滅
 // 每叢只會出現一次野生生物
 function checkBushes() {
   for (const e of fighters()) {
     if (!e.alive) continue;
     const key = e.col + ',' + e.row;
-    if (e.bushKey === key) continue;          // 還在同一格,不重複判定
+    if (e.bushKey === key) continue;          // 還在同一格，不重複判定
     e.bushKey = key;
     if (grid[e.row][e.col] !== TILE.BUSH || usedBush.has(key)) continue;
     if (Math.random() < 0.4) {
@@ -1408,7 +1408,7 @@ function checkBushes() {
   }
 }
 
-// 野生生物:亂竄一段時間後自行消失(自生自滅);被爆炸波及也會消失
+// 野生生物:亂竄一段時間後自行消失(自生自滅)；被爆炸波及也會消失
 function updateWildCritters(dt) {
   for (const w of wildCritters) {
     w.life -= dt; w.wt -= dt;
@@ -1435,13 +1435,13 @@ function allPets() {
   return out;
 }
 
-// 更新放出中的寵物:啃咬、中毒結算;昏倒後標記為 dead(本場不能再放出)
+// 更新放出中的寵物:啃咬、中毒結算；昏倒後標記為 dead(本場不能再放出)
 function updatePets(dt) {
   for (const owner of fighters()) {
     if (!owner.pets || !owner.pets.length) continue;
     for (const pet of owner.pets) {
       pet.tickPoison(dt);
-      if (pet.alive) pet.update(dt); // 主人倒下後,放出中的寵物仍繼續啃貢丸
+      if (pet.alive) pet.update(dt); // 主人倒下後，放出中的寵物仍繼續啃貢丸
     }
     for (const pet of owner.pets) {
       if (!pet.alive) {
@@ -1469,7 +1469,7 @@ function revivePet(p) {
 // ====================================================================
 //  格子制移動(玩家與 AI 共用)
 // ====================================================================
-// 朝 e.mvTarget(下一格中心)平滑移動,抵達即吸附對齊
+// 朝 e.mvTarget(下一格中心)平滑移動，抵達即吸附對齊
 function advanceStep(e, dt) {
   if (!e.mvTarget) return;
   const ddx = e.mvTarget.x - e.x, ddy = e.mvTarget.y - e.y;
@@ -1478,7 +1478,7 @@ function advanceStep(e, dt) {
   const mv = (base + (e.dashT > 0 ? SKILLS.dash.bonus : 0)) * dt; // 豪雨 +10、下雪降到最低、衝刺 +80
   if (d <= mv) {
     e.x = e.mvTarget.x; e.y = e.mvTarget.y;
-    e.mvTarget = null; // 抵達格中心,可再轉向
+    e.mvTarget = null; // 抵達格中心，可再轉向
   } else {
     e.x += (ddx / d) * mv; e.y += (ddy / d) * mv;
   }
@@ -1493,7 +1493,7 @@ const MOVE_KEYS = {
   arrowleft: [-1, 0], a: [-1, 0], arrowright: [1, 0], d: [1, 0],
   arrowup: [0, -1], w: [0, -1], arrowdown: [0, 1], s: [0, 1],
 };
-let moveStack = []; // 目前按住的移動鍵,最後按下的排在最後(最優先)
+let moveStack = []; // 目前按住的移動鍵，最後按下的排在最後(最優先)
 
 window.addEventListener('keydown', (ev) => {
   const tag = ev.target && ev.target.tagName;
@@ -1512,14 +1512,14 @@ window.addEventListener('keydown', (ev) => {
     return;
   }
   if (k === 'r') {
-    // 重新開始:教學中=重來這一步;單機=整場重來;連線中不提供(避免誤觸)
+    // 重新開始:教學中=重來這一步；單機=整場重來；連線中不提供(避免誤觸)
     if (window.tutorial && tutorial.active) tutorial.retry();
     else if (!NET.online && gameState === 'playing') startSeries();
     return;
   }
   if (gameState !== 'playing') return;
   if (NET.role === 'guest') {           // 連線玩家:動作交給房主執行
-    if (MOVE_KEYS[k]) readPlayerInput(0); // 方向一變就立刻送出,不等下一幀
+    if (MOVE_KEYS[k]) readPlayerInput(0); // 方向一變就立刻送出，不等下一幀
     else NET.sendKey(k);
     return;
   }
@@ -1534,7 +1534,7 @@ function playerAction(p, k) {
     if (k === 'l') deployPet(p, 'roach');
     return;
   }
-  // 選擇貢丸 1~9;夜市限定 O 香腸、P 米腸
+  // 選擇貢丸 1~9；夜市限定 O 香腸、P 米腸
   if (k >= '1' && k <= '9') {
     p.selected = parseInt(k, 10);
     if (p === player) updateHud();
@@ -1560,7 +1560,7 @@ window.addEventListener('keyup', (ev) => {
   if (NET.role === 'guest' && MOVE_KEYS[k] && gameState === 'playing' && player) readPlayerInput(0);
 });
 
-// 玩家為「格子制」移動:一次走一整格,永遠對齊格線,方便轉彎不卡住
+// 玩家為「格子制」移動:一次走一整格，永遠對齊格線，方便轉彎不卡住
 function readPlayerInput(dt) {
   if (!player.alive) return; // 倒下後不能移動
   // 想走的方向 = 最近按住的移動鍵
@@ -1569,8 +1569,8 @@ function readPlayerInput(dt) {
     if (keys[moveStack[i]]) { want = MOVE_KEYS[moveStack[i]]; break; }
   }
   // 3D 跟隨/第一人稱模式:方向鍵改以鏡頭(人物前方)為基準
-  // (由 render3d.js 提供轉換;2D 版無此函式,維持絕對方向)
-  // 轉換結果若帶 keepFacing,表示「移動但不轉身」(如第一人稱倒退)
+  // (由 render3d.js 提供轉換；2D 版無此函式，維持絕對方向)
+  // 轉換結果若帶 keepFacing，表示「移動但不轉身」(如第一人稱倒退)
   let keepFacing = false;
   if (want && typeof window !== 'undefined' && window.moveTransform && (!window.VIEW || VIEW.mode === '3d')) {
     want = window.moveTransform(want);
@@ -1583,10 +1583,10 @@ function readPlayerInput(dt) {
 // 人類玩家的格子移動(本機玩家、房主代為移動的連線玩家共用)
 function humanMove(p, want, keepFacing, dt) {
   if (!p.alive) return;
-  // 鍵盤移動優先,會取消點擊地圖的自動走路
+  // 鍵盤移動優先，會取消點擊地圖的自動走路
   if (want) p.autoPath = null;
   if (!want) p.pushT = 0;
-  // 在格中心且沒有進行中的移動時,接受新方向、決定下一格目標
+  // 在格中心且沒有進行中的移動時，接受新方向、決定下一格目標
   if (!p.mvTarget && want) {
     if (!keepFacing) p.dir = { x: want[0], y: want[1] }; // 倒退時不轉身
     const nc = p.col + want[0], nr = p.row + want[1];
@@ -1614,7 +1614,7 @@ function humanMove(p, want, keepFacing, dt) {
   advanceStep(p, dt);
 }
 
-// 點地圖:點一下走過去、快速點兩下放貢丸(2D/3D 共用;連線玩家改送給房主)
+// 點地圖:點一下走過去、快速點兩下放貢丸(2D/3D 共用；連線玩家改送給房主)
 function tapCell(c, r, double) {
   if (double) {
     if (NET.role === 'guest') NET.sendKey(' '); else placeMeatball(player);
@@ -1645,7 +1645,7 @@ function setTapPath(p, c, r) {
 }
 
 // ---------- 點擊地圖操作(滑鼠與觸控通用) ----------
-// 點一下:自動走到該格;快速點兩下同一格:放貢丸
+// 點一下:自動走到該格；快速點兩下同一格:放貢丸
 let lastTap = { t: 0, c: -1, r: -1 };
 canvas.addEventListener('pointerdown', (ev) => {
   if (gameState !== 'playing' || !player || !player.alive) return;
@@ -1665,7 +1665,7 @@ canvas.addEventListener('pointerdown', (ev) => {
   ev.preventDefault();
 });
 
-// 目標格是否可進入(牆/磚/垃圾桶或有貢丸都不行;貢丸在腳下不算,因為目標一定是相鄰格)
+// 目標格是否可進入(牆/磚/垃圾桶或有貢丸都不行；貢丸在腳下不算，因為目標一定是相鄰格)
 function canEnterTile(e, c, r) {
   const here = e instanceof Player && grid[e.row] && grid[e.row][e.col] === TILE.BENCH ? benchAt(e.col, e.row) : null;
   if (here) return c === here.fc && r === here.fr;            // 躺在長椅上:只能往正面離開
@@ -1684,7 +1684,7 @@ function canEnterTile(e, c, r) {
 // ====================================================================
 //  AI 玩家(藍隊隊友 & 紅隊敵人)
 //  優先順序:逃離爆炸 > 炸得到敵人就放彈 > 撿道具 > 炸箱開路 > 逼近敵人
-//  全程持續運作;放彈前會先確認自己有退路
+//  全程持續運作；放彈前會先確認自己有退路
 // ====================================================================
 const AI_BOMB_TYPES = [1, 1, 2, 3, 5, 6, 7, 8, 9]; // 普通貢丸權重較高
 
@@ -1704,7 +1704,7 @@ function aiPath(e, goalFn, maxDepth = 18, avoidDanger = 0) {
       const nc = c + dc, nr = r + dr, k = key(nc, nr);
       if (seen.has(k) || !isFloor(nc, nr) || blockMB(nc, nr)) continue;
       const isGoal = goalFn(nc, nr);
-      // 避開即將爆炸的格子(目標格例外,例如逃生目標本身就是安全格)
+      // 避開即將爆炸的格子(目標格例外，例如逃生目標本身就是安全格)
       if (!isGoal && avoidDanger > 0 && danger[nr][nc] < avoidDanger) continue;
       seen.add(k); prev.set(k, [c, r]);
       if (isGoal) {
@@ -1735,7 +1735,7 @@ function aiEnemyInBlast(e) {
     cells.some((cl) => cl.c === f.col && cl.r === f.row));
 }
 
-// 在目前位置放彈後,是否還有退路可逃?
+// 在目前位置放彈後，是否還有退路可逃?
 function aiHasEscape(e) {
   const mine = blastCells(e.col, e.row, e.power, false);
   const inMine = (c, r) => mine.some((cl) => cl.c === c && cl.r === r);
@@ -1767,7 +1767,7 @@ function aiDecide(e) {
   let p = aiPath(e, (c, r) =>
     items.some((it) => !it.dead && it.col === c && it.row === r), 12, 1.0);
   if (p && p.length) { e.path = p; return; }
-  // 4) 站在可炸箱子旁就放彈;否則走去箱子旁準備炸
+  // 4) 站在可炸箱子旁就放彈；否則走去箱子旁準備炸
   if (canBomb) {
     if (adjacentToBreakable(e.col, e.row) && aiHasEscape(e)) { aiPlaceBomb(e); return; }
     p = aiPath(e, (c, r) => adjacentToBreakable(c, r), 12, 1.0);
@@ -1806,7 +1806,7 @@ function updateEnemy(e, dt) {
         e.dir = { x: nc - e.col, y: nr - e.row };
         e.mvTarget = { x: tileCenter(nc), y: tileCenter(nr) };
       } else {
-        e.path = null; // 路被擋住,下次重新決策
+        e.path = null; // 路被擋住，下次重新決策
       }
     } else if (e.bombOnArrive) {
       e.bombOnArrive = false;
@@ -1861,7 +1861,7 @@ function update(dt) {
   // 小貢丸群組判定
   checkClusters();
 
-  // 草叢:驚動野生老鼠/蟑螂;野生生物自生自滅
+  // 草叢:驚動野生老鼠/蟑螂；野生生物自生自滅
   checkBushes();
   updateWildCritters(dt);
 
@@ -1870,7 +1870,7 @@ function update(dt) {
 
   // 更新貢丸:老化、發霉、引信、滑行
   for (const m of meatballs) {
-    if (m.eaten) continue;             // 已被寵物吃掉,等待移除
+    if (m.eaten) continue;             // 已被寵物吃掉，等待移除
     if (m.fly) updateFlying(m, dt);    // 丟出 / 彈弓射出的飛行中
     else if (!m.held) updateMovingMeatball(m, dt); // 手持中不滑行(但仍會變質、引信倒數)
     m.age += dt;
@@ -1956,9 +1956,9 @@ function update(dt) {
   // 死亡動畫處理 + 移除
   bots.forEach((e) => { if (!e.alive && e.deathT === undefined) e.deathT = 0.4; });
   bots.forEach((e) => { if (e.deathT !== undefined) e.deathT -= dt; });
-  bots = bots.filter((e) => e.alive || e.deathT > 0 || e.remote || e.away > 0); // 連線玩家倒下仍保留(還能放寵物);被外星人抓走的會回來
+  bots = bots.filter((e) => e.alive || e.deathT > 0 || e.remote || e.away > 0); // 連線玩家倒下仍保留(還能放寵物)；被外星人抓走的會回來
 
-  // 新手教學:由 tutorial.js 接手關卡進度,不計時、不判勝負
+  // 新手教學:由 tutorial.js 接手關卡進度，不計時、不判勝負
   if (window.tutorial && tutorial.active) { tutorial.update(dt); updateHud(); return; }
 
   // 限時隊伍勝負判定
@@ -2008,7 +2008,7 @@ function draw() {
   if (env.weather === 'rain') drawRainSplashes();
   if (weatherDef().snow) drawSnowGround();
 
-  // 場上的東西依所在列分組,和地圖物件一起由上往下畫(前排會擋住後排)
+  // 場上的東西依所在列分組，和地圖物件一起由上往下畫(前排會擋住後排)
   const rows = Array.from({ length: ROWS }, () => []);
   const add = (y, fn) => rows[clamp(toRow(y), 0, ROWS - 1)].push([y, fn]);
   items.forEach((it) => add(it.y, () => drawItem(it)));
@@ -2118,7 +2118,7 @@ function drawRainStreaks() {
 }
 
 function drawBlind(a) {
-  // 吃過墨魚會降低不透明度;接近結束時漸退(透明度由 blindAlpha 算)
+  // 吃過墨魚會降低不透明度；接近結束時漸退(透明度由 blindAlpha 算)
   ctx.fillStyle = `rgba(4,6,16,${a})`;
   ctx.fillRect(0, 0, W, H);
   if (player.alive && player.blindT > 0) {
@@ -2131,10 +2131,10 @@ function drawBlind(a) {
   }
 }
 
-// ---------- 下雪:地面白色雪跡(越下越白)+ 雪花;火山灰也用同一套飄落 ----------
+// ---------- 下雪:地面白色雪跡(越下越白)+ 雪花；火山灰也用同一套飄落 ----------
 let snowLayer = null;
 function drawSnowGround() {
-  if (!snowLayer) {                       // 預先畫好一層柔邊白斑(位置固定,不會閃)
+  if (!snowLayer) {                       // 預先畫好一層柔邊白斑(位置固定，不會閃)
     snowLayer = document.createElement('canvas');
     snowLayer.width = W; snowLayer.height = H;
     const g = snowLayer.getContext('2d');
@@ -2200,7 +2200,7 @@ function drawAlien() {
 function drawItem(it) {
   const bob = Math.sin(it.t * 4) * 1.5;
   const pulse = 1 + Math.sin(it.t * 5) * 0.04;
-  // 道具(寫實圖,影子已含在圖裡)
+  // 道具(寫實圖，影子已含在圖裡)
   sprite('items/' + it.key, it.x, it.y + bob, TS * 0.95 * pulse);
   if (it.moldy) {
     ctx.fillStyle = 'rgba(110,170,40,0.5)';
@@ -2214,7 +2214,7 @@ function drawMeatball(m) {
   const wob = Math.sin(elapsed * 8) * 1.5;
   const x = m.x, y = m.y - (m.held ? TS * 0.5 : 0) - (m.jump || 0) * TS * 0.6 + wob; // 手持/跳起時抬高 + 上下浮動
   const r = TS * 0.36;
-  // 丸身(寫實圖,影子已含在圖裡)
+  // 丸身(寫實圖，影子已含在圖裡)
   sprite(meatballSprite(m.def), x, y, TS * 1.15);
 
   // 快爆炸時閃白
@@ -2240,7 +2240,7 @@ function drawMeatball(m) {
   }
 }
 
-// 爆炸波:每格一團火球(黴毒綠 / 墨魚黑),隨機旋轉,邊擴散邊淡出
+// 爆炸波:每格一團火球(黴毒綠 / 墨魚黑)，隨機旋轉，邊擴散邊淡出
 function drawExplosion(ex) {
   const a = clamp(ex.t / EXPLOSION_TIME, 0, 1);
   const kind = ex.poison ? 'poison' : ex.ink ? 'ink' : 'fire';
@@ -2271,11 +2271,11 @@ function drawCharacter(e) {
   if (e.away > 0) return;   // 被外星人抓走:暫時不在場上
   const blink = e.invuln > 0 && Math.floor(e.invuln * 12) % 2 === 0;
   if (blink) return;
-  // 全身像(寫實圖,腳底對齊格子下方;往左走時左右翻轉)
+  // 全身像(寫實圖，腳底對齊格子下方；往左走時左右翻轉)
   const size = TS * 1.55, footY = e.y + TS * 0.42;
   const img = ASSETS[charSprite(e)];
   const spot = e === player && e.alive && spotT > 0 ? Math.min(1, spotT / 0.6) : 0;
-  if (spot) {                                   // 開局:光柱 + 地面光圈,標出自己的位置
+  if (spot) {                                   // 開局:光柱 + 地面光圈，標出自己的位置
     const pulse = 0.75 + 0.25 * Math.sin(elapsed * 10);
     ctx.save();
     ctx.globalAlpha = spot;
@@ -2292,13 +2292,13 @@ function drawCharacter(e) {
     ctx.beginPath(); ctx.ellipse(e.x, footY - 4, rr, rr * 0.45, 0, 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
   }
-  if (e.alive) {                                 // 腳下隊伍色光圈:出生點不分左右,靠顏色分辨隊伍
+  if (e.alive) {                                 // 腳下隊伍色光圈:出生點不分左右，靠顏色分辨隊伍
     const blue = e.team !== 'red';
     ctx.save();
     ctx.fillStyle = blue ? 'rgba(58,166,255,0.30)' : 'rgba(231,76,60,0.30)';
     ctx.strokeStyle = TEAM_COLOR[e.team]; ctx.lineWidth = e === player ? 3 : 2;
     ctx.beginPath(); ctx.ellipse(e.x, footY - 3, TS * 0.44, TS * 0.19, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-    // 開局:隊友也打亮(隊伍色光圈擴散),一眼看出隊友在哪
+    // 開局:隊友也打亮(隊伍色光圈擴散)，一眼看出隊友在哪
     if (e !== player && player && e.team === player.team && spotT > 0) {
       const k = Math.min(1, spotT / 0.6), t = (elapsed * 1.2) % 1;
       ctx.globalAlpha = k * (1 - t);
@@ -2331,7 +2331,7 @@ function drawCharacter(e) {
   }
   ctx.globalAlpha = 1;
   const headY = footY - size * 0.93;
-  // 隊伍/玩家標記(頭上小箭頭:你=金色,隊友=藍,敵人=紅)
+  // 隊伍/玩家標記(頭上小箭頭:你=金色，隊友=藍，敵人=紅)
   ctx.fillStyle = e === player ? '#ffd54f' : TEAM_COLOR[e.team];
   ctx.strokeStyle = 'rgba(0,0,0,0.6)'; ctx.lineWidth = 1.5;
   ctx.beginPath();
@@ -2364,7 +2364,7 @@ function drawCharacter(e) {
     ctx.textBaseline = 'alphabetic';
   }
   const midY = footY - size * 0.42;
-  // 防護盾光環(作用中;快結束時閃爍)
+  // 防護盾光環(作用中；快結束時閃爍)
   if (e.shieldT > 0 && !(e.shieldT < 0.8 && Math.floor(e.shieldT * 10) % 2 === 0)) {
     ctx.strokeStyle = 'rgba(255,213,79,0.9)';
     ctx.lineWidth = 3;
@@ -2412,7 +2412,7 @@ function showResult() {
   if (NET.online) NET.onResult();
   onRoundEnd();
 }
-// 結算後回主選單(單機);連線中改用房間內的按鈕
+// 結算後回主選單(單機)；連線中改用房間內的按鈕
 function backToMainMenu() {
   if (NET.online) return;
   if (window.tutorial && tutorial.active) tutorial.stop();
@@ -2424,7 +2424,7 @@ function backToMainMenu() {
   gameState = 'menu';
   showOverlay('menu-overlay', true);
 }
-// 頂部「主選單」按鈕:對戰中先確認;連線中=離開攤位
+// 頂部「主選單」按鈕:對戰中先確認；連線中=離開攤位
 function goHome() {
   if (NET.online) {
     if (!confirm('離開攤位並回到主選單?')) return;
@@ -2433,7 +2433,7 @@ function goHome() {
     backToMainMenu();
     return;
   }
-  if (gameState === 'playing' && !(window.tutorial && tutorial.active) && !confirm('放棄這一局,回到主選單?')) return;
+  if (gameState === 'playing' && !(window.tutorial && tutorial.active) && !confirm('放棄這一局，回到主選單?')) return;
   backToMainMenu();
 }
 function startMatch() {
@@ -2445,7 +2445,7 @@ function startMatch() {
 }
 
 // ====================================================================
-//  戰隊名單側欄(左側頭像清單,像爆爆王的玩家列表)
+//  戰隊名單側欄(左側頭像清單，像爆爆王的玩家列表)
 // ====================================================================
 let rosterEls = [];
 function buildRoster() {
@@ -2453,7 +2453,7 @@ function buildRoster() {
   if (!el) return;
   el.innerHTML = '';
   rosterEls = [];
-  // 藍隊在前、紅隊在後(電腦版兩欄:藍隊左欄、紅隊右欄,CSS grid 依欄排列)
+  // 藍隊在前、紅隊在後(電腦版兩欄:藍隊左欄、紅隊右欄，CSS grid 依欄排列)
   const list = fighters().slice().sort((a, b) => (a.team === 'red') - (b.team === 'red'));
   el.style.setProperty('--roster-rows', Math.max(1, list.filter((f) => f.team !== 'red').length, list.filter((f) => f.team === 'red').length));
   for (const f of list) {
@@ -2470,12 +2470,12 @@ function buildRoster() {
 function updateRoster() {
   for (const { f, row, hp } of rosterEls) {
     row.classList.toggle('down', !f.alive);
-    // HP 上限超過 4(吃芋頭)時改顯示數字,避免愛心一長串把名字擠掉
+    // HP 上限超過 4(吃芋頭)時改顯示數字，避免愛心一長串把名字擠掉
     hp.textContent = f.maxHp > 4 ? `❤${Math.max(0, f.hp)}/${f.maxHp}` : '❤'.repeat(Math.max(0, f.hp)) + '·'.repeat(Math.max(0, f.maxHp - f.hp));
   }
 }
 
-// 永久道具格:電腦版放左欄(手牌列只留卡牌),窄螢幕放回手牌列右側
+// 永久道具格:電腦版放左欄(手牌列只留卡牌)，窄螢幕放回手牌列右側
 {
   const slots = document.getElementById('perm-slots'), home = document.getElementById('perm-home');
   const row = slots && slots.parentElement, mq = window.matchMedia && window.matchMedia('(min-width: 921px)');
@@ -2585,7 +2585,7 @@ function updateHud() {
   if (lowTip && lowTip.classList) lowTip.classList.toggle('hidden', !lowHp);
   // 連線模式:隱藏重新開始按鈕(body.online)
   if (document.body && document.body.classList) document.body.classList.toggle('online', !!NET.online);
-  // 遊戲中介面配色依地圖(夜市 = 深藍夜空,其他 = 天空藍)
+  // 遊戲中介面配色依地圖(夜市 = 深藍夜空，其他 = 天空藍)
   if (document.body && document.body.classList) for (const m of ['park', 'market', 'night']) document.body.classList.toggle('map-' + m, currentMapId === m);
   // 開局隊伍橫幅:你是哪一隊、隊友是誰(開局亮光期間)
   const tb = $el('team-banner');
@@ -2625,7 +2625,7 @@ function updateHud() {
   const scBox = (team, label) => `<span class="sc-${team}${p.team === team ? ' mine' : ''}">${p.team === team ? '<em>你</em>' : ''}` +
     (team === 'red' ? `<b class="sc-n">${teamAlive(team)}</b><span class="sc-faces">${faces(team)}</span>` : `<span class="sc-faces">${faces(team)}</span><b class="sc-n">${teamAlive(team)}</b>`) +
     `<small class="sc-lbl">${label}隊存活</small></span>`;
-  const multi = MATCH.rounds > 1;   // 多局賽制:勝場另外顯示,避免把存活人數看成比分
+  const multi = MATCH.rounds > 1;   // 多局賽制:勝場另外顯示，避免把存活人數看成比分
   setHtml('stat-enemies', scBox('blue', '藍') +
     `<span class="sc-time${multi ? ' multi' : ''}">${mm}:${ss.toString().padStart(2, '0')}${multi ? `<small>第 ${SERIES.round} 局・${SERIES.wins.blue}:${SERIES.wins.red}</small>` : ''}</span>` +
     scBox('red', '紅'));
@@ -2633,7 +2633,7 @@ function updateHud() {
   renderCards();
   // 戰隊名單:更新每個人的存活/HP 顯示
   updateRoster();
-  // 貢丸選擇列:只更新選取狀態(按鈕由 buildSelector 建立一次,不重建)
+  // 貢丸選擇列:只更新選取狀態(按鈕由 buildSelector 建立一次，不重建)
   refreshSelector();
   // 動作按鈕:當下無法執行的變半透明失效
   refreshActionButtons();
@@ -2652,7 +2652,7 @@ function refreshActionButtons() {
   const playing = inMatch && player.alive;
   const facing = playing ? facingMeatball(player) : null;
   const avail = {
-    // 放貢丸:有額度且腳下沒丸;夾著貢丸時 = 放下;面向可丟的貢丸時 = 連按兩下丟
+    // 放貢丸:有額度且腳下沒丸；夾著貢丸時 = 放下；面向可丟的貢丸時 = 連按兩下丟
     ' ': playing && (!!player.held || (!!facing && canThrow(player)) || (player.bombsPlaced() < player.maxBombs &&
          !meatballs.some((m) => !m.exploded && m.col === player.col && m.row === player.row))),
     'g': playing && player.mp >= SHIELD_MP_COST && !(player.shieldT > 0), // 防護盾:MP 夠且沒在作用中
@@ -2668,7 +2668,7 @@ function refreshActionButtons() {
 
 // ---------- 卡牌區(畫面下方):一次性工具、寵物、永久卡 ----------
 const CARD_TAG = { once: '一次性', perm: '永久', pet: '寵物' };
-const PET_DESC = '按下就放出,自動啃掉貢丸(無法收回)';
+const PET_DESC = '按下就放出，自動啃掉貢丸(無法收回)';
 function cardNote(p, key) {
   if (PETS[key]) return '點一下放出';
   const playing = gameState === 'playing' && p.alive;
@@ -2704,7 +2704,7 @@ function renderCards() {
       `<img src="assets/${c.img}.webp" alt=""><span class="tc-txt"><b>${c.def.name}</b><small>${fresh ? 'NEW' : cardNote(p, c.key)}</small></span></button>`;
   }).join('') || '<p class="cards-empty">木箱炸開撿到的工具會變成卡牌</p>';
   setHtml('card-bar', html);
-  // 永久能力:固定兩格(沒取得也留虛線框,知道還缺什麼)
+  // 永久能力:固定兩格(沒取得也留虛線框，知道還缺什麼)
   setHtml('perm-slots', p ? ['shoes', 'glove'].map((k) => {
     const own = p.tools[k] > 0, d = TOOLS[k];
     return `<div class="perm${own ? ' own' : ''}" title="${d.name}:${d.desc}"><img src="assets/items/${k}.webp" alt="">` +
@@ -2723,7 +2723,7 @@ function onCardClick(ev) {
   if (NET.role === 'guest') NET.sendKey(hot); else playerAction(player, hot);
 }
 
-// 建立貢丸選單(只執行一次;用事件委派,避免每幀重建 DOM 吃掉點擊)
+// 建立貢丸選單(只執行一次；用事件委派，避免每幀重建 DOM 吃掉點擊)
 let selectorLast = -1;
 function buildSelector() {
   const sel = document.getElementById('selector');
@@ -2778,7 +2778,7 @@ function refreshSelector() {
 const CHAR_MAX = { hp: 5, mp: 150, speed: 185, power: 3, bombs: 3 };
 function buildCharPick() {
   const box = $el('char-pick');
-  if (!box) { pickChar(myChar); return; }   // 選角移到對戰設定畫面;這裡只更新主選單的立繪
+  if (!box) { pickChar(myChar); return; }   // 選角移到對戰設定畫面；這裡只更新主選單的立繪
   box.innerHTML = CHAR_IDS.map((id) =>
     `<button type="button" class="charbtn" data-char="${id}" aria-label="${CHARACTERS[id].name}">` +
     `<img src="assets/portraits/${id}.webp" alt=""><span>${CHARACTERS[id].name}</span></button>`).join('');
@@ -2799,7 +2799,7 @@ function pickChar(id) {
   if (info) info.innerHTML = `<b>${c.name}</b>・${c.role}・技能 <b>${sk.icon}${sk.name}</b> ${sk.desc}`;
   const img = $el('hero-char');
   if (img) {
-    img.src = `assets/art/${id}.webp`;   // 主選單:角色形象插畫(assets/art,由 去背_角色形象圖 分割)
+    img.src = `assets/art/${id}.webp`;   // 主選單:角色形象插畫(assets/art，由 去背_角色形象圖 分割)
     img.alt = c.name;
     img.classList.remove('swap'); void img.offsetWidth; img.classList.add('swap');   // 換人小動畫
   }
@@ -2815,7 +2815,7 @@ function pickChar(id) {
   if (typeof NET !== 'undefined' && NET.role === 'guest') NET.raw({ t: 'pick', c: id });
 }
 
-// 首頁左右切換角色(按鈕或方向鍵);開始對戰時預設就是畫面上這位
+// 首頁左右切換角色(按鈕或方向鍵)；開始對戰時預設就是畫面上這位
 function cycleChar(d) {
   const n = CHAR_IDS.length;
   pickChar(CHAR_IDS[(CHAR_IDS.indexOf(myChar) + d + n) % n]);
@@ -2837,7 +2837,7 @@ function restart() {
   usedBush = new Set(); wildCritters = [];
 
   const spawns = teamSpawns();
-  // 連線房主:slotPlan()[出生點序號] = 該位置的真人玩家;沒有的就由 AI 補位
+  // 連線房主:slotPlan()[出生點序號] = 該位置的真人玩家；沒有的就由 AI 補位
   const humans = NET.role === 'host' ? NET.slotPlan() : {};
   // 第一個出生點 = 本機玩家(連線時是房主)
   player = new Player(spawns[0].col, spawns[0].row, true, '#3aa6ff');
@@ -2864,7 +2864,7 @@ function restart() {
   }
   gameState = 'playing';
   elapsed = 0;
-  // 寵物預設收著,用 K / L 放出
+  // 寵物預設收著，用 K / L 放出
   buildRoster();
   updateHud();
 }
@@ -2877,7 +2877,7 @@ function loop(now) {
   const dt = Math.min((now - last) / 1000, 0.05);
   last = now;
   update(dt);
-  if (!window.VIEW || VIEW.mode === '2d') draw(); // 3D 模式由 render3d.js 畫,2D 畫布不用畫
+  if (!window.VIEW || VIEW.mode === '2d') draw(); // 3D 模式由 render3d.js 畫，2D 畫布不用畫
   requestAnimationFrame(loop);
 }
 
@@ -2910,7 +2910,7 @@ loadAssets().then(() => {
       document.querySelectorAll('.mapbtn').forEach((b) =>
         b.classList.toggle('active', b === btn));
       restart();
-      gameState = 'menu'; // 維持在選單,只更新背景預覽
+      gameState = 'menu'; // 維持在選單，只更新背景預覽
     });
   });
   last = performance.now();

@@ -1,6 +1,6 @@
 // ====================================================================
 //  新手教學關卡(2D / 3D 共用)
-//  固定的小練習場,一步一步完成任務才進下一步;不計時、被炸到會原地重來
+//  固定的小練習場，一步一步完成任務才進下一步；不計時、被炸到會原地重來
 //  內容:基本操作 → 踢/丟 → 貢丸 → 地圖特色 → 食物/小吃 → 工具卡牌 → 寵物卡牌 → 實戰
 //  game.js 的 update() 在教學中改呼叫 tutorial.update(),restart() 會結束教學
 // ====================================================================
@@ -16,13 +16,13 @@
     return m;
   }
   const clearLong = () => { meatballs = meatballs.filter((m) => m.fuse < LONG / 2); };
-  // 清掉某格的掉落物(可改放指定道具),讓箱子/垃圾桶的掉落固定,好教學
+  // 清掉某格的掉落物(可改放指定道具)，讓箱子/垃圾桶的掉落固定，好教學
   function replaceDrop(c, r, key) {
     items = items.filter((it) => !(it.col === c && it.row === r));
     if (key) { spawnItem(c, r, key); return items[items.length - 1]; }
     return null;
   }
-  // 在指定格子放道具,回傳道具物件
+  // 在指定格子放道具，回傳道具物件
   function put(c, r, key) {
     items = items.filter((it) => !(it.col === c && it.row === r));
     const it = new Item(c, r, key);
@@ -41,7 +41,7 @@
     return d;
   }
   const tool = (k, n = 1) => { player.tools[k] = Math.max(player.tools[k] || 0, n); };
-  // 寵物卡回到手上(收回場上的、救回昏倒的),讓教學一定能練習
+  // 寵物卡回到手上(收回場上的、救回昏倒的)，讓教學一定能練習
   function resetPet(id) {
     const st = player.petState[id];
     if (st.status === 'out') recallPet(player, id);
@@ -60,25 +60,25 @@
     // ---------- 基本操作 ----------
     {
       title: '移動',
-      text: '用 <kbd>方向鍵</kbd>/<kbd>WASD</kbd> 移動(手機:點地圖一下就會走過去)。<br>走到 🍄 香菇那裡,把它撿起來。',
+      text: '用 <kbd>方向鍵</kbd>/<kbd>WASD</kbd> 移動(手機:點地圖一下就會走過去)。<br>走到 🍄 香菇那裡，把它撿起來。',
       setup(s) { s.item = put(7, 5, 'mushroom'); },
       done(s) { return !has(s.item); },
     },
     {
       title: '放貢丸、躲起來',
-      text: '走到 📦 木箱旁邊,按 <kbd>空白鍵</kbd>(手機:點自己兩下)放貢丸,<br>然後<b>馬上躲到柱子後面</b>。火焰是十字形,轉角最安全。',
+      text: '走到 📦 木箱旁邊，按 <kbd>空白鍵</kbd>(手機:點自己兩下)放貢丸，<br>然後<b>馬上躲到柱子後面</b>。火焰是十字形，轉角最安全。',
       setup() { grid[5][9] = TILE.BRICK; },
       done() { return grid[5][9] !== TILE.BRICK; },
     },
     {
       title: '撿工具',
-      text: '📦 木箱炸開常掉<b>工具</b>和食物。去撿 🥢 <b>食物夾</b>:<br>工具會變成畫面下方的<b>卡牌</b>,點一下就立刻使用(後面會教每一張)。',
+      text: '📦 木箱炸開常掉<b>工具</b>和食物。去撿 🥢 <b>食物夾</b>:<br>工具會變成畫面下方的<b>卡牌</b>，點一下就立刻使用(後面會教每一張)。',
       setup(s) { s.item = replaceDrop(9, 5, 'tongs'); },
       done(s) { return !has(s.item); },
     },
     {
       title: '吃東西變強',
-      text: '🗑️ 垃圾桶裡多半是<b>食物</b>。炸開下面的垃圾桶,撿起 🌶️ <b>辣椒</b>,<br>你的「威力」(火焰長度)會 +1,左邊的威力條會變長(手機在畫面上方)。',
+      text: '🗑️ 垃圾桶裡多半是<b>食物</b>。炸開下面的垃圾桶，撿起 🌶️ <b>辣椒</b>,<br>你的「威力」(火焰長度)會 +1，左邊的威力條會變長(手機在畫面上方)。',
       setup(s) { grid[7][9] = TILE.TRASH; s.power = player.power; },
       update(s) {
         if (!s.dropped && grid[7][9] !== TILE.TRASH) { s.dropped = true; replaceDrop(9, 7, 'chili'); }
@@ -87,32 +87,32 @@
     },
     {
       title: '換貢丸',
-      text: '共有 9 種貢丸,個性都不一樣。按 <kbd>2</kbd>(或點右側的 2 號,手機點下方貢丸格的 2)<br>換成「撒尿牛丸」:踢出去會在牆和人之間反彈。',
+      text: '共有 9 種貢丸，個性都不一樣。按 <kbd>2</kbd>(或點右側的 2 號，手機點下方貢丸格的 2)<br>換成「撒尿牛丸」:踢出去會在牆和人之間反彈。',
       done() { return player.selected === 2; },
     },
     {
       title: '⛈️ 豪雨時踢貢丸',
-      text: '下豪雨了!地面濕滑時人人都<b>踢得動貢丸</b>。放下一顆貢丸,退開一格後<b>面向它</b>,<br><b>再往貢丸的方向推</b>(繼續按方向鍵)就會踢出去,一路滑到撞到障礙物。<br>面向貢丸時地圖下方會提示能怎麼做。手機:點旁邊的貢丸轉身,再點一次就踢出。',
+      text: '下豪雨了!地面濕滑時人人都<b>踢得動貢丸</b>。放下一顆貢丸，退開一格後<b>面向它</b>,<br><b>再往貢丸的方向推</b>(繼續按方向鍵)就會踢出去，一路滑到撞到障礙物。<br>面向貢丸時地圖下方會提示能怎麼做。手機:點旁邊的貢丸轉身，再點一次就踢出。',
       setup() { T.wx = 'rain'; env.weather = 'rain'; announceWeather(); },
       done() { return meatballs.some((m) => m.owner === player && m.moving); },
     },
     {
       title: '🌨️ 下雪時丟貢丸',
-      text: '下雪了!大家都走得很慢,但人人都<b>丟得動貢丸</b>。放下一顆貢丸,退開一格後<b>面向它</b>,<br><b>快速連按兩下空白鍵</b>(手機:連點兩下放貢丸大圓鈕),貢丸會飛過障礙物落到前方。只按一下還是照常放貢丸。',
+      text: '下雪了!大家都走得很慢，但人人都<b>丟得動貢丸</b>。放下一顆貢丸，退開一格後<b>面向它</b>,<br><b>快速連按兩下空白鍵</b>(手機:連點兩下放貢丸大圓鈕)，貢丸會飛過障礙物落到前方。只按一下還是照常放貢丸。',
       setup() { T.wx = 'snow'; env.weather = 'snow'; announceWeather(); },
       done() { return meatballs.some((m) => m.owner === player && m.thrown); },
     },
     {
       title: '防護盾',
-      text: '按 <kbd>G</kbd> 花 ' + SHIELD_MP_COST + ' MP 開防護盾:維持 ' + SHIELD_TIME + ' 秒,期間擋下一次爆炸(擋完就消失)。<br>看到火焰快到了再開,時機最重要!',
+      text: '按 <kbd>G</kbd> 花 ' + SHIELD_MP_COST + ' MP 開防護盾:維持 ' + SHIELD_TIME + ' 秒，期間擋下一次爆炸(擋完就消失)。<br>看到火焰快到了再開，時機最重要!',
       setup(s) {},
-      // 上一步踢出的貢丸滑行會一直扣 MP,這裡保證至少夠開一次盾
+      // 上一步踢出的貢丸滑行會一直扣 MP，這裡保證至少夠開一次盾
       update() { if (player.mp < SHIELD_MP_COST) player.mp = SHIELD_MP_COST; },
       done() { return player.shieldT > 0; },
     },
     {
       title: '角色技能',
-      text: '每位角色都有<b>專屬技能</b>,按 <kbd>T</kbd> 使用,用完要等冷卻(看技能鈕上的圓環和秒數)。<br>阿丸的技能是 🌶️<b>加料</b>:下一顆貢丸威力 +2。按 <kbd>T</kbd> 試試看!',
+      text: '每位角色都有<b>專屬技能</b>，按 <kbd>T</kbd> 使用，用完要等冷卻(看技能鈕上的圓環和秒數)。<br>阿丸的技能是 🌶️<b>加料</b>:下一顆貢丸威力 +2。按 <kbd>T</kbd> 試試看!',
       setup() { player.skillCd = 0; player.boostNext = false; },
       done() { if (player.boostNext) { player.boostNext = false; return true; } return false; },
     },
@@ -120,13 +120,13 @@
     // ---------- 9 種貢丸 ----------
     {
       title: '3 號 爆漿貢丸',
-      text: '下面有兩個木箱排成一排。按 <kbd>3</kbd> 選爆漿貢丸,站在木箱左邊放下:<br><b>火焰會穿過箱子</b>,一次炸開兩個(但穿不過水泥柱)。',
+      text: '下面有兩個木箱排成一排。按 <kbd>3</kbd> 選爆漿貢丸，站在木箱左邊放下:<br><b>火焰會穿過箱子</b>，一次炸開兩個(但穿不過水泥柱)。',
       setup(s) {
         grid[9][9] = TILE.BRICK; grid[9][11] = TILE.BRICK;
         player.power = Math.max(player.power, 3);
       },
       update(s) {
-        // 這一步不需要掉落物,炸開就清掉
+        // 這一步不需要掉落物，炸開就清掉
         if (grid[9][9] !== TILE.BRICK) replaceDrop(9, 9);
         if (grid[9][11] !== TILE.BRICK) replaceDrop(11, 9);
       },
@@ -134,13 +134,13 @@
     },
     {
       title: '4 號 小貢丸',
-      text: '按 <kbd>4</kbd> 選小貢丸:<b>未滿三顆不會自己爆</b>,適合先埋好當陷阱。<br>把 <b>3 顆排在一起</b>(上下左右相連)就會立刻一起爆;被其他貢丸炸到也會跟著爆。放完記得躲開!',
+      text: '按 <kbd>4</kbd> 選小貢丸:<b>未滿三顆不會自己爆</b>，適合先埋好當陷阱。<br>把 <b>3 顆排在一起</b>(上下左右相連)就會立刻一起爆；被其他貢丸炸到也會跟著爆。放完記得躲開!',
       update(s) { watchBalls(s, [4]); },
       done(s) { return [...(s.seen || [])].some((m) => m.exploded); },
     },
     {
       title: '5~8 號 噴食物貢丸',
-      text: '這四種爆炸後會噴出食物:<br>5 香菇貢丸→🍄加速 · 6 芋頭貢丸→🍠HP 上限+1 · 7 香菜貢丸→🌿MP 上限+25 · 8 麻辣貢丸→🌶️火焰+1<br>選其中一種放下,炸完把噴出的食物撿起來。',
+      text: '這四種爆炸後會噴出食物:<br>5 香菇貢丸→🍄加速 · 6 芋頭貢丸→🍠HP 上限+1 · 7 香菜貢丸→🌿MP 上限+25 · 8 麻辣貢丸→🌶️火焰+1<br>選其中一種放下，炸完把噴出的食物撿起來。',
       setup(s) { s.base = null; },
       update(s) {
         const balls = watchBalls(s, [5, 6, 7, 8]);
@@ -150,20 +150,20 @@
     },
     {
       title: '9 號 墨魚貢丸',
-      text: '按 <kbd>9</kbd> 選墨魚貢丸:被炸到的人<b>畫面會變黑幾秒</b>。<br>爆炸後噴出 🦑 墨魚(會自己游走),撿起來以後被噴黑時會比較淡。',
+      text: '按 <kbd>9</kbd> 選墨魚貢丸:被炸到的人<b>畫面會變黑幾秒</b>。<br>爆炸後噴出 🦑 墨魚(會自己游走)，撿起來以後被噴黑時會比較淡。',
       setup(s) { s.ink = player.inkEaten; },
       done(s) { return player.inkEaten > s.ink; },
     },
 
     {
       title: '🥩 黑豬肉貢丸',
-      text: '1 號一般貢丸爆炸時偶爾會噴出 🥩 <b>黑豬肉</b>。先吃掉它,再放一顆貢丸:<br>這顆會變成<b>黑豬肉貢丸</b>,自己彈跳追蹤敵人(擋住就跳過去),碰到就爆。放完會恢復原本選的貢丸。',
+      text: '1 號一般貢丸爆炸時偶爾會噴出 🥩 <b>黑豬肉</b>。先吃掉它，再放一顆貢丸:<br>這顆會變成<b>黑豬肉貢丸</b>，自己彈跳追蹤敵人(擋住就跳過去)，碰到就爆。放完會恢復原本選的貢丸。',
       setup(s) { s.item = put(7, 9, 'blackpork'); s.dummy = dummy(11, 11); },
       done(s) { return !s.dummy.alive; },
     },
     {
       title: '🏮 夜市限定:大腸包小腸',
-      text: '夜市地圖才有:<kbd>O</kbd> 香腸(只往上下炸)、<kbd>P</kbd> 米腸(只往左右炸)。<br>先按 <kbd>P</kbd> 放米腸,走開一格再按 <kbd>O</kbd> 在旁邊放香腸:香腸會被包成<b>大腸包小腸</b>,3×3 範圍、無視柱子!',
+      text: '夜市地圖才有:<kbd>O</kbd> 香腸(只往上下炸)、<kbd>P</kbd> 米腸(只往左右炸)。<br>先按 <kbd>P</kbd> 放米腸，走開一格再按 <kbd>O</kbd> 在旁邊放香腸:香腸會被包成<b>大腸包小腸</b>,3×3 範圍、無視柱子!',
       setup(s) { T.nightOK = true; bots = []; buildRoster(); },
       update(s) { watchBalls(s, [13]); },
       done(s) { return [...(s.seen || [])].some((m) => m.exploded); },
@@ -172,7 +172,7 @@
     // ---------- 地圖特色 ----------
     {
       title: '🌳 公園長椅',
-      text: '公園地圖有 4 張<b>長椅</b>:炸不壞、火焰會穿過去。從椅子<b>正面</b>走進去就會躺下,<b>每秒回 1 HP</b>(還是會被炸到)。<br>你現在只剩 1 HP:走到右下長椅的正上方,再往下走進去躺好,把血回滿。椅背那側走不進去。',
+      text: '公園地圖有 4 張<b>長椅</b>:炸不壞、火焰會穿過去。從椅子<b>正面</b>走進去就會躺下，<b>每秒回 1 HP</b>(還是會被炸到)。<br>你現在只剩 1 HP:走到右下長椅的正上方，再往下走進去躺好，把血回滿。椅背那側走不進去。',
       setup(s) {
         T.nightOK = false;
         grid[10][11] = TILE.BENCH; grid[9][11] = TILE.EMPTY;
@@ -183,10 +183,10 @@
     },
     {
       title: '🥬 菜市場:開局滿地食物',
-      text: '菜市場開局會在沒有箱子的空地撒 <b>16 個食物</b>,一開始先搶先贏!<br>下面撒了 4 個,全部撿起來。(夜市的香腸、米腸剛剛已經學過了)',
+      text: '菜市場開局會在沒有箱子的空地撒 <b>16 個食物</b>，一開始先搶先贏!<br>下面撒了 4 個，全部撿起來。(夜市的香腸、米腸剛剛已經學過了)',
       setup(s) {
         grid[10][11] = TILE.EMPTY; benches = {};
-        player.hp = player.maxHp;   // 跳過長椅那步時,血量補回來
+        player.hp = player.maxHp;   // 跳過長椅那步時，血量補回來
         s.list = [put(3, 9, 'mushroom'), put(5, 9, 'cilantro'), put(9, 9, 'taro'), put(11, 9, 'chili')];
       },
       done(s) { return gone(s.list); },
@@ -195,13 +195,13 @@
     // ---------- 食物、小吃、防護 ----------
     {
       title: '其他食物',
-      text: '下面擺了 3 種食物,全部撿起來:<br>🍢 竹籤:可同時放的貢丸 +1 · 🥬 白蘿蔔:免疫力+(中毒、黑畫面變短)<br>🍄‍🟫 金針菇:自己的貢丸晚一點爆(倒下時會噴出來)',
+      text: '下面擺了 3 種食物，全部撿起來:<br>🍢 竹籤:可同時放的貢丸 +1 · 🥬 白蘿蔔:免疫力+(中毒、黑畫面變短)<br>🍄‍🟫 金針菇:自己的貢丸晚一點爆(倒下時會噴出來)',
       setup(s) { s.list = [put(5, 9, 'skewer'), put(7, 9, 'radish'), put(9, 9, 'enoki')]; },
       done(s) { return gone(s.list); },
     },
     {
       title: '台灣小吃神器',
-      text: '稀有的小吃會把能力直接拉滿,最下面一排全部吃掉:<br>🍗 雞排:HP 補滿 · 🍡 豬血糕:MP 補滿 · ☕ 早餐店奶茶:速度拉滿 · 🥤 珍奶:貢丸數拉滿<br>🥡 臭豆腐:火焰拉滿 · 🧧 <b>福袋:全部能力一次拉滿</b>(超稀有)',
+      text: '稀有的小吃會把能力直接拉滿，最下面一排全部吃掉:<br>🍗 雞排:HP 補滿 · 🍡 豬血糕:MP 補滿 · ☕ 早餐店奶茶:速度拉滿 · 🥤 珍奶:貢丸數拉滿<br>🥡 臭豆腐:火焰拉滿 · 🧧 <b>福袋:全部能力一次拉滿</b>(超稀有)',
       setup(s) {
         s.list = ['chicken', 'bloodcake', 'milktea', 'boba', 'tofu', 'luckybag'].map((k, i) => put(3 + i * 2, 11, k));
       },
@@ -211,38 +211,38 @@
     // ---------- 工具 ----------
     {
       title: '🧹 吸塵器卡',
-      text: '右邊擺了一顆貢丸。站到跟它同一排(中間沒有障礙物),點下方的 🧹 <b>吸塵器卡牌</b>(或 <kbd>Q</kbd>):<br><b>上下左右</b>各吸掉第一顆貢丸。一次性卡牌,用完就消失;卡牌下方會寫現在能不能用、為什麼。',
+      text: '右邊擺了一顆貢丸。站到跟它同一排(中間沒有障礙物)，點下方的 🧹 <b>吸塵器卡牌</b>(或 <kbd>Q</kbd>):<br><b>上下左右</b>各吸掉第一顆貢丸。一次性卡牌，用完就消失；卡牌下方會寫現在能不能用、為什麼。',
       setup(s) { clearLong(); s.ball = longBall(11, 5); tool('vacuum'); },
       done(s) { return s.ball.eaten; },
     },
     {
       title: '🚛 垃圾車卡',
-      text: '右邊一排有兩顆貢丸。站到同一排、<b>面向它們</b>,點 🚛 <b>垃圾車卡牌</b>(或 <kbd>F</kbd>):<br>把<b>前方整排</b>貢丸一次清光,遇到障礙物就停。',
+      text: '右邊一排有兩顆貢丸。站到同一排、<b>面向它們</b>，點 🚛 <b>垃圾車卡牌</b>(或 <kbd>F</kbd>):<br>把<b>前方整排</b>貢丸一次清光，遇到障礙物就停。',
       setup(s) { clearLong(); s.balls = [longBall(9, 7), longBall(11, 7)]; tool('garbage'); },
       done(s) { return s.balls.every((m) => m.eaten); },
     },
     {
       title: '🥢 食物夾卡',
-      text: '走到下面那顆貢丸旁、<b>面向它</b>,點 🥢 <b>食物夾卡牌</b>(或 <kbd>Z</kbd>)夾起來帶著走,<br>走到別的地方按 <kbd>空白鍵</kbd> 放下。',
+      text: '走到下面那顆貢丸旁、<b>面向它</b>，點 🥢 <b>食物夾卡牌</b>(或 <kbd>Z</kbd>)夾起來帶著走，<br>走到別的地方按 <kbd>空白鍵</kbd> 放下。',
       setup(s) { clearLong(); s.ball = longBall(7, 9); tool('tongs'); },
       update(s) { if (s.ball.held) s.picked = true; },
       done(s) { return s.picked && !s.ball.held; },
     },
     {
       title: '🧤 隔熱手套(永久卡)',
-      text: '撿起 🧤 <b>隔熱手套</b>:永久卡,撿到就一直有效,<b>任何天氣都能丟貢丸</b>,「永久道具」格會變綠(電腦版在左欄,手機在手牌上方)。<br>然後走到下面那顆貢丸上方、面向它(往下),<b>快速連按兩下空白鍵</b>丟出去。',
+      text: '撿起 🧤 <b>隔熱手套</b>:永久卡，撿到就一直有效，<b>任何天氣都能丟貢丸</b>，「永久道具」格會變綠(電腦版在左欄，手機在手牌上方)。<br>然後走到下面那顆貢丸上方、面向它(往下),<b>快速連按兩下空白鍵</b>丟出去。',
       setup(s) { clearLong(); player.tools.glove = 0; s.item = put(5, 5, 'glove'); s.ball = longBall(5, 9); },
       done(s) { return player.tools.glove > 0 && s.ball.thrown; },
     },
     {
       title: '🥾 鋼頭鞋(永久卡)',
-      text: '撿起 🥾 <b>鋼頭鞋</b>:永久卡,<b>不下雨也能踢貢丸</b>(右側「現在能做什麼」也會顯示)。<br>走到下面那顆貢丸上方、面向它,再<b>往下推</b>把它踢出去。(🌭 香腸類不能踢也不能丟)',
+      text: '撿起 🥾 <b>鋼頭鞋</b>:永久卡，<b>不下雨也能踢貢丸</b>(右側「現在能做什麼」也會顯示)。<br>走到下面那顆貢丸上方、面向它，再<b>往下推</b>把它踢出去。(🌭 香腸類不能踢也不能丟)',
       setup(s) { clearLong(); player.tools.shoes = 0; s.item = put(9, 5, 'shoes'); s.ball = longBall(9, 9); },
       done(s) { return player.tools.shoes > 0 && s.ball.moving; },
     },
     {
       title: '🏹 彈弓卡',
-      text: '右下角有個 🔴 稻草人,它上方那顆貢丸跟它在同一列。站到貢丸<b>上方</b>、面向它(往下),<br>點 🏹 <b>彈弓卡牌</b>(或 <kbd>C</kbd>):貢丸會射向前方第一個人,<b>命中立刻爆炸</b>。',
+      text: '右下角有個 🔴 稻草人，它上方那顆貢丸跟它在同一列。站到貢丸<b>上方</b>、面向它(往下),<br>點 🏹 <b>彈弓卡牌</b>(或 <kbd>C</kbd>):貢丸會射向前方第一個人，<b>命中立刻爆炸</b>。',
       setup(s) { clearLong(); s.dummy = dummy(11, 11); s.ball = longBall(11, 7); tool('slingshot'); },
       done(s) { return !s.dummy.alive; },
     },
@@ -250,7 +250,7 @@
     // ---------- 寵物 ----------
     {
       title: '🐭 老鼠卡',
-      text: '右邊有一顆貢丸。點 🐭 <b>老鼠卡牌</b>(或 <kbd>K</kbd>)放出老鼠,牠會自己跑去把貢丸<b>啃掉,不會爆炸</b>。<br>放出後<b>收不回來</b>;老鼠啃得快但跑得慢,也會啃你自己的貢丸。',
+      text: '右邊有一顆貢丸。點 🐭 <b>老鼠卡牌</b>(或 <kbd>K</kbd>)放出老鼠，牠會自己跑去把貢丸<b>啃掉，不會爆炸</b>。<br>放出後<b>收不回來</b>；老鼠啃得快但跑得慢，也會啃你自己的貢丸。',
       setup(s) {
         bots = []; buildRoster();
         clearLong();
@@ -261,7 +261,7 @@
     },
     {
       title: '🪳 蟑螂卡',
-      text: '左下角又有一顆貢丸。點 🪳 <b>蟑螂卡牌</b>(或 <kbd>L</kbd>)放出蟑螂:<b>跑得快但啃得慢</b>。<br>兩隻寵物可以同時在場上,一起幫你拆彈;被炸倒就沒了。',
+      text: '左下角又有一顆貢丸。點 🪳 <b>蟑螂卡牌</b>(或 <kbd>L</kbd>)放出蟑螂:<b>跑得快但啃得慢</b>。<br>兩隻寵物可以同時在場上，一起幫你拆彈；被炸倒就沒了。',
       setup(s) {
         clearLong();
         s.ball = longBall(3, 9);
@@ -314,7 +314,7 @@
     if (T.step >= STEPS.length) {
       b.innerHTML =
         '<div class="tut-head">🎉 教學完成!</div>' +
-        '<div class="tut-text">你已經認識所有貢丸、道具和寵物了。忘記的話,隨時可以按「❓ 說明」查看。</div>' +
+        '<div class="tut-text">你已經認識所有貢丸、道具和寵物了。忘記的話，隨時可以按「❓ 說明」查看。</div>' +
         '<div class="tut-btns"><button type="button" class="big primary" data-tut="play">🎮 開始正式對戰</button>' +
         '<button type="button" class="big" data-tut="menu">回主選單</button></div>';
       return;
@@ -331,14 +331,14 @@
 
   function enterStep(i, flash) {
     T.step = i;
-    T.wx = 'cool'; // 教學預設涼爽;個別步驟可改(例如踢貢丸要下豪雨)
+    T.wx = 'cool'; // 教學預設涼爽；個別步驟可改(例如踢貢丸要下豪雨)
     T.s = {};
     T.wait = 0;
     if (i < STEPS.length && STEPS[i].setup) STEPS[i].setup(T.s);
     render(flash);
   }
 
-  // 固定的練習場:外牆 + 柱子,沒有隨機箱子/草叢
+  // 固定的練習場:外牆 + 柱子，沒有隨機箱子/草叢
   function buildArena() {
     grid = [];
     for (let r = 0; r < ROWS; r++) {
@@ -391,7 +391,7 @@
       gameState = 'menu';
       showOverlay('menu-overlay', true);
     },
-    // 重來這步:回到起點、清掉場上的貢丸,重新佈置
+    // 重來這步:回到起點、清掉場上的貢丸，重新佈置
     retry() {
       if (!T.active) return;
       meatballs = []; explosions = [];
@@ -410,7 +410,7 @@
       if (T.step >= STEPS.length) return;
       const st = STEPS[T.step];
       if (st.update) st.update(T.s);
-      if (T.wait > 0) {          // 完成後停一下,讓玩家看到成果
+      if (T.wait > 0) {          // 完成後停一下，讓玩家看到成果
         T.wait -= dt;
         if (T.wait <= 0) enterStep(T.step + 1, '✔ 完成!');
         return;

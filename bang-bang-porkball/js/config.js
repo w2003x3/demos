@@ -1,5 +1,5 @@
 // ===== 全域設定 =====
-// 地圖以格子(tile)為單位,每格 TS 像素
+// 地圖以格子(tile)為單位，每格 TS 像素
 const TS = 48;            // 每格像素
 const COLS = 15;          // 地圖寬(格)
 const ROWS = 13;          // 地圖高(格)
@@ -10,10 +10,10 @@ const H = ROWS * TS;      // 畫布高
 const TILE = {
   EMPTY: 0, // 空地
   SOLID: 1, // 不可破壞牆(水泥柱)
-  BRICK: 2, // 木箱(可破壞,掉裝備/防護)
-  TRASH: 3, // 垃圾桶(可破壞,掉食用道具)
-  BUSH: 4,  // 草叢(可通行,可能驚動野生老鼠/蟑螂;可炸掉變草地)
-  BENCH: 5, // 長椅(公園):炸不壞、火焰可穿透;只能從椅子正面走進去,躺著每秒回 1 HP
+  BRICK: 2, // 木箱(可破壞，掉裝備/防護)
+  TRASH: 3, // 垃圾桶(可破壞，掉食用道具)
+  BUSH: 4,  // 草叢(可通行，可能驚動野生老鼠/蟑螂；可炸掉變草地)
+  BENCH: 5, // 長椅(公園):炸不壞、火焰可穿透；只能從椅子正面走進去，躺著每秒回 1 HP
 };
 const BENCH_HEAL = 1;     // 躺在長椅上每秒回幾 HP
 
@@ -28,14 +28,14 @@ const ITEMS = {
   skewer:   { name: '竹籤', emoji: '🍢', desc: '可放貢丸數 +', color: '#d2b48c' },
   // 白蘿蔔:提升免疫力 → 縮短負面狀態(中黴毒、黑畫面…)時效
   radish:   { name: '白蘿蔔', emoji: '🥬', desc: '免疫力 +(負面狀態變短)', color: '#cfd8dc' },
-  // 金針菇:延長「自己產生的貢丸」食用時效;死亡時噴出等量金針菇
+  // 金針菇:延長「自己產生的貢丸」食用時效；死亡時噴出等量金針菇
   enoki:    { name: '金針菇', emoji: '🍄‍🟫', desc: '自己貢丸時效 +', color: '#ffe0b2' },
-  // 墨魚:會自行小範圍移動;食用後減輕被墨魚貢丸炸到的黑畫面
+  // 墨魚:會自行小範圍移動；食用後減輕被墨魚貢丸炸到的黑畫面
   squid:    { name: '墨魚', emoji: '🦑', desc: '減輕黑畫面', color: '#455a64' },
-  // 黑豬肉:只會在 1 號一般貢丸爆炸時隨機噴出;吃下後下一顆一定是黑豬肉貢丸
+  // 黑豬肉:只會在 1 號一般貢丸爆炸時隨機噴出；吃下後下一顆一定是黑豬肉貢丸
   blackpork: { name: '黑豬肉', emoji: '🥩', desc: '下一顆變成追蹤敵人的黑豬肉貢丸', color: '#6d3a3a' },
 
-  // ===== 台灣小吃神器(稀有,直接把數值拉滿)=====
+  // ===== 台灣小吃神器(稀有，直接把數值拉滿)=====
   luckybag:  { name: '福袋',       emoji: '🧧', desc: '全能力直接達頂!', color: '#e53935' },
   chicken:   { name: '雞排',       emoji: '🍗', desc: 'HP 補滿',        color: '#e0a33c' },
   bloodcake: { name: '豬血糕',     emoji: '🍡', desc: 'MP 補滿',        color: '#6d3a2e' },
@@ -47,10 +47,10 @@ const ITEMS = {
 // 能力上限(福袋/小吃「達頂」用)
 const CAPS = { speed: 280, power: 8, bombs: 10, hp: 8, mp: 250, immunity: 4 };
 
-// 台灣小吃清單(福袋另計,更稀有)
+// 台灣小吃清單(福袋另計，更稀有)
 const SNACKS = ['chicken', 'bloodcake', 'milktea', 'boba', 'tofu'];
 
-// 會從可破壞磚隨機掉落的「食用」道具(竹籤不在此列,只從垃圾桶噴出)
+// 會從可破壞磚隨機掉落的「食用」道具(竹籤不在此列，只從垃圾桶噴出)
 const FOOD_DROP_KEYS = ['mushroom', 'taro', 'cilantro', 'chili',
   'radish', 'enoki', 'squid'];
 
@@ -77,7 +77,7 @@ function applyItem(p, key) {
     case 'radish':   // 白蘿蔔:提升免疫力(負面狀態時效變短)
       p.immunity = Math.min((p.immunity || 1) + 0.4, 4);
       break;
-    case 'enoki':    // 金針菇:自己貢丸時效 +,並記錄數量(死亡會噴出)
+    case 'enoki':    // 金針菇:自己貢丸時效 +，並記錄數量(死亡會噴出)
       p.enokiEaten = (p.enokiEaten || 0) + 1;
       p.fuseBonus = (p.fuseBonus || 0) + ENOKI_FUSE_BONUS;
       break;
@@ -116,7 +116,7 @@ function applyItem(p, key) {
 }
 
 // ===== 貢丸(炸彈)定義 =====
-// id 對應鍵盤 1~8;每種貢丸有不同個性
+// id 對應鍵盤 1~8；每種貢丸有不同個性
 const MEATBALLS = [
   {
     id: 1, key: '貢', name: '貢丸', color: '#d9a066', glow: '#b9783c',
@@ -136,9 +136,9 @@ const MEATBALLS = [
   },
   {
     id: 4, key: '小', name: '小貢丸', color: '#e67e22', glow: '#a85710',
-    behavior: 'cluster', // 三顆相連才會爆;未滿三顆不會自爆,被其他爆炸波及才跟著爆
+    behavior: 'cluster', // 三顆相連才會爆；未滿三顆不會自爆，被其他爆炸波及才跟著爆
     cluster: 3,
-    desc: '三顆相連才爆,被波及也會爆',
+    desc: '三顆相連才爆，被波及也會爆',
   },
   {
     id: 5, key: '菇', name: '香菇貢丸', color: '#8e6e53', glow: '#5c4632',
@@ -162,34 +162,34 @@ const MEATBALLS = [
   },
   {
     id: 9, key: '墨', name: '墨魚貢丸', color: '#37474f', glow: '#10171c',
-    behavior: 'ink', drop: 'squid', // 噴出墨魚,並讓被炸者短暫看不到畫面
+    behavior: 'ink', drop: 'squid', // 噴出墨魚，並讓被炸者短暫看不到畫面
     desc: '炸到會短暫黑畫面、噴墨魚',
   },
   // ===== 特殊貢丸(不在 1~9 選單裡)=====
   {
     id: 10, key: '黑', name: '黑豬肉貢丸', color: '#3b2b2b', glow: '#4a1414',
     behavior: 'homing', special: true, // 吃黑豬肉後的下一顆:彈跳追蹤敵人
-    desc: '自動彈跳追蹤敵人,碰到就爆',
+    desc: '自動彈跳追蹤敵人，碰到就爆',
   },
   // ===== 夜市限定(按 O / P 選)=====
   {
     id: 11, key: '腸', name: '香腸', color: '#c2412a', glow: '#7a2414',
     behavior: 'normal', axis: 'v', night: true, hotkey: 'o',
-    desc: '爆炸只往上下;放在米腸旁會被包成大腸包小腸',
+    desc: '爆炸只往上下；放在米腸旁會被包成大腸包小腸',
   },
   {
     id: 12, key: '米', name: '米腸', color: '#eadcc0', glow: '#a58b5a',
     behavior: 'normal', axis: 'h', night: true, hotkey: 'p',
-    desc: '爆炸只往左右;旁邊放香腸會包成大腸包小腸',
+    desc: '爆炸只往左右；旁邊放香腸會包成大腸包小腸',
   },
   {
     id: 13, key: '包', name: '大腸包小腸', color: '#d9b48a', glow: '#8a4a24',
     behavior: 'square', special: true, // 香腸 + 米腸合體
-    desc: '3×3 方格爆炸,無視柱子',
+    desc: '3×3 方格爆炸，無視柱子',
   },
 ];
 
-// 黑豬肉:1 號貢丸爆炸時噴出的機率;黑豬肉貢丸多給的引信秒數、每次彈跳間隔
+// 黑豬肉:1 號貢丸爆炸時噴出的機率；黑豬肉貢丸多給的引信秒數、每次彈跳間隔
 const BLACKPORK_DROP = 0.18;
 const PORK_FUSE_BONUS = 2.0;
 const PORK_HOP_TIME = 0.28;   // 一次彈跳的飛行時間
@@ -200,25 +200,25 @@ function meatballById(id) {
   return MEATBALLS.find((m) => m.id === id);
 }
 
-// 每顆貢丸的 HP(只有寵物能攻擊貢丸,人物不能)
+// 每顆貢丸的 HP(只有寵物能攻擊貢丸，人物不能)
 const MEATBALL_HP = 30;
 
 // ===== 寵物定義 =====
-// 寵物會自動衝向最近的貢丸啃咬(扣貢丸 HP),咬到 HP 歸零就吃掉它(不會爆炸)
+// 寵物會自動衝向最近的貢丸啃咬(扣貢丸 HP)，咬到 HP 歸零就吃掉它(不會爆炸)
 const PETS = {
   rat:   { id: 'rat',   name: '老鼠', emoji: '🐭', speed: 175, bite: 16, hp: 4 },
   roach: { id: 'roach', name: '蟑螂', emoji: '🪳', speed: 220, bite: 9,  hp: 3 },
 };
 
 // ===== 工具卡牌 =====
-// once:一次性(按下卡牌立刻使用,用完卡牌消失);perm:永久性(撿到就一直有效、自動發動)
+// once:一次性(按下卡牌立刻使用，用完卡牌消失);perm:永久性(撿到就一直有效、自動發動)
 const TOOLS = {
   vacuum:    { id: 'vacuum',    name: '吸塵器',   emoji: '🧹', useKey: 'q', type: 'once',
                desc: '吸掉上下左右各第一顆貢丸(拆彈)' },
   garbage:   { id: 'garbage',   name: '垃圾車',   emoji: '🚛', useKey: 'f', type: 'once',
-               desc: '清除前方整排貢丸,遇障礙物停止' },
+               desc: '清除前方整排貢丸，遇障礙物停止' },
   tongs:     { id: 'tongs',     name: '食物夾',   emoji: '🥢', useKey: 'z', type: 'once',
-               desc: '夾起前方貢丸,按空白鍵放下' },
+               desc: '夾起前方貢丸，按空白鍵放下' },
   slingshot: { id: 'slingshot', name: '彈弓',     emoji: '🏹', useKey: 'c', type: 'once',
                desc: '把前方貢丸射向前方第一人(立即爆)' },
   shoes:     { id: 'shoes',     name: '鋼頭鞋',   emoji: '🥾', type: 'perm',
@@ -230,24 +230,24 @@ const TOOLS = {
 const TOOL_DROP = { vacuum: 3, garbage: 2, tongs: 3, slingshot: 2, shoes: 1, glove: 1 };
 // 卡牌區的排列順序
 const CARD_ORDER = ['vacuum', 'garbage', 'tongs', 'slingshot', 'rat', 'roach', 'shoes', 'glove'];
-// 開場手牌(一次性工具;寵物卡另外各一張)
+// 開場手牌(一次性工具；寵物卡另外各一張)
 const START_TOOLS = { vacuum: 1, garbage: 1, tongs: 1, slingshot: 1 };
-// 丟貢丸:面向貢丸連按兩下空白鍵的判定時間;踢:往貢丸方向推多久才踢出
+// 丟貢丸:面向貢丸連按兩下空白鍵的判定時間；踢:往貢丸方向推多久才踢出
 const DOUBLE_TAP = 0.3;
 const PUSH_KICK = 0.15;
 // 香腸、米腸、大腸包小腸不能踢也不能丟
 const canMoveBall = (m) => !m.def.night && m.def.behavior !== 'square';
 
 // 丟擲 / 致盲 / 金針菇 相關
-const BASE_THROW = 4;          // 丟擲距離(格,從自己算起;可越過障礙物)
+const BASE_THROW = 4;          // 丟擲距離(格，從自己算起；可越過障礙物)
 const ENOKI_FUSE_BONUS = 0.7;  // 每顆金針菇增加自己貢丸的時效(秒)
 const BLIND_TIME = 3.5;        // 被墨魚貢丸炸到的黑畫面基礎秒數
 
-// 毒餌(老鼠藥/蟑螂藥)、防護裝備(防爆衣/N95 口罩)已移除;保留空表讓舊程式路徑不出錯
+// 毒餌(老鼠藥/蟑螂藥)、防護裝備(防爆衣/N95 口罩)已移除；保留空表讓舊程式路徑不出錯
 const BAITS = {};
 const GEAR = {};
 
-// 防護盾:花 MP 啟動,維持幾秒;期間擋下一次爆炸(被炸到就立刻失效),不能累積
+// 防護盾:花 MP 啟動，維持幾秒；期間擋下一次爆炸(被炸到就立刻失效)，不能累積
 const SHIELD_MP_COST = 30;
 const SHIELD_TIME = 3;
 
@@ -255,15 +255,15 @@ const SHIELD_TIME = 3;
 const MP_REGEN = 4;
 
 // ===== 出生點 =====
-// 每張地圖的出生點位置 [col, row];每局從中隨機挑出需要的數量、隨機分給每位玩家(不分隊伍左右)
-// 預設:九宮格扣掉正中間 = 四角 + 四邊中點,共 8 格(最多 4 對 4)。地圖布局不同時,在 MAPS 裡用 spawns 指定
+// 每張地圖的出生點位置 [col, row]；每局從中隨機挑出需要的數量、隨機分給每位玩家(不分隊伍左右)
+// 預設:九宮格扣掉正中間 = 四角 + 四邊中點，共 8 格(最多 4 對 4)。地圖布局不同時，在 MAPS 裡用 spawns 指定
 const GRID9_SPAWNS = (() => {
   const L = 1, R = COLS - 2, T = 1, B = ROWS - 2, MC = Math.floor(COLS / 2), MR = Math.floor(ROWS / 2);
   return [[L, T], [MC, T], [R, T], [L, MR], [R, MR], [L, B], [MC, B], [R, B]];
 })();
 
 // ===== 地圖主題 =====
-// 每張地圖用不同圖材與生成參數;snackWeights = 該地圖較容易掉的台灣小吃;spawns = 出生點(省略 = GRID9_SPAWNS)
+// 每張地圖用不同圖材與生成參數；snackWeights = 該地圖較容易掉的台灣小吃；spawns = 出生點(省略 = GRID9_SPAWNS)
 const MAPS = {
   park: {
     name: '公園', icon: '🌳',
@@ -307,7 +307,7 @@ const EXPLOSION_TIME = 0.5;
 const INVULN_TIME = 1.0;
 
 // ===== 天氣型態 =====
-// 一場會隨機變天(每 30~45 秒);天氣決定貢丸引信長短,部分天氣有特殊效果
+// 一場會隨機變天(每 30~45 秒)；天氣決定貢丸引信長短，部分天氣有特殊效果
 //   fuse:貢丸引信秒數  decay:未啟動小貢丸幾秒後分解  weight:被抽中的權重(災害較少見)
 const WEATHERS = {
   rain:    { name: '豪雨', icon: '⛈️', fuse: 3.0, decay: 8,  weight: 3, speedBonus: 10, freeKick: true,
@@ -325,8 +325,8 @@ const WEATHERS = {
   volcano: { name: '火山噴發', icon: '🌋', fuse: 2.3, decay: 10, weight: 1, ash: true,
              desc: '火山灰遮住視線' },
   alien:   { name: '外星人來襲', icon: '🛸', fuse: 3.0, decay: 12, weight: 1, alien: true,
-             desc: '隨機抓走一人,3 秒後放回、HP 剩 1' },
-  // 極稀有(權重 0.3,約 1.4%);開場不會出現
+             desc: '隨機抓走一人，3 秒後放回、HP 剩 1' },
+  // 極稀有(權重 0.3，約 1.4%)；開場不會出現
   rainbow: { name: '彩虹', icon: '🌈', fuse: 3.0, decay: 12, weight: 0.3, heal: true, rare: true,
              desc: '全體 HP 補滿(依各自上限)' },
 };
@@ -341,7 +341,7 @@ const WEATHER_CHIPS = {
   typhoon: [['limit', '每 4 秒吹走貢丸']],
   quake:   [['limit', '貢丸隨機移位']],
   volcano: [['bad', '畫面變暗'], ['fuse', '貢丸較快爆']],
-  alien:   [['bad', '抓走一人 3 秒,放回 HP 剩 1']],
+  alien:   [['bad', '抓走一人 3 秒，放回 HP 剩 1']],
   rainbow: [['good', '全體 HP 補滿']],
 };
 const isDisaster = (w) => !!(w.gust || w.shake || w.ash || w.alien);
@@ -349,7 +349,7 @@ const SNOW_SPEED = 90;        // 下雪時所有人的移動速度(最低)
 const ALIEN_BEAM = 2.2;       // 外星人光束照射幾秒後抓走
 const WEATHER_MIN = 5, WEATHER_MAX = 20;    // 每種天氣維持的秒數範圍(隨機)
 
-// ---------- 可選角色:初始能力值 + 專屬技能(T 鍵,用完要冷卻) ----------
+// ---------- 可選角色:初始能力值 + 專屬技能(T 鍵，用完要冷卻) ----------
 const CHARACTERS = {
   aman:     { name: '阿丸', title: '貢丸小子',   role: '均衡', hp: 3, mp: 100, speed: 150, power: 2, bombs: 3, skill: 'boost' },
   xiaoyu:   { name: '小芋', title: '芋圓妹',     role: '速度', hp: 3, mp: 90,  speed: 175, power: 2, bombs: 2, skill: 'dash' },
@@ -362,16 +362,16 @@ const CHAR_IDS = Object.keys(CHARACTERS);
 const SKILLS = {
   boost:    { name: '加料',     icon: '🌶️', cd: 12, desc: '下一顆貢丸威力 +2' },
   dash:     { name: '衝刺',     icon: '💨', cd: 12, desc: '4 秒內速度 +80', time: 4, bonus: 80 },
-  heal:     { name: '鐵肚皮',   icon: '💪', cd: 20, desc: '無敵 1 秒;期間每被炸到一次 +1 HP', time: 1 },
+  heal:     { name: '鐵肚皮',   icon: '💪', cd: 20, desc: '無敵 1 秒；期間每被炸到一次 +1 HP', time: 1 },
   detonate: { name: '麻辣引爆', icon: '💥', cd: 12, desc: '自己的貢丸 0.4 秒後全部引爆', delay: 0.4 },
-  blink:    { name: '瞬步',     icon: '🥷', cd: 10,  desc: '往前閃現 2 格,可穿越障礙' },
+  blink:    { name: '瞬步',     icon: '🥷', cd: 10,  desc: '往前閃現 2 格，可穿越障礙' },
   freeze:   { name: '剉冰',     icon: '🧊', cd: 15, desc: '周圍 3 格的貢丸延後 3 秒爆' },
 };
 const charDef = (id) => CHARACTERS[id] || CHARACTERS.aman;
 const skillOf = (p) => SKILLS[charDef(p.char).skill];
 // 主選單選的角色(記在瀏覽器)
 let myChar = 'aman';
-// 每次打開遊戲都隨機一位角色(主選單一開始就展示不同角色;玩家可再自行切換)
+// 每次打開遊戲都隨機一位角色(主選單一開始就展示不同角色；玩家可再自行切換)
 myChar = Object.keys(CHARACTERS)[Math.floor(Math.random() * Object.keys(CHARACTERS).length)];
 const env = {
   weather: 'cool',   // 目前天氣
@@ -393,8 +393,8 @@ const MOLD_STAGE = 6;
 // 小貢丸(未滿三顆、還沒啟動時)放太久會發霉分解:依天氣 8~16 秒
 function computeMiniDecay() { return weatherDef().decay; }
 
-// 抽一個天氣(依權重;可指定排除目前的、開場不出災害)
-// 權重可以是小數(彩虹 0.3);opening = 開場,不抽稀有天氣
+// 抽一個天氣(依權重；可指定排除目前的、開場不出災害)
+// 權重可以是小數(彩虹 0.3);opening = 開場，不抽稀有天氣
 function pickWeather(exclude, noDisaster, opening) {
   const pool = Object.entries(WEATHERS).filter(([k, w]) =>
     k !== exclude && !(noDisaster && isDisaster(w)) && !(opening && w.rare));
@@ -413,6 +413,6 @@ function setWeather(id) {
 function randomizeWeather() { setWeather(pickWeather(null, true, true)); }
 
 // ===== 黴毒(中毒)=====
-// 被「發霉貢丸」炸到 → 中黴毒,持續數秒、每秒扣 HP
+// 被「發霉貢丸」炸到 → 中黴毒，持續數秒、每秒扣 HP
 const POISON_TIME = 4;        // 中毒持續秒數
 const POISON_DPS = 1;         // 每秒扣 HP

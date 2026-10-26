@@ -1,9 +1,9 @@
 // ====================================================================
 //  多人連線(房主運算 host-authoritative)
 //
-//  伺服器:server/(Cloudflare Workers + Durable Objects),只負責房間名單與轉送。
-//  房主的瀏覽器跑完整遊戲(含 AI),每秒 15 次把狀態快照廣播給其他玩家;
-//  其他玩家(guest)不自己模擬,只送出按鍵/移動方向,並顯示房主送來的畫面。
+//  伺服器:server/(Cloudflare Workers + Durable Objects)，只負責房間名單與轉送。
+//  房主的瀏覽器跑完整遊戲(含 AI)，每秒 15 次把狀態快照廣播給其他玩家；
+//  其他玩家(guest)不自己模擬，只送出按鍵/移動方向，並顯示房主送來的畫面。
 //
 //  訊息(JSON,t 一定放第一個欄位):
 //   伺服器 → 玩家:welcome / lobby / error / host-left / peer-left
@@ -11,7 +11,7 @@
 //   玩家 → 房主  :in(按鍵 k / 移動 mv / 點地圖 go)
 // ====================================================================
 
-// 伺服器位址:預設連正式伺服器;網址加 ?server=local 改連本機的 wrangler dev(開發測試用)
+// 伺服器位址:預設連正式伺服器；網址加 ?server=local 改連本機的 wrangler dev(開發測試用)
 const ONLINE_SERVER = (() => {
   const q = new URLSearchParams(location.search).get('server');
   if (q) return q === 'local' ? 'ws://127.0.0.1:8787' : q;
@@ -20,15 +20,15 @@ const ONLINE_SERVER = (() => {
 
 const SNAP_INTERVAL = 1 / 15;   // 房主送快照的間隔(秒)
 // ====================================================================
-//  WebRTC 直連(攤主 ↔ 每位玩家,星狀)
+//  WebRTC 直連(攤主 ↔ 每位玩家，星狀)
 //  - 交換連線資訊(offer / answer / ICE)走原本的連線伺服器:玩家 → 攤主、攤主 → 指定玩家({to})
-//  - 每條直連兩個通道:state(不保證順序、不重傳,送每秒 15 次的快照)、events(可靠,送按鍵/移動)
-//  - 沒連上、逾時或中斷:那位玩家自動改回伺服器轉送(原本的 WebSocket),不影響遊戲
-//  - 只用免費的公開 STUN,不用 TURN 中繼
+//  - 每條直連兩個通道:state(不保證順序、不重傳，送每秒 15 次的快照)、events(可靠，送按鍵/移動)
+//  - 沒連上、逾時或中斷:那位玩家自動改回伺服器轉送(原本的 WebSocket)，不影響遊戲
+//  - 只用免費的公開 STUN，不用 TURN 中繼
 // ====================================================================
 const RTC_ICE = [{ urls: ['stun:stun.cloudflare.com:3478', 'stun:stun.l.google.com:19302'] }];
 const RTC_TIMEOUT = 10000;
-const RTC_OFF = new URLSearchParams(location.search).get('rtc') === '0';   // ?rtc=0 強制只用伺服器轉送(測試用;載入時就讀,加入攤位後網址會變)
+const RTC_OFF = new URLSearchParams(location.search).get('rtc') === '0';   // ?rtc=0 強制只用伺服器轉送(測試用；載入時就讀，加入攤位後網址會變)
 const rtcSupported = () => typeof RTCPeerConnection === 'function' && !RTC_OFF;
 
 class RtcPeer {
@@ -81,7 +81,7 @@ class RtcPeer {
       }
     } catch { this.fail(); }
   }
-  // 快照:通道塞車(瀏覽器還有大量資料沒送出)就跳過這一張,下一張會帶最新狀態
+  // 快照:通道塞車(瀏覽器還有大量資料沒送出)就跳過這一張，下一張會帶最新狀態
   sendState(json) { if (this.state.bufferedAmount < 256 * 1024) this.state.send(json); }
   close() { this.status = 'failed'; clearTimeout(this.timer); try { this.pc.close(); } catch { /* 已關閉 */ } }
 }
@@ -100,7 +100,7 @@ const NET = {
   hostPeer: null,    // 玩家:和攤主的直連
   links: {},         // 每位玩家目前的連線方式 {id: 'p2p' | 'relay'}(攤主算好廣播)
   snapSeq: 0,        // 攤主:快照流水號
-  lastSnap: 0,       // 玩家:收到的最新快照流水號(直連不保證順序,舊的丟掉)
+  lastSnap: 0,       // 玩家:收到的最新快照流水號(直連不保證順序，舊的丟掉)
   picks: {},         // 每位玩家選的角色 {id: 角色}(攤主收集後廣播)
   ready: {},         // 每位玩家是否按了「準備」{id: true}
   cfg: { map: 'park', teams: 'split' },
@@ -133,7 +133,7 @@ const NET = {
       if (wasOnline && gameState === 'playing') { this.takeover('與伺服器的連線中斷了'); return; }
       this.reset();
       if (wasOnline) backToMenu('與伺服器的連線中斷了');
-      else lobbyUI.status(lobbyUI.lastError || '連不上連線伺服器,請確認網路後再試一次(若剛更新過遊戲,請重新整理頁面)', true);
+      else lobbyUI.status(lobbyUI.lastError || '連不上連線伺服器，請確認網路後再試一次(若剛更新過遊戲，請重新整理頁面)', true);
     };
   },
   leave(silent) {
@@ -169,7 +169,7 @@ const NET = {
       (m) => this.guestMessage(m), () => refreshRoomUi());
     this.hostPeer.offer();
   },
-  // 收到對方的連線資訊(攤主:來自哪位玩家;玩家:來自攤主)
+  // 收到對方的連線資訊(攤主:來自哪位玩家；玩家:來自攤主)
   onRtcSignal(from, d) {
     if (!d || !rtcSupported()) return;
     if (this.role === 'host') {
@@ -183,7 +183,7 @@ const NET = {
     } else if (this.hostPeer) this.hostPeer.handle(d);
   },
   linkOf(id) { return this.peers[id] && this.peers[id].open ? 'p2p' : 'relay'; },
-  // 攤主送快照:直連的玩家走直連,其他人走伺服器(全部都沒直連就廣播一次)
+  // 攤主送快照:直連的玩家走直連，其他人走伺服器(全部都沒直連就廣播一次)
   sendSnap(snap) {
     snap.sn = ++this.snapSeq;
     const json = JSON.stringify(snap);
@@ -229,7 +229,7 @@ const NET = {
         else lobbyUI.render();
         return;
       case 'host-changed': {
-        // 攤主斷線,伺服器把攤主交給最早加入的玩家
+        // 攤主斷線，伺服器把攤主交給最早加入的玩家
         this.players = msg.players || [];
         const by = (this.players.find((p) => p.id === msg.id) || {}).name || '玩家';
         if (msg.id === this.id) this.becomeHost(msg.old, msg.oldName);
@@ -240,14 +240,14 @@ const NET = {
           setTimeout(() => this.startRtc(), 800);           // 和新攤主重新建立直連(先走伺服器轉送)
           refreshRoomUi();
         }
-        showToast(`⚠️ 攤主 ${msg.oldName || ''} 斷線了,改由 ${msg.id === this.id ? '你' : by} 當攤主`, true);
+        showToast(`⚠️ 攤主 ${msg.oldName || ''} 斷線了，改由 ${msg.id === this.id ? '你' : by} 當攤主`, true);
         return;
       }
       case 'host-left':
         this.ws = null;
         if (gameState === 'playing') { this.takeover('攤主斷線了'); return; }
         this.reset();
-        backToMenu('攤主收攤了,攤位已關閉');
+        backToMenu('攤主收攤了，攤位已關閉');
         return;
     }
     if (this.role === 'host') this.hostMessage(msg);
@@ -255,8 +255,8 @@ const NET = {
   },
 
   // ---------- 分隊:出生點序號 → 真人玩家 ----------
-  // 出生點 0~2 藍隊、3~5 紅隊;房主固定在 0
-  // 出生點 0..n-1 藍隊、n..2n-1 紅隊(n = 每隊人數);分兩隊時真人藍紅輪流排
+  // 出生點 0~2 藍隊、3~5 紅隊；房主固定在 0
+  // 出生點 0..n-1 藍隊、n..2n-1 紅隊(n = 每隊人數)；分兩隊時真人藍紅輪流排
   slotOrder() {
     const n = MATCH.size, order = [];
     if (MATCH.teams === 'coop') for (let i = 0; i < 2 * n; i++) order.push(i);
@@ -269,7 +269,7 @@ const NET = {
     this.roster().slice(0, order.length).forEach((p, i) => { plan[order[i]] = p; });
     return plan;
   },
-  // 房主排第一,其餘照伺服器給的加入順序
+  // 房主排第一，其餘照伺服器給的加入順序
   roster() {
     return this.players.filter((p) => p.host).concat(this.players.filter((p) => !p.host));
   },
@@ -280,7 +280,7 @@ const NET = {
   // ====================== 房主 ======================
   startOnline() { if (this.role === 'host') startSeries(); },
   restartMatch() { if (this.role === 'host') startSeries(); },
-  // 攤主開一局:自己先開,再通知大家(帶上規則、第幾局、比分)
+  // 攤主開一局:自己先開，再通知大家(帶上規則、第幾局、比分)
   startRound() {
     if (this.role !== 'host') return;
     this.resultShown = false;
@@ -315,7 +315,7 @@ const NET = {
   sendSeries() {
     this.raw({ t: 'series', s: { round: SERIES.round, wins: SERIES.wins, last: SERIES.last, over: SERIES.over, next: SERIES.over ? 0 : ROUND_GAP } });
   },
-  // ---------- 催促:還沒準備好的人;大家都準備好了就催攤主 ----------
+  // ---------- 催促:還沒準備好的人；大家都準備好了就催攤主 ----------
   nudgeTargets(byId) {
     const humans = this.roster();
     const notReady = humans.filter((p) => !p.host && !this.ready[p.id] && p.id !== byId).map((p) => p.id);
@@ -333,7 +333,7 @@ const NET = {
     refreshRoomUi();
     setTimeout(refreshRoomUi, 5100);
   },
-  // 攤主:算出要催誰,廣播給大家(同一個人 3 秒內只算一次)
+  // 攤主:算出要催誰，廣播給大家(同一個人 3 秒內只算一次)
   nudge(byId) {
     if (this.role !== 'host') return;
     this.nudgeSeen = this.nudgeSeen || {};
@@ -351,7 +351,7 @@ const NET = {
       AUDIO.voice('hurry');
       showToast(`📣 ${msg.by} 在催你:快點!大家都在等你!`, true);
     } else if (msg.byId === this.id) {
-      showToast(names.length ? `📣 已催促 ${names.join('、')}` : '大家都準備好了,攤主可以開始囉!');
+      showToast(names.length ? `📣 已催促 ${names.join('、')}` : '大家都準備好了，攤主可以開始囉!');
     } else if (names.length) {
       showToast(`📣 ${msg.by} 催促了 ${names.join('、')}`);
     }
@@ -372,14 +372,14 @@ const NET = {
     for (const w of wildCritters) { w.vx = 0; w.vy = 0; w.wt = 0; w.tx = w.ty = undefined; if (!(w.life > 0)) w.life = 1; }
     for (const p of allPets()) { p.tx = p.ty = undefined; }
   },
-  // 攤主轉移:我被選為新攤主 → 接著計算遊戲、送快照給其他人;舊攤主的角色改由電腦接手
+  // 攤主轉移:我被選為新攤主 → 接著計算遊戲、送快照給其他人；舊攤主的角色改由電腦接手
   becomeHost(oldId, oldName) {
     this.role = 'host';
     if (this.hostPeer) this.hostPeer.close();
     this.hostPeer = null; this.peers = {};
     delete this.picks[oldId]; delete this.ready[oldId];
     this.picks[this.id] = myChar;
-    // 物件編號沿用(其他人的畫面不用重建),新物件從目前最大編號之後開始
+    // 物件編號沿用(其他人的畫面不用重建)，新物件從目前最大編號之後開始
     let maxId = 0;
     for (const o of [...fighters(), ...meatballs, ...items, ...allPets(), ...wildCritters]) if (o && o._nid > maxId) maxId = o._nid;
     netSeq = Math.max(netSeq, maxId + 1000);
@@ -403,7 +403,7 @@ const NET = {
     if (setupUI.visible()) setupUI.render();
     updateHud();
   },
-  // 對戰中斷線:離開連線,其他真人角色全部改由電腦接手,自己在本機把這局打完;這局結束就不再繼續
+  // 對戰中斷線:離開連線，其他真人角色全部改由電腦接手，自己在本機把這局打完；這局結束就不再繼續
   takeover(reason) {
     if (this.ws) { const w = this.ws; this.ws = null; try { w.close(); } catch { /* 已關閉 */ } }
     for (const p of Object.values(this.peers)) p.close();
@@ -420,8 +420,8 @@ const NET = {
     }
     SERIES.offline = true;
     buildRoster();
-    showNetBanner(`⚠️ ${reason}:這局改由電腦接手,打完就回主選單`);
-    showToast(`⚠️ ${reason},改由電腦接手`, true);
+    showNetBanner(`⚠️ ${reason}:這局改由電腦接手，打完就回主選單`);
+    showToast(`⚠️ ${reason}，改由電腦接手`, true);
     updateHud();
   },
   setReady(v) {
@@ -435,7 +435,7 @@ const NET = {
       const f = bots.find((b) => b.netId === msg.id);
       if (f) {
         f.remote = false; f.netWant = null; f.label += '(電腦)'; buildRoster();
-        const text = `⚠️ ${f.label.replace('(電腦)', '')} 斷線了,改由電腦接手`;
+        const text = `⚠️ ${f.label.replace('(電腦)', '')} 斷線了，改由電腦接手`;
         showToast(text, true);
         this.raw({ t: 'notice', text });
       }
@@ -588,7 +588,7 @@ const guest = {
     for (const k of ['fighters', 'meatballs', 'items', 'pets', 'wild']) this[k] = new Map();
     this.ready = false;
   },
-  // 依 id 取出既有物件(保持同一個物件,3D 畫面才不會每次重建),沒有就新建
+  // 依 id 取出既有物件(保持同一個物件，3D 畫面才不會每次重建)，沒有就新建
   sync(map, list, make, fill) {
     const next = new Map();
     const out = [];
@@ -609,8 +609,8 @@ const guest = {
   },
 
   apply(s) {
-    if (gameState === 'menu') return; // 已回大廳,忽略晚到的快照
-    // 地圖:第一次換新陣列(3D 會整張重建),之後逐格更新
+    if (gameState === 'menu') return; // 已回大廳，忽略晚到的快照
+    // 地圖:第一次換新陣列(3D 會整張重建)，之後逐格更新
     const flat = s.g;
     if (!this.ready || grid.length !== ROWS) {
       grid = [];
@@ -657,7 +657,7 @@ const guest = {
     if (env.abduct && !env.abduct.f) env.abduct = null;
     const me = fs.list.find((f) => f.netId === NET.id);
     const firstFrame = !this.ready;
-    // 找不到自己(名單還沒同步)就先用第一個角色當鏡頭,不讓畫面壞掉
+    // 找不到自己(名單還沒同步)就先用第一個角色當鏡頭，不讓畫面壞掉
     player = me || fs.list[0];
     bots = fs.list.filter((f) => f !== player);
 
@@ -685,7 +685,7 @@ const guest = {
     this.items = is.map;
     items = is.list;
 
-    // 爆炸(短暫,直接換成最新的)
+    // 爆炸(短暫，直接換成最新的)
     explosions = s.ex.map((e) => ({ cells: e.c.map((v) => ({ c: Math.floor(v / 100), r: v % 100 })), t: e.t, color: e.co, poison: !!e.p, ink: !!e.k }));
 
     // 寵物
@@ -796,7 +796,7 @@ const lobbyUI = {
   show() {
     const el = this.ensure();
     if (!el) return;
-    // 右側角色:每次打開隨機一位;用邀請連結來的(網址帶 room)台詞改成邀請語氣
+    // 右側角色:每次打開隨機一位；用邀請連結來的(網址帶 room)台詞改成邀請語氣
     this.heroChar = CHAR_IDS[Math.floor(Math.random() * CHAR_IDS.length)];
     this.heroHost = !!new URLSearchParams(location.search).get('room');
     showOverlay('menu-overlay', false);
@@ -827,7 +827,7 @@ const lobbyUI = {
         '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="3.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
         '<h2>多人連線</h2><span class="ol-badge">最多 8 人</span></div>' +
         '<div class="ol-body"><div class="ol-form">' +
-        '<p class="sub">和朋友一起玩;人數不足的位置由電腦補上。</p>' +
+        '<p class="sub">和朋友一起玩；人數不足的位置由電腦補上。</p>' +
         `<label class="ol-field">暱稱 <input id="ol-name" maxlength="12" placeholder="你的名字" value="${esc(name)}"></label>` +
         `<div class="ol-me"><img src="assets/avatars/${myChar}.webp" alt=""><span><small>你的角色</small><b>${charDef(myChar).name}</b></span>` +
         '<button type="button" data-ol="char">換角色</button></div>' +
@@ -837,7 +837,7 @@ const lobbyUI = {
         `<input id="ol-code" maxlength="6" placeholder="攤位代碼" aria-label="攤位代碼" value="${esc(code)}" autocomplete="off">` +
         '<button type="button" class="big" data-ol="join">加入</button></div>' +
         `<p class="ol-status${this.msgErr ? ' err' : ''}">${esc(this.msg)}</p>` +
-        '<p class="mini">收到邀請連結的話,點開會直接帶入代碼。</p></div>' +
+        '<p class="mini">收到邀請連結的話，點開會直接帶入代碼。</p></div>' +
         `<div class="ol-hero" aria-hidden="true"><img src="assets/art/${this.heroChar}.webp" alt=""><span class="ol-bubble">${this.heroHost ? '快來陪我擺攤!' : '一起來開攤!'}</span></div></div>`;
       return;
     }
@@ -899,7 +899,7 @@ const lobbyUI = {
     else if (a === 'leave') { NET.leave(); this.status(''); this.render(); }
     else if (a === 'back') { this.hide(); showOverlay('menu-overlay', true); }
     else if (a === 'char') {
-      // 換角色:依序切換,保留已輸入的暱稱
+      // 換角色:依序切換，保留已輸入的暱稱
       const inp = this.el.querySelector('#ol-name');
       if (inp) this.draftName = inp.value;
       pickChar(CHAR_IDS[(CHAR_IDS.indexOf(myChar) + 1) % CHAR_IDS.length]);
@@ -952,7 +952,7 @@ function restoreResultButtons() {
   if (box) box.remove();
 }
 
-// 開始畫面的「多人連線」按鈕;網址帶 ?room= 時直接打開大廳
+// 開始畫面的「多人連線」按鈕；網址帶 ?room= 時直接打開大廳
 (function initOnlineButton() {
   const btn = document.getElementById('btn-online');
   if (btn) btn.addEventListener('click', () => lobbyUI.show());

@@ -1,5 +1,5 @@
 /* ====================================================================
-   炸裂丸子 介面(灰天空 + 炭黑緞帶 + 亮黃重點色;粗黑描邊的扁平風格)
+   炸裂丸子 介面(灰天空 + 炭黑緞帶 + 亮黃重點色；粗黑描邊的扁平風格)
    ==================================================================== */
 * { box-sizing: border-box; margin: 0; padding: 0; }
 
@@ -30,7 +30,7 @@ body {
   font-family: var(--font);
   background: var(--sky);
   color: var(--ink);
-  overflow: hidden; /* 單一畫面,不捲動 */
+  overflow: hidden; /* 單一畫面，不捲動 */
 }
 button, select, input { font-family: inherit; }
 
@@ -90,7 +90,7 @@ body:not(.mode-3d) .only-3d { display: none !important; }
 .sc-blue { padding: 0 16px 0 22px; background: var(--blue); color: #fff; font-size: 22px; clip-path: polygon(12px 0, 100% 0, 100% 100%, 0 100%); }
 .sc-time { padding: 0 22px; background: var(--accent); color: var(--ink); font-size: 30px; letter-spacing: .04em; }
 .sc-red { padding: 0 22px 0 16px; background: var(--red); color: #fff; font-size: 22px; clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%); }
-/* 比分:「存活」小字;自己隊伍加「你」標籤與金色底線;多局賽制在時間下方顯示局數與勝場 */
+/* 比分:「存活」小字；自己隊伍加「你」標籤與金色底線；多局賽制在時間下方顯示局數與勝場 */
 .scoreboard small { font-family: "Noto Sans TC", sans-serif; font-size: 10px; line-height: 1.15; font-weight: 700; opacity: .85; margin-right: 6px; text-align: center; }
 .scoreboard em { font-style: normal; font-family: "Noto Sans TC", sans-serif; font-size: 12px; font-weight: 900; background: var(--accent); color: var(--ink); padding: 1px 5px; margin-right: 6px; }
 .sc-blue.mine, .sc-red.mine { box-shadow: inset 0 -4px 0 var(--accent); }
@@ -99,7 +99,7 @@ body:not(.mode-3d) .only-3d { display: none !important; }
 .team-chip { margin-left: auto; padding: 2px 8px; font-size: 12px; font-weight: 900; color: #fff; }
 .team-chip.blue { background: var(--blue); }
 .team-chip.red { background: var(--red); }
-/* 開局隊伍橫幅(2D / 3D 共用):放在棋盤正中央 = 九宮格中間,不是出生點,不會擋到任何人 */
+/* 開局隊伍橫幅(2D / 3D 共用):放在棋盤正中央 = 九宮格中間，不是出生點，不會擋到任何人 */
 .team-banner { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 7; pointer-events: none;
   display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 26px; color: #fff; text-align: center;
   border: 3px solid var(--ink); box-shadow: 4px 4px 0 rgba(0,0,0,.3); animation: teamIn .35s ease-out; }
@@ -272,7 +272,7 @@ body.mode-3d #ink-overlay {
   clip-path: polygon(50% 0, 61% 35%, 98% 35%, 68% 57%, 79% 91%, 50% 70%, 21% 91%, 32% 57%, 2% 35%, 39% 35%);
 }
 .menu-title h1 { font-weight: 900; white-space: nowrap; font-size: clamp(60px, 8.5vw, 110px); line-height: 1.05; letter-spacing: .04em; }
-/* 定稿 Logo(assets/logo.webp,由 定稿_標題_去背.webp 裁切縮小) */
+/* 定稿 Logo(assets/logo.webp，由 定稿_標題_去背.webp 裁切縮小) */
 .menu-title h1.menu-logo { margin: 0 0 4px -2%; font-size: 0; line-height: 0; }
 .menu-logo img { display: block; width: min(100%, 480px); height: auto; filter: drop-shadow(4px 6px 0 rgba(0,0,0,.18)); }
 .menu-sub { font-size: 18px; font-weight: 700; color: #4a4a4a; }
@@ -428,7 +428,7 @@ button.big:disabled { opacity: .45; cursor: not-allowed; }
 .tut-btns.small .icon-btn { font-size: 12px; padding: 2px 8px; min-height: 30px; }
 .tut-btns .big { width: auto; padding: 0 22px; margin: 0; }
 
-/* ===== 多人連線大廳(js/net.js,改成全螢幕) ===== */
+/* ===== 多人連線大廳(js/net.js，改成全螢幕) ===== */
 #online-overlay { position: fixed; inset: 0; z-index: 45; background: var(--sky); display: flex; align-items: center; justify-content: center; }
 #online-overlay.hidden { display: none; }
 .opanel { text-align: center; }
@@ -499,7 +499,7 @@ button.big:disabled { opacity: .45; cursor: not-allowed; }
 .wx-note { font-size: 12px; font-weight: 500; color: var(--muted); line-height: 1.5; }
 .wx-note b { color: var(--ink); font-weight: 900; }
 
-/* 寬螢幕:遊戲三欄整體置中,兩側面板不要貼在螢幕最邊緣 */
+/* 寬螢幕:遊戲三欄整體置中，兩側面板不要貼在螢幕最邊緣 */
 .cockpit { width: 100%; max-width: 1600px; margin: 0 auto; }
 
 /* ===== 天氣卡、變天提示 ===== */
@@ -632,7 +632,7 @@ button.big:disabled { opacity: .45; cursor: not-allowed; }
 .bar3 i { position: absolute; left: 0; top: 0; bottom: 0; transition: width .15s; }
 .bar3.mini { height: 7px; margin-top: 2px; }
 
-/* 情境提示(地圖下緣中央;2D / 3D 共用) */
+/* 情境提示(地圖下緣中央；2D / 3D 共用) */
 .ctx-hint {
   position: absolute; left: 50%; bottom: 18px; transform: translateX(-50%); z-index: 6; pointer-events: none;
   display: flex; align-items: center; gap: 8px; padding: 6px 12px;
@@ -981,7 +981,7 @@ body.mode-3d #lowhp-overlay.on {
 .hero-chars .hc-img.swap { animation: heroSwap .28s ease; }
 @keyframes heroSwap { from { opacity: .3; transform: translateY(10px) scale(.96); } to { opacity: 1; transform: none; } }
 
-/* 低血量文字提示(配合畫面邊緣紅光,2D / 3D 共用) */
+/* 低血量文字提示(配合畫面邊緣紅光，2D / 3D 共用) */
 #lowhp-tip {
   position: absolute; left: 50%; top: 56px; transform: translateX(-50%); z-index: 6; pointer-events: none;
   padding: 5px 14px; background: rgba(200,30,30,.92); color: #fff; font-size: 15px; font-weight: 900; white-space: nowrap;
@@ -991,7 +991,7 @@ body.mode-3d #lowhp-overlay.on {
 @media (max-width: 560px) { #lowhp-tip { top: 44px; font-size: 13px; padding: 4px 10px; } }
 
 /* =====================================================================
-   主選單改版(2026-10-26,依定稿主視覺 / Logo 的夜市爆炸漫畫風)
+   主選單改版(2026-10-26，依定稿主視覺 / Logo 的夜市爆炸漫畫風)
    天空藍放射線 + 網點、爆炸框角色展示、紅色大按鈕、奶油色漫畫格選單
    ===================================================================== */
 #menu-overlay {
@@ -1067,9 +1067,9 @@ body.mode-3d #lowhp-overlay.on {
 }
 
 /* =====================================================================
-   遊戲中介面改版(2026-10-26,依定稿主視覺 / Logo):粗黑框、硬邊投影、網點背景、
-   黃色頁籤標題、奶油色卡片;夜市地圖用深藍夜空,其他地圖用天空藍
-   (只改外觀,不動結構與功能)
+   遊戲中介面改版(2026-10-26，依定稿主視覺 / Logo):粗黑框、硬邊投影、網點背景、
+   黃色頁籤標題、奶油色卡片；夜市地圖用深藍夜空，其他地圖用天空藍
+   (只改外觀，不動結構與功能)
    ===================================================================== */
 #app { --g-ink: #17161c; --g-cream: #fff4da; --g-yellow: #ffcf2e; --g-red: #e43d30; --g-blue: #2e8bea; --g-shadow: #17161c;
   background-color: #2e8bea; background-image: radial-gradient(rgba(255,255,255,.22) 2px, transparent 2.6px); background-size: 16px 16px; }
@@ -1151,7 +1151,7 @@ body.map-night #app { --g-shadow: #0c1230; background-color: #1a2550; background
 
 /* =====================================================================
    電腦版精簡配置(≥921px):左右欄在 768 高的螢幕也不出捲軸
-   左:天氣一行、數值兩欄、戰隊兩欄(藍左紅右);右:貢丸格縮小、動作鈕收緊;操作提示改在說明裡
+   左:天氣一行、數值兩欄、戰隊兩欄(藍左紅右)；右:貢丸格縮小、動作鈕收緊；操作提示改在說明裡
    ===================================================================== */
 @media (min-width: 921px) {
   #app .cockpit { gap: 14px; padding: 12px 16px; }
@@ -1176,7 +1176,7 @@ body.map-night #app { --g-shadow: #0c1230; background-color: #1a2550; background
   #app .side-left .stat-row small { display: none; }
   #app .side-left .stat-tag { display: none; }
   #app .ch-face { width: 34px; height: 34px; }
-  /* 戰隊:兩欄(藍隊左、紅隊右),一行一人 */
+  /* 戰隊:兩欄(藍隊左、紅隊右)，一行一人 */
   #app .roster { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); grid-auto-flow: column; grid-template-rows: repeat(var(--roster-rows, 4), auto); gap: 5px; }
   #app .roster .roster-row { padding: 2px 5px; gap: 4px; border-width: 2px; border-left-width: 6px !important; box-shadow: 2px 2px 0 var(--g-shadow); min-width: 0; }
   #app .roster-face { width: 22px; height: 22px; }
@@ -1202,7 +1202,7 @@ body.map-night #app { --g-shadow: #0c1230; background-color: #1a2550; background
   #app .can-do .cd-title { display: none; }
 }
 @media (min-width: 921px) {
-  /* 名單一行:頭像 + 角色名(「隊友 1」等標籤隱藏;自己仍顯示「你」) */
+  /* 名單一行:頭像 + 角色名(「隊友 1」等標籤隱藏；自己仍顯示「你」) */
   #app .roster .roster-row { padding: 4px 6px; }
   #app .roster-face { width: 26px; height: 26px; }
   #app .roster-name { font-size: 0; }
@@ -1222,7 +1222,7 @@ body.map-night #app { --g-shadow: #0c1230; background-color: #1a2550; background
   #app .sc-blue { border-right: 4px solid var(--g-cream); }
   #app .sc-red { border-left: 4px solid var(--g-cream); }
 }
-/* 卡牌插畫(assets/cards,由 卡牌圖示.png 去背分割):卡面放大顯示 */
+/* 卡牌插畫(assets/cards，由 卡牌圖示.png 去背分割):卡面放大顯示 */
 #app .tcard img { width: 54px; height: 54px; filter: drop-shadow(2px 2px 0 rgba(23,22,28,.25)); }
 #app .tcard.off img { filter: grayscale(.9) opacity(.7); }
 @media (max-width: 920px) { #app .tcard img { width: 40px; height: 40px; } }
@@ -1392,7 +1392,7 @@ body.map-night #app { --g-shadow: #0c1230; background-color: #1a2550; background
   #online-overlay .ol-form { padding: 18px 16px; box-shadow: 5px 5px 0 var(--s-ink); }
   #online-overlay button.big.primary { height: 64px; font-size: 22px; }
 }
-/* 選角色:依寬度自動排(電腦版一排 6 個,不撐出一屏);簡述兩行:稱號 / [定位] */
+/* 選角色:依寬度自動排(電腦版一排 6 個，不撐出一屏)；簡述兩行:稱號 / [定位] */
 #setup-overlay .su-char-grid { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 12px; }
 #setup-overlay .su-char-grid button { gap: 2px; }
 #setup-overlay .su-char-grid small { white-space: nowrap; }
@@ -1407,7 +1407,7 @@ body.map-night #app { --g-shadow: #0c1230; background-color: #1a2550; background
    深夜藍底、星芒計時器、圖示返回鈕、玩家狀態單欄、手牌縮小、拿掉重新開始鈕(R 鍵仍可用)
    ===================================================================== */
 #app { --g-shadow: #0c1230; background-color: #1a2550; background-image: radial-gradient(rgba(255,207,46,.13) 2px, transparent 2.6px); background-size: 18px 18px; }
-/* 計時器:奶油外框 + 黃色星芒,疊在藍紅隊條之間 */
+/* 計時器:奶油外框 + 黃色星芒，疊在藍紅隊條之間 */
 #app .sc-time { width: 104px; height: 66px; padding: 4px 0 0; margin: 0 -10px; background: transparent; border: 0; box-shadow: none; isolation: isolate;
   display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
 #app .sc-time::before, #app .sc-time::after { content: ""; position: absolute; z-index: -1;
@@ -1448,7 +1448,7 @@ body.map-night #app { --g-shadow: #0c1230; background-color: #1a2550; background
 @media (max-width: 560px) { .cam-tip { left: auto; right: -8px; transform: none; animation: none; } .cam-tip::before, .cam-tip::after { left: auto; right: 28px; } }
 
 /* =====================================================================
-   局間 / 結算畫面改版:依勝負換放射底(贏黃、輸深夜藍、平手藍),左主角形象圖 + 右米色格
+   局間 / 結算畫面改版:依勝負換放射底(贏黃、輸深夜藍、平手藍)，左主角形象圖 + 右米色格
    ===================================================================== */
 #result-overlay { --r-ink: #17161c; --r-cream: #fff4da; --r-yellow: #ffcf2e; --r-red: #e43d30; --r-blue: #2e8bea;
   background: repeating-conic-gradient(from 0deg at 34% 50%, #3a97f0 0deg 8deg, #2e8bea 8deg 16deg); overflow-y: auto; padding: 24px 0; box-sizing: border-box; }

@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Noto+Sans+TC:wght@500;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261026v" />
+  <link rel="stylesheet" href="css/style.css?v=20261026w" />
 </head>
 <body>
 <div id="app">
@@ -18,7 +18,7 @@
       <button id="btn-home" class="dark-btn home-btn" type="button" title="回主選單" aria-label="回主選單">
         <svg width="18" height="18" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="3.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </button>
-      <div class="brand"><img class="brand-logo" src="assets/logo.webp?v=20261026v" alt="炸裂丸子" width="900" height="583"></div>
+      <div class="brand"><img class="brand-logo" src="assets/logo.webp?v=20261026w" alt="炸裂丸子" width="900" height="583"></div>
     </div>
     <div id="stat-enemies" class="scoreboard"></div>
     <div class="top-tools">
@@ -26,7 +26,7 @@
         <button type="button" data-view="2d" aria-pressed="true" title="2D 俯視(` 鍵切換)">2D</button>
         <button type="button" data-view="3d" aria-pressed="false" title="3D 立體(` 鍵切換)">3D</button>
       </div>
-      <!-- 3D 視角:一顆按鈕打開選單,4 種視角 + 該視角才有的選項 -->
+      <!-- 3D 視角:一顆按鈕打開選單，4 種視角 + 該視角才有的選項 -->
       <div class="cam-pick only-3d">
         <button id="cam-btn" class="dark-btn cam-btn" type="button" aria-haspopup="true" aria-expanded="false">
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M3 8h4l2-3h6l2 3h4v11H3z"></path><circle cx="12" cy="13" r="3.5"></circle></svg>
@@ -61,7 +61,7 @@
           <p id="cam-note" class="cam-note"></p>
         </div>
       </div>
-      <label class="dark-btn quality-pick only-3d" title="3D 畫質 / 效能:電腦較慢(內顯)選「低」或「省電」;「自動」會依實際流暢度自行調整">畫質
+      <label class="dark-btn quality-pick only-3d" title="3D 畫質 / 效能:電腦較慢(內顯)選「低」或「省電」；「自動」會依實際流暢度自行調整">畫質
         <select id="quality-sel" aria-label="3D 畫質">
           <option value="auto">自動</option>
           <option value="off">省電</option>
@@ -104,7 +104,7 @@
     <section class="stage-wrap">
       <!-- 手機:天氣 + 五項數值(一行) -->
       <div id="m-status" class="m-status only-phone"></div>
-      <!-- 電腦版:天氣一行(原本在左欄,移到場地上方讓左欄不出捲軸) -->
+      <!-- 電腦版:天氣一行(原本在左欄，移到場地上方讓左欄不出捲軸) -->
       <div id="wx-strip" class="wx-strip"></div>
       <div class="stage">
         <canvas id="game"></canvas>
@@ -179,7 +179,7 @@
 
   <div class="menu-left">
     <div class="menu-title">
-      <h1 class="menu-logo"><img src="assets/logo.webp?v=20261026v" alt="炸裂丸子 BANG BANG PORKBALL" width="900" height="583"></h1>
+      <h1 class="menu-logo"><img src="assets/logo.webp?v=20261026w" alt="炸裂丸子 BANG BANG PORKBALL" width="900" height="583"></h1>
       <p class="menu-sub">經典小吃大亂鬥・2 隊限時淘汰</p>
     </div>
     <button id="btn-start" class="start-btn" type="button">
@@ -234,7 +234,7 @@
     <input id="snd-music-vol" type="range" min="0" max="100" step="5" aria-label="音樂音量">
     <b id="snd-music-num" class="sp-num"></b>
   </div>
-  <p class="sp-note">背景音樂 4 首:主選單、公園、菜市場、夜市各一首;剩 30 秒會加快</p>
+  <p class="sp-note">背景音樂 4 首:主選單、公園、菜市場、夜市各一首；剩 30 秒會加快</p>
 </div>
 
 <!-- ===== 對戰設定(單機 / 連線攤位共用) ===== -->
@@ -253,7 +253,7 @@
   <div class="load3d-box">
     <div class="load3d-text">載入 3D 素材… 0%</div>
     <div class="load3d-bar"><div class="load3d-fill"></div></div>
-    <div class="load3d-note">第一次切到 3D 需要下載約 22MB,之後切換是即時的</div>
+    <div class="load3d-note">第一次切到 3D 需要下載約 22MB，之後切換是即時的</div>
   </div>
 </div>
 
@@ -268,28 +268,28 @@
       <li><kbd>↑↓←→</kbd> / <kbd>WASD</kbd> 移動(一步一格)</li>
       <li><kbd>空白鍵</kbd> 放置貢丸・<kbd>1</kbd>~<kbd>9</kbd> 切換貢丸(夜市 <kbd>O</kbd> 香腸、<kbd>P</kbd> 米腸)</li>
       <li><b>踢</b>:面向貢丸再往它的方向推(豪雨或 🥾鋼頭鞋)・<b>丟</b>:面向貢丸連按兩下空白鍵(下雪或 🧤隔熱手套)</li>
-      <li><kbd>G</kbd> 防護盾(耗 MP,維持 3 秒,擋一次爆炸)</li>
-      <li><kbd>T</kbd> 角色技能(每位角色不同,用完要冷卻)</li>
-      <li><b>卡牌</b>(畫面下方,點一下立刻使用):<kbd>Q</kbd> 吸塵器・<kbd>F</kbd> 垃圾車・<kbd>Z</kbd> 食物夾・<kbd>C</kbd> 彈弓・<kbd>K</kbd> 老鼠・<kbd>L</kbd> 蟑螂</li>
-      <li><kbd>R</kbd> 重新開始(單機;連線對戰沒有重新開始,局間自動倒數)</li>
+      <li><kbd>G</kbd> 防護盾(耗 MP，維持 3 秒，擋一次爆炸)</li>
+      <li><kbd>T</kbd> 角色技能(每位角色不同，用完要冷卻)</li>
+      <li><b>卡牌</b>(畫面下方，點一下立刻使用):<kbd>Q</kbd> 吸塵器・<kbd>F</kbd> 垃圾車・<kbd>Z</kbd> 食物夾・<kbd>C</kbd> 彈弓・<kbd>K</kbd> 老鼠・<kbd>L</kbd> 蟑螂</li>
+      <li><kbd>R</kbd> 重新開始(單機；連線對戰沒有重新開始，局間自動倒數)</li>
       <li><kbd>`</kbd>(Esc 下方)切換 2D / 3D 畫面</li>
     </ul>
     <h2 class="only-3d">3D 視角操作</h2>
     <ul class="help only-3d">
       <li><b>左鍵拖曳 / 單指滑動</b>:旋轉視角・<b>滾輪 / 雙指捏合</b>:縮放・<b>右鍵拖曳</b>:平移</li>
-      <li>上方「視角」選單:全景 / 俯視 / 跟隨 / 第一人稱;跟隨與第一人稱都可選鏡頭方向(跟著人物轉或固定朝北)與廣角</li>
+      <li>上方「視角」選單:全景 / 俯視 / 跟隨 / 第一人稱；跟隨與第一人稱都可選鏡頭方向(跟著人物轉或固定朝北)與廣角</li>
     </ul>
   </div>
 </div>
 
-<script src="js/config.js?v=20261026v"></script>
-<script src="js/audio.js?v=20261026v"></script>
-<script src="js/net.js?v=20261026v"></script>
-<script src="js/game.js?v=20261026v"></script>
-<script src="js/match.js?v=20261026v"></script>
-<script src="js/controls.js?v=20261026v"></script>
-<script src="js/guide.js?v=20261026v"></script>
-<script src="js/tutorial.js?v=20261026v"></script>
-<script src="js/view.js?v=20261026v"></script>
+<script src="js/config.js?v=20261026w"></script>
+<script src="js/audio.js?v=20261026w"></script>
+<script src="js/net.js?v=20261026w"></script>
+<script src="js/game.js?v=20261026w"></script>
+<script src="js/match.js?v=20261026w"></script>
+<script src="js/controls.js?v=20261026w"></script>
+<script src="js/guide.js?v=20261026w"></script>
+<script src="js/tutorial.js?v=20261026w"></script>
+<script src="js/view.js?v=20261026w"></script>
 </body>
 </html>

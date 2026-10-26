@@ -1,13 +1,13 @@
 // ====================================================================
 //  2D / 3D 畫面切換(同一頁、同一場遊戲)
-//  遊戲模擬只有一份(game.js);切換只是換「誰來畫」:
-//    2D = canvas#game(game.js 的 draw)  3D = three.js(js/render3d.js,畫在 #game3d)
-//  3D 程式與模型(約 22MB)第一次切到 3D 才下載,並顯示進度;之後切換是即時的。
-//  網址 ?view=3d 可直接以 3D 開啟;選擇會記在瀏覽器。
+//  遊戲模擬只有一份(game.js)；切換只是換「誰來畫」:
+//    2D = canvas#game(game.js 的 draw)  3D = three.js(js/render3d.js，畫在 #game3d)
+//  3D 程式與模型(約 22MB)第一次切到 3D 才下載，並顯示進度；之後切換是即時的。
+//  網址 ?view=3d 可直接以 3D 開啟；選擇會記在瀏覽器。
 // ====================================================================
 const VIEW = (() => {
-  const V = '20261026v';
-  // 3D 需要的腳本(依序執行);size 是大約大小,用來估算進度
+  const V = '20261026w';
+  // 3D 需要的腳本(依序執行);size 是大約大小，用來估算進度
   const SCRIPTS_3D = [
     ['assets/atlas.js', 350e3],
     ['models/map_models.js', 13.9e6],
@@ -27,11 +27,11 @@ const VIEW = (() => {
     mode: '2d',
     set(mode) {
       if (mode === this.mode && (mode === '2d' || loaded3d)) return;
-      // 連線對戰進行中(含局間倒數)不能切換:切到 3D 要下載素材,期間畫面會卡住;
+      // 連線對戰進行中(含局間倒數)不能切換:切到 3D 要下載素材，期間畫面會卡住；
       // 準備階段(攤位的對戰設定、整場結算後)可以各自選 2D/3D
       const inPlay = typeof gameState !== 'undefined' && (gameState === 'playing' || (typeof SERIES !== 'undefined' && SERIES.nextAt));
       if (typeof NET !== 'undefined' && NET.online && inPlay) {
-        if (typeof showToast === 'function') showToast('對戰中不能切換 2D/3D,請在準備時切換');
+        if (typeof showToast === 'function') showToast('對戰中不能切換 2D/3D，請在準備時切換');
         return;
       }
       if (mode === '3d' && !loaded3d) { load3d(); return; }
@@ -48,7 +48,7 @@ const VIEW = (() => {
     let tip = pick.querySelector('.cam-tip');
     clearTimeout(tipTimer);
     if (!show) { if (tip) tip.remove(); return; }
-    if (document.querySelector('.screen:not(.hidden)')) return;   // 主選單/設定/結算畫面上不提示,只在遊戲畫面
+    if (document.querySelector('.screen:not(.hidden)')) return;   // 主選單/設定/結算畫面上不提示，只在遊戲畫面
     if (!tip) {
       tip = document.createElement('div');
       tip.className = 'cam-tip';
@@ -74,7 +74,7 @@ const VIEW = (() => {
     window.dispatchEvent(new Event('resize')); // 讓 3D 畫面依新尺寸重設
   }
 
-  // 依序下載並執行 3D 腳本,顯示進度
+  // 依序下載並執行 3D 腳本，顯示進度
   function load3d() {
     if (loading) return loading;
     const box = document.getElementById('load3d');
@@ -91,7 +91,7 @@ const VIEW = (() => {
     loading = (async () => {
       try {
         for (const [url, size] of SCRIPTS_3D) {
-          if (url.startsWith('js/render3d')) apply('3d'); // 3D 畫面要先顯示,渲染器才量得到尺寸
+          if (url.startsWith('js/render3d')) apply('3d'); // 3D 畫面要先顯示，渲染器才量得到尺寸
           const res = await fetch(url);
           if (!res.ok) throw new Error(url + ' ' + res.status);
           let text;
@@ -118,7 +118,7 @@ const VIEW = (() => {
         apply('3d');
       } catch (e) {
         console.error(e);
-        if (txt) txt.textContent = '3D 素材載入失敗,請重新整理再試';
+        if (txt) txt.textContent = '3D 素材載入失敗，請重新整理再試';
         apply('2d');
         loading = null;
         V3.busy = false;
@@ -140,7 +140,7 @@ const VIEW = (() => {
     V3.set(b.dataset.view);
     b.blur();
   });
-  // V 鍵以外沒有對應按鍵(V 是藍白拖);用 Tab 旁的 ` 鍵快速切換
+  // V 鍵以外沒有對應按鍵(V 是藍白拖)；用 Tab 旁的 ` 鍵快速切換
   window.addEventListener('keydown', (e) => {
     if (e.key === '`' && !(e.target && /INPUT|TEXTAREA|SELECT/.test(e.target.tagName))) V3.toggle();
   });

@@ -1,8 +1,8 @@
 // ====================================================================
 //  對戰設定 + 多局制系列賽 + 結算後的接續流程(單機 / 連線共用)
 //  - 開始對戰前:選角色、地圖、人數、幾局定勝負、每局時間、電腦難度、天氣
-//  - 每局結束:顯示系列賽比分,5 秒後自動開下一局
-//  - 整場結束:可直接換角色;單機「再來一輪 / 調整設定 / 回主選單」,
+//  - 每局結束:顯示系列賽比分，5 秒後自動開下一局
+//  - 整場結束:可直接換角色；單機「再來一輪 / 調整設定 / 回主選單」，
 //    連線玩家按「準備」、攤主看到幾人準備好後開始下一輪
 // ====================================================================
 const MATCH_OPTS = {
@@ -40,7 +40,7 @@ function startSeries() {
   if (NET.online) { if (NET.role === 'host') { NET.ready = {}; NET.startRound(); } return; }
   startRound();
 }
-// 開下一局(單機;連線時由 NET.startRound 呼叫)
+// 開下一局(單機；連線時由 NET.startRound 呼叫)
 function beginRound() {
   SERIES.round += 1; SERIES.nextAt = 0;
   currentMapId = MATCH.map === 'random' ? ['park', 'market', 'night'][rand(3)] : MATCH.map;
@@ -57,9 +57,9 @@ function startRound() {
 }
 
 // ---------------------------------------------------------------- 一局結束
-// 單機與攤主:算比分;連線玩家:等攤主送 series 訊息
+// 單機與攤主:算比分；連線玩家:等攤主送 series 訊息
 function onRoundEnd() {
-  // 連線玩家:比分由攤主送來;在那之前先依畫面上的勝負顯示標題(避免閃過「平手」)
+  // 連線玩家:比分由攤主送來；在那之前先依畫面上的勝負顯示標題(避免閃過「平手」)
   if (NET.online && NET.role !== 'host') SERIES.last = gameState === 'win' ? 'blue' : gameState === 'lose' ? 'red' : null;
   if (!NET.online || NET.role === 'host') {
     const w = gameState === 'win' ? 'blue' : gameState === 'lose' ? 'red' : null;
@@ -67,7 +67,7 @@ function onRoundEnd() {
     if (w) SERIES.wins[w] += 1;
     const need = needWins();
     const lead = SERIES.wins.blue !== SERIES.wins.red;
-    // 先拿到 need 勝結束;打滿局數還平手就延長,最多再打 2 局
+    // 先拿到 need 勝結束；打滿局數還平手就延長，最多再打 2 局
     SERIES.over = SERIES.wins.blue >= need || SERIES.wins.red >= need ||
       (SERIES.round >= MATCH.rounds && lead) || SERIES.round >= MATCH.rounds + 2;
     if (SERIES.offline) SERIES.over = true;   // 連線中斷、電腦接手的那局:打完就不再繼續
@@ -86,7 +86,7 @@ setInterval(() => {
   if (left <= 0 && (!NET.online || NET.role === 'host')) { SERIES.nextAt = 0; startRound(); }
 }, 200);
 
-// 系列賽比分條:藍隊格(頭像、勝場圓點)| 星芒比分 | 紅隊格;單局制改顯示存活人數
+// 系列賽比分條:藍隊格(頭像、勝場圓點)| 星芒比分 | 紅隊格；單局制改顯示存活人數
 function seriesBar(single) {
   const need = needWins();
   const mine = player ? player.team : 'blue';
@@ -99,7 +99,7 @@ function seriesBar(single) {
   const score = single ? `${teamAlive('blue')}:${teamAlive('red')}` : `${SERIES.wins.blue}:${SERIES.wins.red}`;
   return `<div class="rs-score">${side('blue', '藍隊')}<div class="rs-burst"><b>${score}</b><small>${single ? '存活' : '勝場'}</small></div>${side('red', '紅隊')}</div>`;
 }
-// 換角色(結算畫面直接換,下一輪生效)
+// 換角色(結算畫面直接換，下一輪生效)
 function miniCharPick() {
   return '<div class="rs-chars" role="group" aria-label="下一輪的角色">' + CHAR_IDS.map((id) =>
     `<button type="button" data-char="${id}" class="${id === myChar ? 'active' : ''}" title="${CHARACTERS[id].name}・${CHARACTERS[id].role}">` +
@@ -130,7 +130,7 @@ const resultUI = {
       body = seriesBar(false) +
         `<p class="rs-sub">這局存活 <i class="su-dot blue"></i>${teamAlive('blue')} : ${teamAlive('red')}<i class="su-dot red"></i>・先拿 ${needWins()} 勝獲勝</p>` +
         `<div class="rs-next"><span class="rs-count"><b id="rs-count">${ROUND_GAP}</b></span><span>秒後開始<b>第 ${SERIES.round + 1} 局</b></span></div>` +
-        (!NET.online ? '<button type="button" class="start-btn" data-rs="next">立即開始下一局</button>' : '');   // 連線:大家一起倒數,不提供提前開始
+        (!NET.online ? '<button type="button" class="start-btn" data-rs="next">立即開始下一局</button>' : '');   // 連線:大家一起倒數，不提供提前開始
     } else {
       const title = single ? (!w ? '平手!' : w === mine ? '你的隊伍獲勝!' : '你的隊伍輸了')
         : (!sw ? '系列賽平手' : sw === mine ? '你的隊伍贏得比賽!' : '你的隊伍輸了這場比賽');
@@ -139,7 +139,7 @@ const resultUI = {
       body = seriesBar(single) + sub +
         (SERIES.offline ? '' : `<div class="rs-label">下一輪的角色(點一下更換)</div>` + miniCharPick());
       if (SERIES.offline) {
-        body += '<p class="rs-offline">連線已中斷,這局打完就結束了</p>' +
+        body += '<p class="rs-offline">連線已中斷，這局打完就結束了</p>' +
           '<button type="button" class="start-btn" data-rs="menu">回主選單</button>';
       } else if (!NET.online) {
         body += '<button type="button" class="start-btn" data-rs="again">再來一輪</button>' +
@@ -155,7 +155,7 @@ const resultUI = {
             nudgeButton('rs') + '<button type="button" class="home-btn" data-rs="quit">收攤</button></div>';
         } else {
           const ready = !!NET.ready[NET.id];
-          body += `<button type="button" class="start-btn${ready ? ' done' : ''}" data-rs="ready">${ready ? '✓ 已準備,等攤主開始' : '準備下一輪'}</button>` +
+          body += `<button type="button" class="start-btn${ready ? ' done' : ''}" data-rs="ready">${ready ? '✓ 已準備，等攤主開始' : '準備下一輪'}</button>` +
             '<div class="rs-row">' + nudgeButton('rs') + '<button type="button" class="home-btn" data-rs="quit">離開攤位</button></div>';
         }
       }
@@ -183,7 +183,7 @@ const resultUI = {
 function nudgeButton(kind) {
   const cooling = performance.now() - (NET.nudgeAt || 0) < 5000;
   const cls = kind === 'su' ? 'su-nudge' : 'home-btn rs-nudge';
-  return `<button type="button" class="${cls}" data-${kind}="nudge"${cooling ? ' disabled' : ''} title="催還沒準備好的人;大家都準備好了就催攤主">${cooling ? '📣 已催促' : '📣 催促'}</button>`;
+  return `<button type="button" class="${cls}" data-${kind}="nudge"${cooling ? ' disabled' : ''} title="催還沒準備好的人；大家都準備好了就催攤主">${cooling ? '📣 已催促' : '📣 催促'}</button>`;
 }
 // 遊戲畫面上方常駐的連線訊息(斷線後由電腦接手時顯示)
 function showNetBanner(text) {
@@ -220,7 +220,7 @@ function readyList() {
 }
 const escHtml = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
 
-// 畫面模式(2D/3D)選擇:準備時各自選,大家可以不同;對戰中不能切換
+// 畫面模式(2D/3D)選擇:準備時各自選，大家可以不同；對戰中不能切換
 function viewPick() {
   const m = window.VIEW ? VIEW.mode : '2d';
   return '<div class="view-toggle su-view" role="group" aria-label="畫面模式"><span>畫面</span>' +
@@ -281,7 +281,7 @@ const setupUI = {
       side = `<div class="su-room"><div class="su-title">攤位</div><div class="su-room-head"><small>代碼</small><b>${escHtml(NET.code)}</b>` +
         `<button type="button" class="su-copy" data-link="${escHtml(link)}">複製邀請連結</button></div>` +
         `<ul class="su-players">${rows}</ul>` +
-        (extra > 0 ? `<p class="su-note">人數超過 ${2 * n} 人,${extra} 位要等下一場</p>` : `<p class="su-note">空位由電腦補上</p>`) + '</div>';
+        (extra > 0 ? `<p class="su-note">人數超過 ${2 * n} 人，${extra} 位要等下一場</p>` : `<p class="su-note">空位由電腦補上</p>`) + '</div>';
     }
     let foot;
     const nudgeBtn = online ? nudgeButton('su') : '';
@@ -296,7 +296,7 @@ const setupUI = {
         `<button type="button" class="start-btn${ready ? ' done' : ''}" data-su="ready">${ready ? '✓ 已準備' : '準備好了'}</button>`;
     }
     box.innerHTML =
-      `<div class="su-head"><h2>對戰設定</h2><span>${online ? (host ? '你是攤主,可以調整規則' : '規則由攤主設定') : '單機對戰'}</span>` +
+      `<div class="su-head"><h2>對戰設定</h2><span>${online ? (host ? '你是攤主，可以調整規則' : '規則由攤主設定') : '單機對戰'}</span>` +
       viewPick() + '</div>' +
       `<div class="su-body"><section class="su-chars"><div class="su-title">選角色</div><div class="su-char-grid">${chars}</div>` +
       `<div class="su-char-info"><b class="sci-name">${c.name}・${c.title}</b>` +

@@ -1,12 +1,12 @@
 // ====================================================================
-//  音效與背景音樂(Web Audio 即時合成,不需音檔)
-//  sfx(名稱, x, y):播放音效(依與自己的距離調整音量);房主連線時會一併送給其他玩家
-//  背景音樂:選單一首、三張地圖各一首;剩 30 秒加快、最後 10 秒倒數嗶聲
+//  音效與背景音樂(Web Audio 即時合成，不需音檔)
+//  sfx(名稱， x, y):播放音效(依與自己的距離調整音量)；房主連線時會一併送給其他玩家
+//  背景音樂:選單一首、三張地圖各一首；剩 30 秒加快、最後 10 秒倒數嗶聲
 //  聲音設定面板(右上角 🔊、主選單「聲音設定」):音效、音樂各自開關 + 音量(記在瀏覽器)
 // ====================================================================
 const AUDIO = (() => {
   let ac = null, master = null, sfxBus = null, musicBus = null;
-  // 音效 / 音樂各自開關與音量(0~100);沿用舊版「全開 / 只有音效 / 靜音」的選擇
+  // 音效 / 音樂各自開關與音量(0~100)；沿用舊版「全開 / 只有音效 / 靜音」的選擇
   const snd = { sfx: true, music: true, sfxVol: 90, musicVol: 70 };
   try {
     const saved = JSON.parse(localStorage.getItem('bbw.sound2') || 'null');
@@ -194,7 +194,7 @@ const AUDIO = (() => {
   function seeded(seed) { let s = seed; return () => (s = (s * 16807) % 2147483647) / 2147483647; }
   function compose(name) {
     const S = SONGS[name], rnd = seeded([...name].reduce((a, c) => a + c.charCodeAt(0), 7));
-    const melody = []; // 8 小節 × 16 拍,null = 休止
+    const melody = []; // 8 小節 × 16 拍，null = 休止
     for (let bar = 0; bar < 8; bar++) {
       for (let i = 0; i < 16; i++) {
         const strong = i % 4 === 0;
@@ -270,7 +270,7 @@ const AUDIO = (() => {
   }
   applyMode();
 
-  // 預錄語音(assets/voice/*.mp3,edge-tts 產生);跟著「音效」開關與音量
+  // 預錄語音(assets/voice/*.mp3,edge-tts 產生)；跟著「音效」開關與音量
   function voice(name) {
     if (!snd.sfx) return false;
     try {
@@ -284,7 +284,7 @@ const AUDIO = (() => {
   return { play, init, openPanel, voice };
 })();
 
-// 遊戲內呼叫:播放音效;房主連線時記下來,隨快照送給其他玩家
+// 遊戲內呼叫:播放音效；房主連線時記下來，隨快照送給其他玩家
 function sfx(name, x, y) {
   AUDIO.play(name, x, y);
   if (typeof NET !== 'undefined' && NET.role === 'host') NET.sq.push([name, Math.round(x || 0), Math.round(y || 0)]);

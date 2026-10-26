@@ -1,17 +1,17 @@
 // ====================================================================
 //  3D 渲染器 v2(three.js r128)
-//  - game.js 照常執行完整遊戲模擬(2D canvas 隱藏),本檔每幀同步 3D 場景
+//  - game.js 照常執行完整遊戲模擬(2D canvas 隱藏)，本檔每幀同步 3D 場景
 //  - 貼圖一律取自 SVG_ATLAS(data URI):避免 file:// 下 WebGL 的 CORS 黑圖
-//  - 角色 = voxel 積木模型;貢丸/道具/寵物 = Blender 寫實模型(props.glb);爆炸 = shader 火焰特效
+//  - 角色 = voxel 積木模型；貢丸/道具/寵物 = Blender 寫實模型(props.glb)；爆炸 = shader 火焰特效
 //  - 地圖物件 = Blender 製作的寫實 GLB(Poly Haven CC0 掃描模型 + 程序化組合件),
-//    PBR 材質 + HDRI 環境光 + 柔和陰影;來源/建置腳本見 tools/assets/
+//    PBR 材質 + HDRI 環境光 + 柔和陰影；來源/建置腳本見 tools/assets/
 // ====================================================================
 (function () {
   const container = document.getElementById('game3d');
   if (!container || typeof THREE === 'undefined') return;
 
   // ---------- 基本場景 ----------
-  // ---------- 畫質 / 效能設定(省電・低・中・高・自動),記在 localStorage ----------
+  // ---------- 畫質 / 效能設定(省電・低・中・高・自動)，記在 localStorage ----------
   //  pixel:解析度倍率  shadows:即時陰影  env:HDRI 環境光反射  decor:場外造景比例
   //  fx:爆炸特效等級(0 火焰 / 1 +煙與焦痕 / 2 +火星)  realChars:寫實人物(否則積木人)
   //  charShadow:人物投射即時陰影(陰影圖每幀重算)  lights:夜市燈籠點光源
@@ -28,14 +28,14 @@
   let qualityLevel = qualityPref === 'auto' ? 'mid' : qualityPref;
   let Q = QUALITY[qualityLevel];
   const pixelRatioFor = (q) => q.pixel >= 2 ? Math.min(window.devicePixelRatio || 1, 2) : Math.min(window.devicePixelRatio || 1, 1) * q.pixel;
-  // 抗鋸齒只能在建立 WebGL 時決定(切換畫質後,下次開啟頁面才會跟著變)
+  // 抗鋸齒只能在建立 WebGL 時決定(切換畫質後，下次開啟頁面才會跟著變)
   const renderer = new THREE.WebGLRenderer({ antialias: Q.aa });
   renderer.setPixelRatio(pixelRatioFor(Q));
   renderer.outputEncoding = THREE.sRGBEncoding;
   container.appendChild(renderer.domElement);
 
   // ---------- 微縮模型風格(vendor/miniature-look.js):移軸景深、光暈、調色、暗角、顆粒 ----------
-  //  全景/俯視 = 盤面(只模糊盤面外的上下緣)、跟隨 = 輕移軸、第一人稱 = 只調色;省電畫質不套用
+  //  全景/俯視 = 盤面(只模糊盤面外的上下緣)、跟隨 = 輕移軸、第一人稱 = 只調色；省電畫質不套用
   let miniOn = true;
   try { miniOn = localStorage.getItem('bbw3d_mini') !== '0'; } catch (e) { /* 無痕模式 */ }
   const look = window.MiniatureLook
@@ -46,7 +46,7 @@
   const refineOn = !!window.MiniatureLook && (qualityLevel === 'mid' || qualityLevel === 'high');
 
   const scene = new THREE.Scene();
-  // 全景/俯視用 30° 窄視角(微縮模型的望遠感),鏡頭距離依視角放大,畫面範圍與原本 50° 相同
+  // 全景/俯視用 30° 窄視角(微縮模型的望遠感)，鏡頭距離依視角放大，畫面範圍與原本 50° 相同
   const FREE_FOV = 30, FREE_K = Math.tan(25 * Math.PI / 180) / Math.tan(FREE_FOV / 2 * Math.PI / 180);
   const camera = new THREE.PerspectiveCamera(FREE_FOV, 1, 0.1, 200);
   const CX = COLS / 2, CZ = ROWS / 2;
@@ -58,12 +58,12 @@
   controls.minDistance = 4 * FREE_K;
   controls.maxDistance = 40 * FREE_K;
 
-  // ---------- 鏡頭模式:free(全景/俯視,可拖曳環繞)/ follow(第三人稱跟隨)/ fps(第一人稱) ----------
+  // ---------- 鏡頭模式:free(全景/俯視，可拖曳環繞)/ follow(第三人稱跟隨)/ fps(第一人稱) ----------
   let camMode = 'free';
-  // 跟隨/第一人稱各自的設定:lock = 鏡頭固定朝北(和地圖同方向,不隨人物轉動)、wide = 廣角(方便看兩側來的貢丸)
+  // 跟隨/第一人稱各自的設定:lock = 鏡頭固定朝北(和地圖同方向，不隨人物轉動)、wide = 廣角(方便看兩側來的貢丸)
   const camLock = { follow: true, fps: true };    // 預設:固定朝北 + 廣角
   const camWide = { follow: true, fps: true };
-  const CAM_FOV = { follow: [50, 75], fps: [72, 100] };   // [一般, 廣角]
+  const CAM_FOV = { follow: [50, 75], fps: [72, 100] };   // [一般， 廣角]
   const isLocked = () => !!camLock[camMode];
   let smoothYaw = 0;      // 平滑後的面向角(避免 4 方向切換時鏡頭猛轉)
   let camView = 'overview';
@@ -88,7 +88,7 @@
     camPanel.querySelectorAll('[data-wide]').forEach((b) => b.classList.toggle('active', (b.dataset.wide === '1') === !!camWide[camView]));
     const note = document.getElementById('cam-note');
     if (note) note.textContent = ((camView === 'fps' || camView === 'follow') && !camLock[camView])
-      ? '方向鍵以鏡頭前方為準:↑ 往前走' : '方向鍵 = 地圖上的上下左右' + (camView === 'overview' || camView === 'top' ? ';拖曳旋轉、滾輪縮放' : '');
+      ? '方向鍵以鏡頭前方為準:↑ 往前走' : '方向鍵 = 地圖上的上下左右' + (camView === 'overview' || camView === 'top' ? '；拖曳旋轉、滾輪縮放' : '');
   }
   function setCamView(v, save) {
     camView = CAM_NAMES[v] ? v : 'overview';
@@ -101,7 +101,7 @@
   try {
     const c = JSON.parse(localStorage.getItem('bbw.cam') || 'null');
     if (c) {
-      // 只沿用新格式(物件)的設定;舊格式(布林值)多半是當時的預設,改用新預設(固定朝北 + 廣角)
+      // 只沿用新格式(物件)的設定；舊格式(布林值)多半是當時的預設，改用新預設(固定朝北 + 廣角)
       if (typeof c.lock === 'object' && c.lock) Object.assign(camLock, c.lock);
       if (typeof c.wide === 'object' && c.wide) Object.assign(camWide, c.wide);
       camView = c.v || 'overview';
@@ -130,7 +130,7 @@
   const angleDelta = (from, to) => ((to - from + Math.PI * 3) % (Math.PI * 2)) - Math.PI;
 
   // 跟隨(會轉)/第一人稱:方向鍵改以「鏡頭前方」為基準(game.js 只在 3D 模式呼叫)
-  // 用平滑後的鏡頭角量化到 90°,鏡頭轉到位前仍以舊基準,天然防止原地打轉
+  // 用平滑後的鏡頭角量化到 90°，鏡頭轉到位前仍以舊基準，天然防止原地打轉
   window.moveTransform = (v) => {
     if (camMode === 'free' || !player || isLocked()) return v;   // 固定朝北:方向鍵 = 地圖方向
     const k = ((Math.round(smoothYaw / (Math.PI / 2)) % 4) + 4) % 4;
@@ -138,7 +138,7 @@
     const R = [-F[1], F[0]];                          // 畫面右方
     const [mx, my] = v;
     const out = [F[0] * -my + R[0] * mx, F[1] * -my + R[1] * mx];
-    // 第一人稱按 ↓:倒退走,不轉身(鏡頭不迴轉)
+    // 第一人稱按 ↓:倒退走，不轉身(鏡頭不迴轉)
     if (camMode === 'fps' && my === 1) out.keepFacing = true;
     return out;
   };
@@ -146,7 +146,7 @@
   // 依模式驅動鏡頭(每幀)
   const camTmp = new THREE.Vector3();
   function updateCamera() {
-    // 視野角:第一人稱 72°(廣角 100°),跟隨 50°(廣角 75°),全景/俯視 30°;平滑過渡
+    // 視野角:第一人稱 72°(廣角 100°)，跟隨 50°(廣角 75°)，全景/俯視 30°；平滑過渡
     const targetFov = CAM_FOV[camMode] ? CAM_FOV[camMode][camWide[camMode] ? 1 : 0] : FREE_FOV;
     if (Math.abs(camera.fov - targetFov) > 0.5) {
       camera.fov += (targetFov - camera.fov) * 0.15;
@@ -154,17 +154,17 @@
     }
     if (camMode === 'free' || !player) { controls.update(); return; }
     const tYaw = Math.atan2(player.dir.x, player.dir.y);
-    // 固定方向開啟時,鏡頭角不再追人物面向:朝北,和地圖同方向(跟隨/第一人稱都可設定)
+    // 固定方向開啟時，鏡頭角不再追人物面向:朝北，和地圖同方向(跟隨/第一人稱都可設定)
     const goal = isLocked() ? Math.PI : tYaw;
     smoothYaw += angleDelta(smoothYaw, goal) * 0.14;
     const px = W2(player.x), pz = W2(player.y);
     if (camMode === 'follow') {
-      // 第三人稱近距離:在玩家背後斜上方,平滑追蹤
+      // 第三人稱近距離:在玩家背後斜上方，平滑追蹤
       const dist = 3.4, h = 2.3;
       camTmp.set(px - Math.sin(smoothYaw) * dist, h, pz - Math.cos(smoothYaw) * dist);
       camera.position.lerp(camTmp, 0.12);
       camera.lookAt(px, 0.7, pz);
-    } else { // fps 第一人稱:視點在頭頂高度、視線微微向下(約 14°),像眼睛看出去
+    } else { // fps 第一人稱:視點在頭頂高度、視線微微向下(約 14°)，像眼睛看出去
       camera.position.set(
         px - Math.sin(smoothYaw) * 0.1, 1.32, pz - Math.cos(smoothYaw) * 0.1);
       camera.lookAt(px + Math.sin(smoothYaw) * 4, 0.35, pz + Math.cos(smoothYaw) * 4);
@@ -186,10 +186,10 @@
   renderer.shadowMap.enabled = Q.shadows;
   renderer.shadowMap.type = Q.soft ? THREE.PCFSoftShadowMap : THREE.PCFShadowMap;
 
-  // ---------- 打光(天光 + 投影主光 + 環境 HDRI;依主題調色) ----------
+  // ---------- 打光(天光 + 投影主光 + 環境 HDRI；依主題調色) ----------
   const hemi = new THREE.HemisphereLight(0xbfd9ff, 0x5a4a38, 0.85); // 天空/地面反射光
   const sun = new THREE.DirectionalLight(0xffffff, 0.9);
-  sun.position.set(CX + 10, 11, CZ + 5); // 斜側光:影子拉長,立體感更好
+  sun.position.set(CX + 10, 11, CZ + 5); // 斜側光:影子拉長，立體感更好
   sun.target.position.set(CX, 0, CZ);
   sun.castShadow = true;
   sun.shadow.mapSize.set(Q.shadowSize || 1024, Q.shadowSize || 1024);
@@ -198,11 +198,11 @@
   sun.shadow.normalBias = 0.02;
   const ambient = new THREE.AmbientLight(0xffffff, 0.35);
   scene.add(hemi, sun, sun.target, ambient);
-  // 爆炸閃光(單一動態光源,永遠掛在最近的爆炸上)
+  // 爆炸閃光(單一動態光源，永遠掛在最近的爆炸上)
   const boomLight = new THREE.PointLight(0xffa726, 0, 7);
   scene.add(boomLight);
 
-  // env:PBR 物件吃環境光的強度;lantern:燈籠自發光強度
+  // env:PBR 物件吃環境光的強度；lantern:燈籠自發光強度
   const THEME_LIGHT = {
     park:   { bg: 0x87b8e0, hemi: 0.7,  sun: 1.5,  amb: 0.2,  sunColor: 0xffecc8, exposure: 0.9,  env: 0.85, lantern: 1.0 },
     market: { bg: 0xb9c4cc, hemi: 0.75, sun: 1.25, amb: 0.25, sunColor: 0xfff8ee, exposure: 0.95, env: 1.0,  lantern: 1.0 },
@@ -235,7 +235,7 @@
       const src = (typeof SVG_ATLAS !== 'undefined' && SVG_ATLAS[path])
         ? SVG_ATLAS[path] : 'assets/' + path + '.svg';
       const t = texLoader.load(src);
-      // 平滑卡通貼圖(不再是 8-bit 像素風,改用線性過濾避免鋸齒)
+      // 平滑卡通貼圖(不再是 8-bit 像素風，改用線性過濾避免鋸齒)
       t.magFilter = THREE.LinearFilter;
       t.minFilter = THREE.LinearMipmapLinearFilter;
       t.encoding = THREE.sRGBEncoding;
@@ -277,7 +277,7 @@
       t.encoding = THREE.sRGBEncoding;
       t.mapping = THREE.EquirectangularReflectionMapping;
       e.env = pmrem.fromEquirectangular(t).texture;
-      // 背景用調暗、略模糊的版本(原圖經 ACES 後太亮,夜市尤其刺眼);反射光仍用原圖
+      // 背景用調暗、略模糊的版本(原圖經 ACES 後太亮，夜市尤其刺眼)；反射光仍用原圖
       const BG_LOOK = { park: 'brightness(0.92) blur(1px)', market: 'brightness(0.78) blur(1.5px)', night: 'brightness(0.42) saturate(0.85) blur(1.5px)' };
       let bgTex = t;
       try {
@@ -318,7 +318,7 @@
         map: load('diff', true), normalMap: Q.floorNormal ? load('nor') : null, roughnessMap: load('arm'),
         metalnessMap: load('arm'), aoMap: load('arm'), roughness: 1, metalness: 1, color: FLOOR_TINT[id] || 0xffffff })
       : new THREE.MeshStandardMaterial({ color: 0x7a8f5a, roughness: 1 });
-    // 棋盤格(只在場內)用 shader 依世界座標調暗相間格子,地板仍是一整張無接縫貼圖
+    // 棋盤格(只在場內)用 shader 依世界座標調暗相間格子，地板仍是一整張無接縫貼圖
     const checker = id === 'market' ? 0.06 : 0.1;
     m.onBeforeCompile = (sh) => {
       sh.uniforms.uBoard = { value: new THREE.Vector4(0, 0, COLS, ROWS) };
@@ -350,7 +350,7 @@
     return mesh;
   }
 
-  // ---------- 地圖 3D 物件庫(Blender 製作的 GLB,每主題一檔) ----------
+  // ---------- 地圖 3D 物件庫(Blender 製作的 GLB，每主題一檔) ----------
   // 節點名稱:wall / pillar / brick / trash / bush(可有 _a/_b/_c 變體)+ 造景
   const mapLib = {};
   let needRebuild = false;
@@ -383,8 +383,8 @@
   }
   // 材質後處理:去背貼圖改 alphaTest(葉片/菜籃格孔)、葉片法線不翻面、燈籠自發光、全部投影
   // Q 版人物的反轉外殼描邊(17_build_roster.py):只改深度、畫面位置不變
-  //   chibi_outline     整體外殼:往後推 0.25,身體前方的部分會蓋掉內部線條 → 只剩外輪廓粗線
-  //   chibi_outline_acc 帽子/髮飾/道具:往鏡頭拉近 0.04,帽沿貼著臉的地方也露出細線
+  //   chibi_outline     整體外殼:往後推 0.25，身體前方的部分會蓋掉內部線條 → 只剩外輪廓粗線
+  //   chibi_outline_acc 帽子/髮飾/道具:往鏡頭拉近 0.04，帽沿貼著臉的地方也露出細線
   function prepOutline(o, m) {
     o.castShadow = false; o.receiveShadow = false;
     if (m.userData.outlined) return;
@@ -424,7 +424,7 @@
       }
       if (/leaf|fern/.test(name)) {
         m.side = THREE.DoubleSide;
-        // 葉卡背面不翻法線 → 整叢光照一致,不會出現黑卡
+        // 葉卡背面不翻法線 → 整叢光照一致，不會出現黑卡
         m.onBeforeCompile = (sh) => {
           sh.fragmentShader = sh.fragmentShader.replace('#include <normal_fragment_begin>',
             THREE.ShaderChunk.normal_fragment_begin.replace('gl_FrontFacing ? 1.0 : - 1.0', '1.0'));
@@ -454,7 +454,7 @@
     }
     return lib.variantCache[base];
   }
-  // clone() 不會複製 customDepthMaterial(鏤空陰影),要補上
+  // clone() 不會複製 customDepthMaterial(鏤空陰影)，要補上
   function cloneNode(n) {
     const o = n.clone();
     o.traverse((m) => {
@@ -585,7 +585,7 @@
         const im = new THREE.InstancedMesh(part.geo, part.mat, ps.length);
         im.castShadow = true;
         im.receiveShadow = true;
-        im.frustumCulled = false; // 實例散佈整張地圖,包圍球只算單一幾何會誤裁切
+        im.frustumCulled = false; // 實例散佈整張地圖，包圍球只算單一幾何會誤裁切
         if (part.mat.userData.depthMat) im.customDepthMaterial = part.mat.userData.depthMat;
         ps.forEach((p, i) => {
           const m = new THREE.Matrix4().multiplyMatrices(p.matrix, part.local);
@@ -599,7 +599,7 @@
   }
 
   // 場外造景(圍牆外):公園=藍花楹樹+草叢+岩石、菜市場=攤位+遮陽傘+菜籃、夜市=燈籠竿+攤車+桌椅
-  // 鏡頭在南方(+Z)俯視,所以高的東西只放北側與東西兩側,南側只放低矮物件
+  // 鏡頭在南方(+Z)俯視，所以高的東西只放北側與東西兩側，南側只放低矮物件
   function decorPlacements(lib) {
     for (const l of decorLights) scene.remove(l);
     decorLights.length = 0;
@@ -644,7 +644,7 @@
         put('pillar', COLS + 2.4, z + 1.2, -Math.PI / 2);
       }
       for (let x = 1; x < COLS; x += 2.6) put('brick', x + rnd() * 0.5, ROWS + 0.9, rnd() * 0.8);
-      // 燈籠暖光(只放兩盞,兼顧內顯效能)
+      // 燈籠暖光(只放兩盞，兼顧內顯效能)
       for (const [x, z] of (Q.lights ? [[COLS * 0.3, -1.1], [COLS * 0.7, -1.1]] : [])) {
         const l = new THREE.PointLight(0xff5a36, 1.8, 9, 2);
         l.position.set(x, 1.7, z);
@@ -683,7 +683,7 @@
     renderer.shadowMap.needsUpdate = true;
   }
 
-  // 單格變動(炸掉箱子等):隱藏該格的實例;若出現新物件就用單獨模型補上
+  // 單格變動(炸掉箱子等):隱藏該格的實例；若出現新物件就用單獨模型補上
   function syncCell(c, r) {
     const key = r * COLS + c;
     const old = cellPlace.get(key);
@@ -736,7 +736,7 @@
   }
   const W2 = (px) => px / TS;
 
-  // ---------- 腳下柔影(角色/貢丸不投即時陰影,改用便宜的圓形漸層影子) ----------
+  // ---------- 腳下柔影(角色/貢丸不投即時陰影，改用便宜的圓形漸層影子) ----------
   const blobTex = (() => {
     const cv = document.createElement('canvas'); cv.width = cv.height = 64;
     const g = cv.getContext('2d');
@@ -778,10 +778,10 @@
   const flashMat = new THREE.MeshBasicMaterial({ color: 0xfff1d0, transparent: true, opacity: 0.55,
     blending: THREE.AdditiveBlending, depthWrite: false, toneMapped: false });
 
-  // ---------- 貢丸:寫實貢丸(各口味配料)+ 竹籤引信火花;快爆閃白、發霉變綠 ----------
+  // ---------- 貢丸:寫實貢丸(各口味配料)+ 竹籤引信火花；快爆閃白、發霉變綠 ----------
   const ballCache = new Map();
   const BALL_R = { 3: 0.46, 4: 0.26, 10: 0.4, 11: 0.36, 12: 0.38, 13: 0.4 };
-  // 中心離地高度(相對直徑):球 0.5;香腸/米腸/大腸包小腸是躺著的,較低
+  // 中心離地高度(相對直徑):球 0.5；香腸/米腸/大腸包小腸是躺著的，較低
   const BALL_Y = { 11: 0.2, 12: 0.25, 13: 0.33 };
 
   // ---------- 新增的特殊貢丸/道具:用基本幾何組出 3D 模型 ----------
@@ -796,7 +796,7 @@
     mesh.castShadow = true;
     return mesh;
   }
-  // 腸子:圓柱 + 兩端半球;axis 'z' 沿上下方向(香腸)、'x' 沿左右方向(米腸)
+  // 腸子:圓柱 + 兩端半球；axis 'z' 沿上下方向(香腸)、'x' 沿左右方向(米腸)
   function sausageBody(len, rad, color, axis) {
     const grp = new THREE.Group();
     const mat = std(color, 0.45);
@@ -843,7 +843,7 @@
       fuseTip(g, 0, 0.5, -0.05);
       return { group: g, body };
     }
-    if (id === 11) {            // 香腸:沿上下方向,紅色帶烤痕
+    if (id === 11) {            // 香腸:沿上下方向，紅色帶烤痕
       const sg = sausageBody(1.1, 0.26, 0xc2412a, 'z');
       g.add(sg);
       const mark = std(0x5d1a0e, 0.8);
@@ -854,7 +854,7 @@
       fuseTip(g, 0, 0.3, -0.62);
       return { group: g, body: sg.userData.tube };
     }
-    if (id === 12) {            // 米腸:沿左右方向,米白色帶米粒
+    if (id === 12) {            // 米腸:沿左右方向，米白色帶米粒
       const rg = sausageBody(1.1, 0.3, 0xeadcc0, 'x');
       g.add(rg);
       const grain = std(0xffffff, 0.35);
@@ -898,7 +898,7 @@
 
   function makeMeatball(m) {
     const g = new THREE.Group();
-    // 優先用 Blender 模型;模型還沒載入時,新增的種類先用幾何組合的替代模型
+    // 優先用 Blender 模型；模型還沒載入時，新增的種類先用幾何組合的替代模型
     const model = propModel('mb_' + m.def.id);
     const custom = model ? null : customMeatball(m.def.id);
     let body = custom ? custom.body : null;
@@ -922,7 +922,7 @@
       body = new THREE.Mesh(ballGeo, new THREE.MeshStandardMaterial({ color: m.def.color, roughness: 0.6 }));
       g.add(body);
     }
-    // 快爆閃光:外罩一層加亮球殼(不動到貼圖材質,避免重新編譯 shader)
+    // 快爆閃光:外罩一層加亮球殼(不動到貼圖材質，避免重新編譯 shader)
     const flash = new THREE.Mesh(ballGeo, flashMat);
     flash.scale.setScalar(1.06);
     flash.visible = false;
@@ -943,7 +943,7 @@
       const lift = (m.held ? 0.7 : 0) + (m.jump || 0) * 0.9; // 手持舉高、黑豬肉彈跳
       g.scale.set(r, r, r);
       g.position.set(W2(m.x), (BALL_Y[m.def.id] || 0.5) * r + bob + lift, W2(m.y));
-      // 慢慢轉,增加生命感;香腸/米腸/大腸包小腸固定方向,一眼看出爆炸方向
+      // 慢慢轉，增加生命感；香腸/米腸/大腸包小腸固定方向，一眼看出爆炸方向
       g.rotation.y = (m.def.axis || m.def.behavior === 'square') ? 0 : elapsed * 0.6;
       g.userData.shadow.position.y = (0.012 - g.position.y) / r; // 影子貼地(抵銷彈跳與舉起高度)
       const u = g.userData;
@@ -959,12 +959,12 @@
   }
 
   // ---------- 角色:寫實學生(Quaternius CC0 人體 + Blender 制服/球帽)+ 骨架動畫 ----------
-  // 模型未載入或畫質設為「省電」時,退回 voxel 積木學生
+  // 模型未載入或畫質設為「省電」時，退回 voxel 積木學生
   const charCache = new Map();
   const charLib = loadMapLib('chars');
   const animLib = loadMapLib('anims');
-  const CHAR_H = 1.12;            // 遊戲中的身高(格;Q 版 2 頭身)
-  const CHAR_SRC_H = 1.52;        // 原始模型身高(公尺;tools/assets/15_build_chibi.py)
+  const CHAR_H = 1.12;            // 遊戲中的身高(格；Q 版 2 頭身)
+  const CHAR_SRC_H = 1.52;        // 原始模型身高(公尺；tools/assets/15_build_chibi.py)
   const charClock = new THREE.Clock();
   let charDt = 0;
   const deadAt = new WeakMap();
@@ -975,7 +975,7 @@
       accent: f === player ? 0xffd54f : (f.team === 'red' ? 0xe74c3c : 0x3aa6ff),
     };
   }
-  // 動畫片段:只保留旋轉 + 骨盆位移(依體型縮放骨盆高度,避免女生腳浮空/陷地)
+  // 動畫片段:只保留旋轉 + 骨盆位移(依體型縮放骨盆高度，避免女生腳浮空/陷地)
   const clipCache = {};
   function clipsFor(vname, model) {
     if (clipCache[vname]) return clipCache[vname];
@@ -995,7 +995,7 @@
     return (clipCache[vname] = out);
   }
   // GLTFLoader 會把同檔案內重複的節點名稱改成 pelvis_1、spine_01_1…(四個角色共用骨架名)
-  // → 依動畫軌道的骨頭名稱改回來,動畫才綁得上
+  // → 依動畫軌道的骨頭名稱改回來，動畫才綁得上
   let boneNames = null;
   function fixBoneNames(model) {
     if (!boneNames) {
@@ -1029,8 +1029,8 @@
     g2.fillStyle = '#fff';
     g2.fillText(text, w / 2, 34);
     const tex = new THREE.CanvasTexture(cv);
-    tex.encoding = THREE.sRGBEncoding;   // 畫布顏色是 sRGB;沒標記會被當成線性再轉一次而洗白
-    // 不受霧影響;亮度略壓(白字不超過夜間光暈門檻,不會暈開)
+    tex.encoding = THREE.sRGBEncoding;   // 畫布顏色是 sRGB；沒標記會被當成線性再轉一次而洗白
+    // 不受霧影響；亮度略壓(白字不超過夜間光暈門檻，不會暈開)
     const mat = new THREE.SpriteMaterial({ map: tex, depthTest: false, depthWrite: false, transparent: true, fog: false });
     mat.color.setScalar(0.85);
     const sp = new THREE.Sprite(mat);
@@ -1062,7 +1062,7 @@
     maskRing.visible = false;
     g.add(maskRing);
     g.add(blobShadow(0.75));
-    // 腳下隊伍色光圈(顏色每幀依隊伍設定):出生點不分左右,靠顏色分辨
+    // 腳下隊伍色光圈(顏色每幀依隊伍設定):出生點不分左右，靠顏色分辨
     const teamRing = new THREE.Mesh(new THREE.RingGeometry(0.34, 0.46, 32), new THREE.MeshBasicMaterial({
       color: 0x3aa6ff, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }));
     teamRing.rotation.x = -Math.PI / 2;
@@ -1155,7 +1155,7 @@
       if (g) return g;
     }
     const g = new THREE.Group();
-    // 身體零件包成一組(原點在腳底):躺長椅、倒地時整組轉倒;光圈等附件留在外層不跟著轉
+    // 身體零件包成一組(原點在腳底):躺長椅、倒地時整組轉倒；光圈等附件留在外層不跟著轉
     const body = new THREE.Group();
     g.add(body);
     const skin = 0xf2c9a0, shirt = 0xf5f5f5, hair = 0x2b2622, sock = 0xeeeeee, shoe = 0x333940;
@@ -1201,7 +1201,7 @@
       else if (!deadAt.has(f)) deadAt.set(f, now);
     }
     // 死亡後保留 2.5 秒讓倒地動畫播完
-    // 被外星人抓走(away)的人暫時不在場上,不顯示
+    // 被外星人抓走(away)的人暫時不在場上，不顯示
     const list = fighters().filter((f) => f && !(f.away > 0) && (f.alive || f.invuln > 0 || (deadAt.has(f) && now - deadAt.get(f) < 2.5)));
     syncSet(charCache, list, makeVoxelChar, (f, g) => {
       g.position.set(W2(f.x), 0, W2(f.y));
@@ -1257,7 +1257,7 @@
         }
       }
       u.marker.position.y = (u.real ? 1.5 : 1.42) + Math.sin(elapsed * 5) * 0.05;
-      // 頭上名稱(畫在箭頭上方,永遠面向鏡頭、不被擋住)
+      // 頭上名稱(畫在箭頭上方，永遠面向鏡頭、不被擋住)
       const nm = typeof displayName === 'function' ? displayName(f) : '';
       const nmKey = nm + '|' + f.team + (f === player ? '|me' : '');
       if (u.nameKey !== nmKey) {
@@ -1267,11 +1267,11 @@
         u.nameKey = nmKey;
       }
       u.nameSprite.visible = f.alive && !(camMode === 'fps' && f === player);
-      // 名牌大小依鏡頭距離:近距離(跟隨)維持小尺寸,遠景(全景/俯視)放大到最多 2.2 倍,字在畫面上仍讀得出來
+      // 名牌大小依鏡頭距離:近距離(跟隨)維持小尺寸，遠景(全景/俯視)放大到最多 2.2 倍，字在畫面上仍讀得出來
       const nk = Math.min(2.2, Math.max(1, camera.position.distanceTo(g.position) / 12)), nb = u.nameSprite.userData.base;
       u.nameSprite.scale.set(nb.x * nk, nb.y * nk, 1);
       u.nameSprite.position.y = u.marker.position.y + 0.17 + nb.y * nk / 2;
-      // 防護盾:金色護罩球(呼吸脈動);口罩:藍色地環(旋轉)
+      // 防護盾:金色護罩球(呼吸脈動)；口罩:藍色地環(旋轉)
       u.shield.visible = f.alive && f.shieldT > 0;
       if (u.shield.visible) {
         u.shield.material.opacity = 0.16 + 0.1 * Math.sin(elapsed * 6);
@@ -1313,7 +1313,7 @@
     g.userData = u;
     return g;
   }
-  // 依移動方向轉身(平滑),並播放小動作:蟑螂腳快速交替、老鼠身體起伏
+  // 依移動方向轉身(平滑)，並播放小動作:蟑螂腳快速交替、老鼠身體起伏
   function animatePet(g, x, z, speedHint) {
     const u = g.userData;
     const dx = x - (u.px === undefined ? x : u.px), dz = z - (u.pz === undefined ? z : u.pz);
@@ -1405,7 +1405,7 @@
         u.ring.rotation.z = elapsed * 2;
         u.ring.material.opacity = 0.5 + 0.3 * Math.sin(elapsed * 6);
       }
-      // 發霉:綠色光暈、慢慢縮小,快消失時閃爍
+      // 發霉:綠色光暈、慢慢縮小，快消失時閃爍
       const rot = it.moldy ? Math.max(0, Math.min(1, (it.age - it.fresh) / MOLD_STAGE)) : 0;
       u.mold.visible = !!it.moldy;
       if (it.moldy) u.mold.material.opacity = 0.35 + 0.15 * Math.sin(elapsed * 5);
@@ -1422,7 +1422,7 @@
     float vnoise(vec2 p){ vec2 i = floor(p), f = fract(p); f = f * f * (3.0 - 2.0 * f);
       return mix(mix(h21(i), h21(i + vec2(1.0, 0.0)), f.x), mix(h21(i + vec2(0.0, 1.0)), h21(i + vec2(1.0, 1.0)), f.x), f.y); }
     float fbm(vec2 p){ float v = 0.0, a = 0.5; for (int i = 0; i < 5; i++){ v += a * vnoise(p); p *= 2.03; a *= 0.5; } return v; }`;
-  // 面向鏡頭的四邊形:position = 中心,aCorner = 角落,aParam = (亂數種子, 延遲, 大小)
+  // 面向鏡頭的四邊形:position = 中心，aCorner = 角落，aParam = (亂數種子， 延遲， 大小)
   const BILL_VERT = `
     attribute vec2 aCorner; attribute vec3 aParam;
     uniform float uT; uniform float uRise; uniform float uGrow;
@@ -1486,7 +1486,7 @@
       if (d > 0.25 || vA <= 0.0) discard;
       gl_FragColor = vec4(uCore, vA * (1.0 - d * 4.0));
     }`;
-  // 三種爆炸配色:一般火焰 / 黴毒(綠) / 墨汁(黑紫,不發光)
+  // 三種爆炸配色:一般火焰 / 黴毒(綠) / 墨汁(黑紫，不發光)
   const FX_PAL = {
     fire:   { core: 0xfff3c4, mid: 0xff7a1a, dark: 0x5c1606, smoke: 0x2f2a27, spark: 0xffd27a, ring: 0xffb04a, add: true },
     poison: { core: 0xeaffb4, mid: 0x86cc22, dark: 0x1f3d08, smoke: 0x40602a, spark: 0xc8ff6a, ring: 0x9ee34a, add: true },
@@ -1679,7 +1679,7 @@
     for (let i = n; i < dangerPool.length; i++) dangerPool[i].visible = false;
   }
 
-  // ---------- 公園小鴨(Poly Haven CC0 橡皮鴨,在北側圍牆頂上來回散步) ----------
+  // ---------- 公園小鴨(Poly Haven CC0 橡皮鴨，在北側圍牆頂上來回散步) ----------
   let duck = null;
   function syncDuck() {
     if (!duck) {
@@ -1696,7 +1696,7 @@
     duck.rotation.y = Math.cos(t) > 0 ? Math.PI / 2 : -Math.PI / 2;
   }
 
-  // ---------- 點地圖操作(射線;拖曳=旋轉,原地點=移動/放彈) ----------
+  // ---------- 點地圖操作(射線；拖曳=旋轉，原地點=移動/放彈) ----------
   const ray = new THREE.Raycaster();
   const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
   let downPos = null;
@@ -1731,12 +1731,12 @@
 
   // ---------- 跟隨模式:擋住視線的模型變半透明(玩家本人永遠可見) ----------
   // 判定方式:凡是位於「鏡頭 → 玩家」視線圓柱內的物件全部淡化(牆/箱/桶/草叢/場外造景)
-  // 實例化的物件:先把該實例藏起來,改放一個半透明替身
+  // 實例化的物件:先把該實例藏起來，改放一個半透明替身
   function fadeMaterial(m) {
     if (!m.userData.fadeMat) {
       const t = m.clone();
       t.transparent = true;
-      t.opacity = 0.5; // 半透明程度:保留物體的存在感,又不擋視線
+      t.opacity = 0.5; // 半透明程度:保留物體的存在感，又不擋視線
       t.depthWrite = false;
       t.onBeforeCompile = m.onBeforeCompile;
       m.userData.fadeMat = t;
@@ -1848,7 +1848,7 @@
     });
   }
   updateMiniUi();
-  // 依鏡頭模式與主題選微縮風格(夜間地圖:光暈門檻較低,燈籠會暈開)
+  // 依鏡頭模式與主題選微縮風格(夜間地圖:光暈門檻較低，燈籠會暈開)
   let lookKey = '';
   function updateLook() {
     if (!look) return;
@@ -1871,10 +1871,10 @@
     qSel.value = qualityPref;
     if (qSel.options[0]) qSel.options[0].text = qualityPref === 'auto' ? '自動·' + Q.name : '自動';
   }
-  // 自動:每秒看一次 FPS,太低就降一級;持續很順就升一級(降過的等級不再升回,避免來回跳)
+  // 自動:每秒看一次 FPS，太低就降一級；持續很順就升一級(降過的等級不再升回，避免來回跳)
   let fpsFrames = 0, fpsT0 = performance.now(), fpsHigh = 0;
   let autoCap = QUALITY_ORDER.length - 1;
-  let autoCool = performance.now() + 9000;  // 剛載入時模型解碼會卡,先不判斷
+  let autoCool = performance.now() + 9000;  // 剛載入時模型解碼會卡，先不判斷
   let fpsLowRun = 0;
   if (qSel) {
     qSel.addEventListener('change', () => {
@@ -1896,10 +1896,10 @@
     if (fpsEl) fpsEl.textContent = Math.round(fps) + ' fps';
     if (qualityPref !== 'auto' || document.hidden || now < autoCool) return;
     const i = QUALITY_ORDER.indexOf(qualityLevel);
-    // 自動模式最低停在「低」(保留寫實人物);只有在「低」仍持續低於 14 fps 才降到「省電」
+    // 自動模式最低停在「低」(保留寫實人物)；只有在「低」仍持續低於 14 fps 才降到「省電」
     const floorHit = i === 1 && fps >= 14;
     if (fps < 24 && i > 0 && !floorHit) {
-      if (++fpsLowRun >= (i === 1 ? 3 : 2)) {   // 連續數秒偏低才降,避免偶發卡頓誤判
+      if (++fpsLowRun >= (i === 1 ? 3 : 2)) {   // 連續數秒偏低才降，避免偶發卡頓誤判
         autoCap = i - 1;
         applyQuality(QUALITY_ORDER[i - 1]);
         autoCool = now + 4000;
@@ -1964,7 +1964,7 @@
     }
   }
 
-  // ---------- 公園長椅(extra.glb 的 prop_bench,椅背預設朝北;方向隨地圖)----------
+  // ---------- 公園長椅(extra.glb 的 prop_bench，椅背預設朝北；方向隨地圖)----------
   const benchGroup = new THREE.Group();
   scene.add(benchGroup);
   let benchKey = '';
@@ -2006,7 +2006,7 @@
     flakePos.set([Math.random() * (COLS + 4) - 2, Math.random() * 6, Math.random() * (ROWS + 4) - 2], i * 3);
     flakeV.push(0.6 + Math.random() * 0.7);
   }
-  // 地面雪跡:一張半透明的白斑貼圖蓋在地面上,越下越白
+  // 地面雪跡:一張半透明的白斑貼圖蓋在地面上，越下越白
   const snowCv = document.createElement('canvas'); snowCv.width = COLS * 32; snowCv.height = ROWS * 32;
   (function paintSnow() {
     const g = snowCv.getContext('2d');
@@ -2052,13 +2052,13 @@
     rainbow.add(new THREE.Mesh(new THREE.TorusGeometry(r, 0.19, 8, 96, Math.PI), m));
     return m;
   });
-  // 彩虹橫跨地圖:兩腳落在左右場外、距離上緣約 1/4 處,拱形壓扁一點、半透明,不擋住太多場地
+  // 彩虹橫跨地圖:兩腳落在左右場外、距離上緣約 1/4 處，拱形壓扁一點、半透明，不擋住太多場地
   const RB_Z = ROWS * 0.25;
   rainbow.position.set(CX, -0.4, RB_Z);
   rainbow.scale.y = 0.62;
   rainbow.visible = false;
   scene.add(rainbow);
-  // 彩虹光澤:從彩虹兩腳方向打進場內的兩道彩色光(不投影、色相輪轉、兩側互補),讓下方物件反射出彩虹色
+  // 彩虹光澤:從彩虹兩腳方向打進場內的兩道彩色光(不投影、色相輪轉、兩側互補)，讓下方物件反射出彩虹色
   const glossA = new THREE.DirectionalLight(0xffffff, 0), glossB = new THREE.DirectionalLight(0xffffff, 0);
   glossA.position.set(CX - 12, 6, RB_Z); glossB.position.set(CX + 12, 6, RB_Z);
   glossA.target.position.set(CX, 0, CZ); glossB.target.position.set(CX, 0, CZ);
@@ -2124,14 +2124,14 @@
   // ---------- 渲染迴圈 ----------
   function frame() {
     requestAnimationFrame(frame);
-    if (window.VIEW && VIEW.mode !== '3d') return; // 2D 模式:3D 暫停,不耗效能
+    if (window.VIEW && VIEW.mode !== '3d') return; // 2D 模式:3D 暫停，不耗效能
     if (typeof player === 'undefined' || !player || !grid.length) {
       draw();
       return;
     }
     syncBoard();
     syncBenches();
-    if (propsJustLoaded) { // 模型庫剛載入:清掉替代模型,下面的 sync 會用正式模型重建
+    if (propsJustLoaded) { // 模型庫剛載入:清掉替代模型，下面的 sync 會用正式模型重建
       propsJustLoaded = false;
       for (const cache of [ballCache, itemCache, petCache, wildCache]) {
         for (const g of cache.values()) scene.remove(g);
