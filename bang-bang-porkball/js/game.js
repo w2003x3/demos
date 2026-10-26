@@ -86,36 +86,28 @@ const toRow = (y) => Math.floor(y / TS);
 // ---------- 地圖 ----------
 let grid = []; // grid[r][c] = TILE.*
 
-// 兩隊出生點(col,row):藍隊在左、紅隊在右。第一個是人類玩家。
-// 出生點:前 n 個藍隊(左側)、後 n 個紅隊(右側);n = 每隊人數(對戰設定)
-// 每局隨機:整張左右 / 上下翻轉(藍隊可能在右邊),同隊的出生位置再打亂
+// 出生點:前 n 個藍隊、後 n 個紅隊(n = 每隊人數);第一個是本機玩家
+// 位置取自目前地圖的出生點表(MAPS[id].spawns,預設九宮格 8 格),每局隨機挑選並打亂,不分隊伍左右
 let spawnLayout = null;
 let spotT = 0;   // 開局「你在這裡」亮光剩餘秒數
+const mapSpawnSlots = () => (MAPS[currentMapId] && MAPS[currentMapId].spawns) || GRID9_SPAWNS;
 function rollSpawns() {
+  const slots = mapSpawnSlots().slice();
+  for (let i = slots.length - 1; i > 0; i--) { const j = rand(i + 1); [slots[i], slots[j]] = [slots[j], slots[i]]; }
   const base = baseSpawns();
-  const fx = Math.random() < 0.5, fy = Math.random() < 0.5;
-  const pos = base.map((s) => [fx ? COLS - 1 - s.col : s.col, fy ? ROWS - 1 - s.row : s.row]);
-  const shuffle = (a) => { for (let i = a.length - 1; i > 0; i--) { const j = rand(i + 1); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-  const n = base.filter((s) => s.team === 'blue').length;
-  const bluePos = shuffle(pos.slice(0, n)), redPos = shuffle(pos.slice(n));
-  spawnLayout = { size: n, list: base.map((s, i) => {
-    const [col, row] = i < n ? bluePos[i] : redPos[i - n];
-    return { ...s, col, row };
-  }) };
+  spawnLayout = { size: base.length / 2, map: currentMapId, list: base.map((s, i) => ({ ...s, col: slots[i][0], row: slots[i][1] })) };
 }
 function teamSpawns() {
   const n = (typeof MATCH !== 'undefined' && MATCH.size) || 3;
-  return spawnLayout && spawnLayout.size === n ? spawnLayout.list : baseSpawns();
+  return spawnLayout && spawnLayout.size === n && spawnLayout.map === currentMapId ? spawnLayout.list : baseSpawns();
 }
+// 未隨機前的預設排法:依出生點表順序,藍隊在前、紅隊在後(人數超過出生點數時以出生點數為上限)
 function baseSpawns() {
-  const mid = Math.floor(ROWS / 2);
-  const n = (typeof MATCH !== 'undefined' && MATCH.size) || 3;
-  // 每隊 4 人時沿左右兩側平均分開(1、4、8、11 列);3 人以下維持角落 + 中間
-  const rows = n === 4 ? [1, 4, ROWS - 5, ROWS - 2] : [1, ROWS - 2, mid];
-  const blue = rows.map((r) => [1, r]).slice(0, n);
-  const red = (n === 1 ? [[COLS - 2, ROWS - 2]] : rows.map((r) => [COLS - 2, r])).slice(0, n);
-  return blue.map(([col, row], i) => ({ col, row, team: 'blue', human: i === 0 }))
-    .concat(red.map(([col, row]) => ({ col, row, team: 'red' })));
+  const slots = mapSpawnSlots();
+  const n = Math.min((typeof MATCH !== 'undefined' && MATCH.size) || 3, Math.floor(slots.length / 2));
+  return slots.slice(0, n * 2).map(([col, row], i) => (i < n
+    ? { col, row, team: 'blue', human: i === 0 }
+    : { col, row, team: 'red' }));
 }
 
 function generateMap() {

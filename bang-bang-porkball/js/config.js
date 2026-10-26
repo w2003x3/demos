@@ -254,8 +254,16 @@ const SHIELD_TIME = 3;
 // MP 自然回復(每秒):讓防護盾、踢/騎乘貢丸等 MP 技能更常派上用場
 const MP_REGEN = 4;
 
+// ===== 出生點 =====
+// 每張地圖的出生點位置 [col, row];每局從中隨機挑出需要的數量、隨機分給每位玩家(不分隊伍左右)
+// 預設:九宮格扣掉正中間 = 四角 + 四邊中點,共 8 格(最多 4 對 4)。地圖布局不同時,在 MAPS 裡用 spawns 指定
+const GRID9_SPAWNS = (() => {
+  const L = 1, R = COLS - 2, T = 1, B = ROWS - 2, MC = Math.floor(COLS / 2), MR = Math.floor(ROWS / 2);
+  return [[L, T], [MC, T], [R, T], [L, MR], [R, MR], [L, B], [MC, B], [R, B]];
+})();
+
 // ===== 地圖主題 =====
-// 每張地圖用不同圖材與生成參數;snackWeights = 該地圖較容易掉的台灣小吃
+// 每張地圖用不同圖材與生成參數;snackWeights = 該地圖較容易掉的台灣小吃;spawns = 出生點(省略 = GRID9_SPAWNS)
 const MAPS = {
   park: {
     name: '公園', icon: '🌳',
