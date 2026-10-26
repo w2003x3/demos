@@ -1181,7 +1181,8 @@
       else if (!deadAt.has(f)) deadAt.set(f, now);
     }
     // 死亡後保留 2.5 秒讓倒地動畫播完
-    const list = fighters().filter((f) => f && (f.alive || f.invuln > 0 || (deadAt.has(f) && now - deadAt.get(f) < 2.5)));
+    // 被外星人抓走(away)的人暫時不在場上,不顯示
+    const list = fighters().filter((f) => f && !(f.away > 0) && (f.alive || f.invuln > 0 || (deadAt.has(f) && now - deadAt.get(f) < 2.5)));
     syncSet(charCache, list, makeVoxelChar, (f, g) => {
       g.position.set(W2(f.x), 0, W2(f.y));
       const u = g.userData;

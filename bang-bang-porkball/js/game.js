@@ -297,12 +297,35 @@ function updateAlien(dt) {
   if (!a.f.alive) { env.abduct = null; env.abductDone = true; return; }
   if (a.t >= ALIEN_BEAM) {
     const f = a.f;
-    spawnText(f.x, f.y - TS * 0.6, '被外星人抓走了!', '#b2ff59');
-    f.shieldT = 0; f.hp = 0; f.abducted = true;
-    f.die();
+    spawnText(f.x, f.y - TS * 0.6, '被外星人抓走了!3 秒後放回來', '#b2ff59');
+    // 暫時離場:沿用倒下的狀態(不會被炸、不能行動、不被鎖定),但不算死亡(不噴金針菇、存活照算)
+    f.shieldT = 0; f.ironT = 0; f.alive = false; f.away = ALIEN_AWAY;
+    f.mvTarget = null; f.path = null; f.autoPath = null; f.held = null;
     env.abduct = null; env.abductDone = true;
     if (f === player) updateHud();
   }
+}
+// 外星人放人:隨機安全的空格(沒有貢丸、角色,不在爆炸範圍),HP 只剩 1,短暫無敵
+const ALIEN_AWAY = 3;
+function returnFromAlien(f) {
+  f.away = 0;
+  if (gameState !== 'playing') return;
+  const occupied = (c, r) => meatballs.some((m) => !m.exploded && m.col === c && m.row === r) ||
+    fighters().some((o) => o !== f && o.alive && o.col === c && o.row === r);
+  const cells = [], fallback = [];
+  for (let r = 1; r < ROWS - 1; r++) for (let c = 1; c < COLS - 1; c++) {
+    if (!isFloor(c, r) || occupied(c, r)) continue;
+    fallback.push([c, r]);
+    if (!danger || !danger[r] || danger[r][c] === Infinity) cells.push([c, r]);
+  }
+  const pool = cells.length ? cells : fallback;
+  if (!pool.length) return;
+  const [c, r] = pool[rand(pool.length)];
+  f.x = tileCenter(c); f.y = tileCenter(r);
+  f.alive = true; f.hp = 1; f.invuln = Math.max(f.invuln, 1.5);
+  sfx('whoosh', f.x, f.y);
+  spawnText(f.x, f.y - TS * 0.7, '🛸被放回來了!HP 剩 1', '#b2ff59');
+  if (f === player) { spotT = Math.max(spotT, 1.5); updateHud(); }   // 自己回來時亮一下,方便找到位置
 }
 // 畫面變黑的程度:被墨魚貢丸炸到、火山灰取較黑的
 function blindAlpha() {
@@ -378,7 +401,7 @@ function computeDanger() {
 
 // 所有參戰角色(玩家 + AI)
 function fighters() { return [player, ...bots]; }
-function teamAlive(team) { return fighters().filter((f) => f.team === team && f.alive).length; }
+function teamAlive(team) { return fighters().filter((f) => f.team === team && (f.alive || f.away > 0)).length; }   // 被外星人抓走的會回來,照算存活
 
 // ---------- 玩家 ----------
 class Player {
@@ -1258,10 +1281,10 @@ function useSkill(p) {
     p.dashT = sk.time;
     say('💨衝刺!', '#4fc3f7');
   } else if (id === 'heal') {
-    if (p.hp >= p.maxHp) { if (p === player) say('HP 已滿', '#bdbdbd'); return; }
-    p.hp += 1;
-    p.invuln = Math.max(p.invuln, 1);
-    say('💪鐵肚皮 HP +1', '#81c784');
+    // 鐵肚皮:無敵 1 秒,期間每被一顆貢丸炸到 +1 HP(看準時機硬吃爆炸)
+    p.ironT = sk.time;
+    p.invuln = Math.max(p.invuln, sk.time);
+    say('💪鐵肚皮!', '#81c784');
   } else if (id === 'detonate') {
     const mine = meatballs.filter((m) => m.owner === p && !m.exploded && !m.eaten && !m.held && !isDormant(m));
     if (!mine.length) { if (p === player) say('場上沒有你的貢丸', '#bdbdbd'); return; }
@@ -1293,7 +1316,7 @@ function aiSkill(e) {
   if (e.skillCd > 0) return;
   const id = charDef(e.char).skill;
   const dHere = danger[e.row][e.col];
-  if (id === 'heal') { if (e.hp < e.maxHp) useSkill(e); }
+  if (id === 'heal') { if (dHere < 0.9) useSkill(e); }           // 爆炸快來時硬吃,賺 HP
   else if (id === 'dash') { if (dHere < 2.5) useSkill(e); }        // 正在逃命就加速
   else if (id === 'freeze') { if (dHere < 1.6) useSkill(e); }
   else if (id === 'blink') {
@@ -1788,6 +1811,8 @@ function update(dt) {
   for (const f of fighters()) {
     if (f.shieldT > 0) f.shieldT = Math.max(0, f.shieldT - dt);
     if (f.skillCd > 0) f.skillCd = Math.max(0, f.skillCd - dt);
+    if (f.ironT > 0) f.ironT = Math.max(0, f.ironT - dt);
+    if (f.away > 0) { f.away -= dt; if (f.away <= 0) returnFromAlien(f); }
     if (f.dashT > 0) f.dashT = Math.max(0, f.dashT - dt);
     if (f.spaceT > 0) { f.spaceT -= dt; if (f.spaceT <= 0) { f.spaceT = 0; placeMeatball(f); } } // 只按一下:放貢丸
     if (onBench(f)) {                                          // 躺在長椅上:每秒回 1 HP
@@ -1837,6 +1862,16 @@ function update(dt) {
     const damage = (ent) => {
       if (!ent.alive) return;
       if (hitCells.some((cl) => cl.c === ent.col && cl.r === ent.row)) {
+        if (ent.ironT > 0) {
+          ex.ironed = ex.ironed || new Set();
+          if (!ex.ironed.has(ent)) {
+            ex.ironed.add(ent);
+            if (ent.hp < ent.maxHp) { ent.hp += 1; spawnText(ent.x, ent.y - TS * 0.5, '💪硬吃 +1 HP', '#81c784'); }
+            else spawnText(ent.x, ent.y - TS * 0.5, '💪硬吃!', '#81c784');
+            if (ent === player) updateHud();
+          }
+          return;
+        }
         ent.hurt(1, ex.poison);
         if (ex.ink && ent.blind) ent.blind(); // 墨魚貢丸:短暫看不到畫面
       }
@@ -1893,7 +1928,7 @@ function update(dt) {
   // 死亡動畫處理 + 移除
   bots.forEach((e) => { if (!e.alive && e.deathT === undefined) e.deathT = 0.4; });
   bots.forEach((e) => { if (e.deathT !== undefined) e.deathT -= dt; });
-  bots = bots.filter((e) => e.alive || e.deathT > 0 || e.remote); // 連線玩家倒下仍保留(還能放寵物)
+  bots = bots.filter((e) => e.alive || e.deathT > 0 || e.remote || e.away > 0); // 連線玩家倒下仍保留(還能放寵物);被外星人抓走的會回來
 
   // 新手教學:由 tutorial.js 接手關卡進度,不計時、不判勝負
   if (window.tutorial && tutorial.active) { tutorial.update(dt); updateHud(); return; }
@@ -2204,6 +2239,7 @@ function drawExplosion(ex) {
 }
 
 function drawCharacter(e) {
+  if (e.away > 0) return;   // 被外星人抓走:暫時不在場上
   const blink = e.invuln > 0 && Math.floor(e.invuln * 12) % 2 === 0;
   if (blink) return;
   // 全身像(寫實圖,腳底對齊格子下方;往左走時左右翻轉)

@@ -557,7 +557,7 @@ function buildSnapshot() {
       lb: f === player ? (f.netName || f.label) : f.label, tm: f.team, hu: f.isHuman ? 1 : 0,
       x: Math.round(f.x), y: Math.round(f.y), d: [f.dir.x, f.dir.y], mv: f.mvTarget ? 1 : 0,
       hp: f.hp, mh: f.maxHp, mp: Math.round(f.mp), mm: f.maxMp, pw: f.power, sp: f.speed, mb: f.maxBombs,
-      al: f.alive ? 1 : 0, iv: r1(f.invuln), bt: r1(f.blindT), pt: r1(f.poisonT),
+      al: f.alive ? 1 : 0, aw: r1(f.away || 0), ir: r1(f.ironT || 0), iv: r1(f.invuln), bt: r1(f.blindT), pt: r1(f.poisonT),
       sh: r1(f.shieldT || 0), im: r1(f.immunity), se: f.selected, ie: f.inkEaten, pk: f.porkNext ? 1 : 0,
       ch: f.char, sc: r1(f.skillCd || 0), da: r1(f.dashT || 0), bo: f.boostNext ? 1 : 0,
       to: f.isHuman ? f.tools : undefined,
@@ -644,7 +644,7 @@ const guest = {
       f.dir = { x: d.d[0], y: d.d[1] };
       f.mvTarget = d.mv ? { x: f.tx, y: f.ty } : null;
       f.hp = d.hp; f.maxHp = d.mh; f.mp = d.mp; f.maxMp = d.mm; f.power = d.pw; f.speed = d.sp; f.maxBombs = d.mb;
-      f.alive = !!d.al; f.invuln = d.iv; f.blindT = d.bt; f.poisonT = d.pt;
+      f.alive = !!d.al; f.away = d.aw || 0; f.ironT = d.ir || 0; f.invuln = d.iv; f.blindT = d.bt; f.poisonT = d.pt;
       f.shieldT = d.sh || 0; f.immunity = d.im; f.selected = d.se; f.inkEaten = d.ie; f.porkNext = !!d.pk;
       f.char = d.ch || 'aman'; f.skillCd = d.sc || 0; f.dashT = d.da || 0; f.boostNext = !!d.bo;
       if (d.to) f.tools = d.to;

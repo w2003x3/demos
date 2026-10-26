@@ -325,7 +325,7 @@ const WEATHERS = {
   volcano: { name: '火山噴發', icon: '🌋', fuse: 2.3, decay: 10, weight: 1, ash: true,
              desc: '火山灰遮住視線' },
   alien:   { name: '外星人來襲', icon: '🛸', fuse: 3.0, decay: 12, weight: 1, alien: true,
-             desc: '隨機抓走一位玩家' },
+             desc: '隨機抓走一人,3 秒後放回、HP 剩 1' },
 };
 // 天氣卡的效果標籤:good 可以做的事、limit 限制、bad 危險、fuse 引信快慢
 const WEATHER_CHIPS = {
@@ -338,7 +338,7 @@ const WEATHER_CHIPS = {
   typhoon: [['limit', '每 4 秒吹走貢丸']],
   quake:   [['limit', '貢丸隨機移位']],
   volcano: [['bad', '畫面變暗'], ['fuse', '貢丸較快爆']],
-  alien:   [['bad', '隨機抓走一人']],
+  alien:   [['bad', '抓走一人 3 秒,放回 HP 剩 1']],
 };
 const isDisaster = (w) => !!(w.gust || w.shake || w.ash || w.alien);
 const SNOW_SPEED = 90;        // 下雪時所有人的移動速度(最低)
@@ -358,7 +358,7 @@ const CHAR_IDS = Object.keys(CHARACTERS);
 const SKILLS = {
   boost:    { name: '加料',     icon: '🌶️', cd: 12, desc: '下一顆貢丸威力 +2' },
   dash:     { name: '衝刺',     icon: '💨', cd: 12, desc: '4 秒內速度 +80', time: 4, bonus: 80 },
-  heal:     { name: '鐵肚皮',   icon: '💪', cd: 35, desc: '回復 1 HP、無敵 1 秒' },
+  heal:     { name: '鐵肚皮',   icon: '💪', cd: 20, desc: '無敵 1 秒;期間每被炸到一次 +1 HP', time: 1 },
   detonate: { name: '麻辣引爆', icon: '💥', cd: 12, desc: '自己的貢丸 0.4 秒後全部引爆', delay: 0.4 },
   blink:    { name: '瞬步',     icon: '🥷', cd: 10,  desc: '往前閃現 2 格,可穿越障礙' },
   freeze:   { name: '剉冰',     icon: '🧊', cd: 15, desc: '周圍 3 格的貢丸延後 3 秒爆' },
