@@ -2484,6 +2484,7 @@ let hudSel = -1;
 function updateHud() {
   const p = player, w = weatherDef();
   const cd = charDef(p.char), sk = skillOf(p);
+  setHtml('me-ribbon', `你・${cd.name}`);
   setHtml('stat-char', `<span class="ch-face"><img src="assets/avatars/${p.char || 'aman'}.webp" alt=""></span><b>${cd.name}</b><span>${cd.role}型</span><span class="team-chip ${p.team === 'red' ? 'red' : 'blue'}">${p.team === 'red' ? '紅隊' : '藍隊'}</span>`);
 
   // ---- 五項數值
@@ -2597,7 +2598,7 @@ function updateHud() {
     `<small class="sc-lbl">${label}隊存活</small></span>`;
   const multi = MATCH.rounds > 1;   // 多局賽制:勝場另外顯示,避免把存活人數看成比分
   setHtml('stat-enemies', scBox('blue', '藍') +
-    `<span class="sc-time${multi ? ' multi' : ''}">${mm}:${ss.toString().padStart(2, '0')}${multi ? `<small>第 ${SERIES.round} 局・勝 ${SERIES.wins.blue}:${SERIES.wins.red}</small>` : ''}</span>` +
+    `<span class="sc-time${multi ? ' multi' : ''}">${mm}:${ss.toString().padStart(2, '0')}${multi ? `<small>第 ${SERIES.round} 局・${SERIES.wins.blue}:${SERIES.wins.red}</small>` : ''}</span>` +
     scBox('red', '紅'));
 
   renderCards();
@@ -2669,7 +2670,7 @@ function renderCards() {
     const fresh = p.cardNew && elapsed - (p.cardNew[c.key] || -9) < 1.5;
     const desc = c.kind === 'pet' ? PET_DESC : c.def.desc;
     return `<button type="button" class="tcard ${c.kind}${ok ? '' : ' off'}${fresh ? ' new' : ''}" data-card="${c.key}" title="${c.def.name}:${desc}">` +
-      `<span class="tc-tag">${CARD_TAG[c.kind]}</span>${c.hot ? `<kbd>${c.hot}</kbd>` : ''}` +
+      `<span class="tc-tag">${CARD_TAG[c.kind]}${c.hot ? '・' + String(c.hot).toUpperCase() : ''}</span>` +
       (c.n > 1 ? `<span class="tc-n">×${c.n}</span>` : '') +
       `<img src="assets/${c.img}.webp" alt=""><span class="tc-txt"><b>${c.def.name}</b><small>${fresh ? 'NEW' : cardNote(p, c.key)}</small></span></button>`;
   }).join('') || '<p class="cards-empty">木箱炸開撿到的工具會變成卡牌</p>';

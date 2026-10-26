@@ -1255,3 +1255,184 @@ body.map-night #app { --g-shadow: #0c1230; background-color: #1a2550; background
   #app .top-tools { gap: 5px; }
   #app .topbar { column-gap: 10px; }
 }
+
+/* =====================================================================
+   對戰設定 / 多人連線改版(設計稿 Setup・Online・Room):藍色放射底 + 米色漫畫格
+   ===================================================================== */
+#setup-overlay, #online-overlay {
+  --s-ink: #17161c; --s-cream: #fff4da; --s-yellow: #ffcf2e; --s-red: #e43d30; --s-blue: #2e8bea;
+  background: repeating-conic-gradient(from 0deg at 50% 40%, #3a97f0 0deg 8deg, #2e8bea 8deg 16deg);
+}
+#setup-overlay::before, #online-overlay::before { content: ""; position: fixed; inset: 0; pointer-events: none;
+  background-image: radial-gradient(rgba(255,255,255,.28) 2px, transparent 2.6px); background-size: 16px 16px; }
+#setup-overlay .setup-box { position: relative; width: min(1360px, 100%); gap: 18px; }
+/* 標題 */
+#setup-overlay .su-head { align-items: center; flex-wrap: wrap; gap: 10px 18px; }
+#setup-overlay .su-head h2, #online-overlay .ol-head h2 { margin: 0; color: var(--s-cream); font-size: 44px; font-weight: 900; letter-spacing: .14em;
+  -webkit-text-stroke: 9px var(--s-ink); paint-order: stroke fill; }
+#setup-overlay .su-head span, #online-overlay .ol-badge { background: var(--s-yellow); color: var(--s-ink); border: 3px solid var(--s-ink);
+  font-size: 15px; font-weight: 900; padding: 4px 12px; box-shadow: 3px 3px 0 var(--s-ink); }
+/* 三塊米色格 */
+#setup-overlay .su-body { gap: 26px 24px; align-items: stretch; }
+#setup-overlay .su-body > section, #setup-overlay .su-room { position: relative; background: var(--s-cream); border: 5px solid var(--s-ink);
+  box-shadow: 8px 8px 0 var(--s-ink); padding: 34px 18px 18px; }
+#setup-overlay .su-chars { flex: 999 1 520px; display: flex; flex-direction: column; gap: 14px; }
+#setup-overlay .su-rules { flex: 1 1 420px; gap: 10px; }
+#setup-overlay .su-title { position: absolute; left: -5px; top: -18px; margin: 0; background: var(--s-ink); color: var(--s-yellow);
+  font-size: 15px; letter-spacing: .14em; padding: 4px 26px 5px 14px; clip-path: polygon(0 0, 100% 0, 92% 100%, 0 100%); }
+/* 選角色:形象圖 */
+#setup-overlay .su-char-grid { gap: 14px; }
+#setup-overlay .su-char-grid button { position: relative; padding: 0 0 8px; border: 4px solid var(--s-ink); border-bottom-width: 4px; background: #fff;
+  box-shadow: 4px 4px 0 var(--s-ink); overflow: hidden; transition: transform .12s; }
+#setup-overlay .su-char-grid button:hover { background: #fff; transform: translateY(-3px); }
+#setup-overlay .su-char-grid button.active { background: repeating-conic-gradient(from 0deg at 50% 45%, #ffcf2e 0deg 9deg, #ffb21f 9deg 18deg);
+  box-shadow: 0 0 0 4px var(--s-red), 6px 6px 0 4px var(--s-ink); }
+#setup-overlay .su-char-grid img { width: 100%; height: auto; aspect-ratio: 1; object-fit: contain; object-position: center; }
+#setup-overlay .su-char-grid b { font-size: 20px; margin-top: -6px; }
+#setup-overlay .su-char-grid small { font-size: 12px; color: #4a4650; }
+#setup-overlay .su-char-info { margin: 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; background: #fff; border: 3px solid var(--s-ink); padding: 12px 14px; }
+#setup-overlay .sci-name { font-size: 22px; font-weight: 900; margin-right: 6px; }
+#setup-overlay .sci-chip { display: inline-flex; align-items: baseline; gap: 5px; border: 3px solid var(--s-ink); background: #fff; padding: 2px 10px; font-weight: 900; font-size: 13px; }
+#setup-overlay .sci-chip b { font-family: "Luckiest Guy", "Noto Sans TC", sans-serif; font-size: 18px; font-weight: 400; letter-spacing: .04em; }
+#setup-overlay .sci-skill { flex: 1 1 100%; margin: 0; font-size: 15px; font-weight: 700; }
+#setup-overlay .sci-skill b { background: var(--s-ink); color: var(--s-yellow); padding: 1px 8px; margin-right: 6px; }
+/* 規則 */
+#setup-overlay .su-row { grid-template-columns: 48px minmax(0, 1fr); gap: 10px; }
+#setup-overlay .su-row > span { font-size: 16px; }
+#setup-overlay .su-opts button { height: auto; min-height: 44px; padding: 0 14px; border: 3px solid var(--s-ink); background: #fff; font-size: 15px; font-weight: 900; }
+#setup-overlay .su-opts button:hover { background: #fff7d6; }
+#setup-overlay .su-opts button.active { background: var(--s-yellow); color: var(--s-ink); box-shadow: 3px 3px 0 var(--s-ink); }
+#setup-overlay .su-opts button.active:disabled { background: var(--s-yellow); }
+#setup-overlay .su-summary { margin: auto 0 0; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; background: var(--s-ink); color: var(--s-cream);
+  border: 3px solid var(--s-yellow); padding: 12px 14px; font-size: 16px; font-weight: 900; }
+#setup-overlay .su-summary small { flex: 1 1 100%; font-size: 13px; font-weight: 700; color: var(--s-yellow); }
+.su-dot { width: 14px; height: 14px; border-radius: 50%; border: 2px solid #fff4da; display: inline-block; }
+.su-dot.blue { background: #2e8bea; } .su-dot.red { background: #e43d30; }
+.su-vs { font-family: "Luckiest Guy", sans-serif; font-weight: 400; color: #ffcf2e; font-size: 20px; margin: 0 4px; letter-spacing: .06em; }
+/* 攤位(深色格) */
+#setup-overlay .su-room { flex: 1 1 330px; background: var(--s-ink); border-color: var(--s-ink); color: var(--s-cream); gap: 10px; }
+#setup-overlay .su-room .su-title { background: var(--s-yellow); color: var(--s-ink); }
+#setup-overlay .su-room-head { gap: 10px; }
+#setup-overlay .su-room-head small { font-size: 13px; font-weight: 900; color: var(--s-yellow); }
+#setup-overlay .su-room-head b { flex: 1; font-family: "Luckiest Guy", sans-serif; font-weight: 400; font-size: 34px; letter-spacing: .2em; color: var(--s-cream); }
+#setup-overlay .su-copy { height: auto; min-height: 44px; border: 3px solid var(--s-yellow); background: var(--s-yellow); color: var(--s-ink); font-weight: 900; font-size: 13px; }
+#setup-overlay .su-players li { gap: 6px; padding: 4px 8px 4px 6px; background: var(--s-cream); color: var(--s-ink); border-left: 8px solid var(--s-blue); font-size: 14px; }
+#setup-overlay .su-players li.team-red { border-left-color: var(--s-red); }
+#setup-overlay .su-players li.me { background: var(--s-yellow); }
+#setup-overlay .su-players li span { color: #4a4650; font-size: 12px; }
+#setup-overlay .su-face { width: 34px; height: 34px; border-radius: 50%; border: 3px solid var(--s-ink); background: var(--s-cream); object-fit: cover; flex: none; box-sizing: border-box; }
+#setup-overlay .su-players em { border: 2px solid var(--s-ink); background: #fff; color: var(--s-ink); font-weight: 900; }
+#setup-overlay .su-players em.ok { background: #7be39a; color: var(--s-ink); }
+#setup-overlay .su-note { color: var(--s-yellow); margin-top: auto; }
+#setup-overlay .su-status { color: var(--s-cream); -webkit-text-stroke: 4px var(--s-ink); paint-order: stroke fill; }
+/* 底部按鈕 */
+#setup-overlay .su-foot { justify-content: flex-end; gap: 16px; }
+#setup-overlay .su-foot .start-btn { width: auto; min-width: 280px; padding: 0 40px; height: 72px; background: var(--s-red); color: var(--s-cream); border: 5px solid var(--s-ink);
+  box-shadow: 7px 7px 0 var(--s-ink); font-size: 28px; letter-spacing: .16em; transition: transform .12s, box-shadow .12s; }
+#setup-overlay .su-foot .start-btn:hover { transform: translate(3px, 3px); box-shadow: 4px 4px 0 var(--s-ink); }
+#setup-overlay .su-foot .start-btn.done { background: #2f9e57; }
+#setup-overlay .su-back, #setup-overlay .su-nudge { height: 60px; border: 4px solid var(--s-ink); background: var(--s-cream); box-shadow: 5px 5px 0 var(--s-ink); font-size: 19px; color: var(--s-ink); }
+@media (max-width: 560px) {
+  #setup-overlay .su-head h2, #online-overlay .ol-head h2 { font-size: 30px; -webkit-text-stroke-width: 7px; }
+  #setup-overlay .su-char-grid { gap: 8px; }
+  #setup-overlay .su-char-grid b { font-size: 15px; }
+  #setup-overlay .su-char-grid small { font-size: 10px; }
+  #setup-overlay .su-body > section, #setup-overlay .su-room { padding: 30px 10px 12px; box-shadow: 5px 5px 0 var(--s-ink); }
+  #setup-overlay .sci-name { font-size: 17px; flex: 1 1 100%; }
+  #setup-overlay .su-row { grid-template-columns: 40px minmax(0, 1fr); }
+  #setup-overlay .su-opts button { padding: 0 10px; font-size: 13px; }
+  #setup-overlay .su-foot { background: transparent; justify-content: center; }
+  #setup-overlay .su-foot .start-btn { min-width: 0; flex: 1; padding: 0 12px; font-size: 22px; height: 60px; }
+  #setup-overlay .su-back, #setup-overlay .su-nudge { padding: 0 12px; font-size: 16px; }
+}
+
+/* 多人連線入口 */
+#online-overlay { overflow-y: auto; align-items: flex-start; padding: 22px 0 40px; }
+#online-overlay .online-panel { position: relative; width: min(1240px, 100%); box-sizing: border-box; padding: 0 40px; background: transparent; border: 0; text-align: left; }
+#online-overlay .ol-head { display: flex; align-items: center; gap: 18px; margin-bottom: 22px; }
+#online-overlay .ol-back { width: 56px; height: 56px; border-radius: 50%; border: 4px solid var(--s-ink); background: var(--s-cream); color: var(--s-ink);
+  display: grid; place-items: center; box-shadow: 4px 4px 0 var(--s-ink); cursor: pointer; padding: 0; }
+#online-overlay .ol-back:hover { background: var(--s-yellow); }
+#online-overlay .ol-body { display: flex; flex-wrap: wrap; align-items: center; gap: 30px 50px; }
+#online-overlay .ol-form { flex: 1 1 440px; max-width: 560px; box-sizing: border-box; background: var(--s-cream); border: 5px solid var(--s-ink); box-shadow: 8px 8px 0 var(--s-ink);
+  padding: 26px 28px; display: flex; flex-direction: column; gap: 16px; }
+#online-overlay .sub { margin: 0; color: var(--s-ink); font-size: 17px; }
+#online-overlay .mini { margin: -6px 0 0; color: #4a4650; font-weight: 700; }
+#online-overlay .ol-field { flex-direction: column; align-items: stretch; gap: 6px; margin: 0; font-weight: 900; font-size: 16px; }
+#online-overlay .ol-field input, #online-overlay .ol-join input { width: 100%; box-sizing: border-box; min-height: 56px; border: 4px solid var(--s-ink); font-size: 20px; padding: 0 16px; }
+#online-overlay .ol-me { display: flex; align-items: center; gap: 12px; background: #fff; border: 3px solid var(--s-ink); padding: 8px 12px; }
+#online-overlay .ol-me img { width: 52px; height: 52px; border-radius: 50%; border: 3px solid var(--s-ink); background: var(--s-yellow); object-fit: cover; box-sizing: border-box; }
+#online-overlay .ol-me span { flex: 1; display: flex; flex-direction: column; line-height: 1.3; }
+#online-overlay .ol-me small { font-size: 12px; font-weight: 700; color: #4a4650; }
+#online-overlay .ol-me b { font-size: 20px; }
+#online-overlay .ol-me button { min-height: 44px; padding: 0 14px; border: 3px solid var(--s-ink); background: var(--s-cream); font: inherit; font-weight: 900; font-size: 14px; cursor: pointer; }
+#online-overlay .ol-me button:hover { background: var(--s-yellow); }
+#online-overlay button.big.primary { width: 100%; height: 76px; margin: 0; background: var(--s-red); color: var(--s-cream); border: 5px solid var(--s-ink); box-shadow: 7px 7px 0 var(--s-ink);
+  font-size: 28px; font-weight: 900; letter-spacing: .14em; transition: transform .12s, box-shadow .12s; }
+#online-overlay button.big.primary:hover { background: #ef4a3c; transform: translate(3px, 3px); box-shadow: 4px 4px 0 var(--s-ink); }
+#online-overlay .ol-or { display: flex; align-items: center; gap: 12px; color: #4a4650; font-weight: 900; font-size: 14px; }
+#online-overlay .ol-or::before, #online-overlay .ol-or::after { content: ""; flex: 1; height: 3px; background: var(--s-ink); }
+#online-overlay .ol-join { margin: 0; gap: 10px; }
+#online-overlay .ol-join input { font-family: "Luckiest Guy", sans-serif; font-size: 24px; letter-spacing: .3em; text-align: left; }
+#online-overlay .ol-join .big { height: 56px; padding: 0 28px; background: var(--s-yellow); border: 4px solid var(--s-ink); box-shadow: 4px 4px 0 var(--s-ink); font-size: 20px; font-weight: 900; }
+#online-overlay .ol-status { margin: 0; min-height: 0; }
+#online-overlay .ol-status:empty { display: none; }
+#online-overlay .ol-hero { flex: 1 1 400px; position: relative; display: grid; place-items: center; min-height: 500px; }
+#online-overlay .ol-hero::before, #online-overlay .ol-hero::after { content: ""; position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  clip-path: polygon(50% 0%,59% 16%,77% 6%,76% 25%,96% 22%,86% 39%,100% 50%,86% 61%,96% 78%,76% 75%,77% 94%,59% 84%,50% 100%,41% 84%,23% 94%,24% 75%,4% 78%,14% 61%,0% 50%,14% 39%,4% 22%,24% 25%,23% 6%,41% 16%); }
+#online-overlay .ol-hero::before { width: 500px; height: 500px; background: var(--s-ink); }
+#online-overlay .ol-hero::after { width: 474px; height: 474px; background: repeating-conic-gradient(from 0deg at 50% 50%, #ffcf2e 0deg 9deg, #ffb21f 9deg 18deg); }
+#online-overlay .ol-hero img { position: relative; z-index: 1; width: 420px; height: 420px; object-fit: contain; filter: drop-shadow(8px 10px 0 rgba(23,22,28,.35)); }
+#online-overlay .ol-bubble { position: absolute; z-index: 2; right: 6%; top: 8%; background: var(--s-cream); border: 4px solid var(--s-ink); padding: 8px 14px;
+  font-weight: 900; font-size: 17px; box-shadow: 4px 4px 0 var(--s-ink); transform: rotate(4deg); }
+@media (max-width: 920px) { #online-overlay .ol-hero { display: none; } #online-overlay .ol-form { max-width: none; } }
+@media (max-width: 560px) {
+  #online-overlay { padding-top: 14px; }
+  #online-overlay .online-panel { padding: 0 14px; }
+  #online-overlay .ol-form { padding: 18px 16px; box-shadow: 5px 5px 0 var(--s-ink); }
+  #online-overlay button.big.primary { height: 64px; font-size: 22px; }
+}
+/* 選角色:依寬度自動排(電腦版一排 6 個,不撐出一屏);簡述兩行:稱號 / [定位] */
+#setup-overlay .su-char-grid { grid-template-columns: repeat(auto-fill, minmax(118px, 1fr)); gap: 12px; }
+#setup-overlay .su-char-grid button { gap: 2px; }
+#setup-overlay .su-char-grid small { white-space: nowrap; }
+#setup-overlay .su-char-grid em { font-style: normal; border: 2px solid var(--s-ink); background: #fff; padding: 0 8px; font-size: 12px; font-weight: 900; }
+@media (max-width: 560px) { #setup-overlay .su-char-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; } }
+@media (max-width: 560px) {
+  #setup-overlay .su-foot { background: #2e8bea; border-top: 4px solid var(--s-ink); margin: 0 -20px; padding: 10px 20px; }
+}
+
+/* =====================================================================
+   遊戲中 HUD 對齊設計稿(HudFit1440 / HudFit1366)
+   深夜藍底、星芒計時器、圖示返回鈕、玩家狀態單欄、手牌縮小、拿掉重新開始鈕(R 鍵仍可用)
+   ===================================================================== */
+#app { --g-shadow: #0c1230; background-color: #1a2550; background-image: radial-gradient(rgba(255,207,46,.13) 2px, transparent 2.6px); background-size: 18px 18px; }
+/* 計時器:奶油外框 + 黃色星芒,疊在藍紅隊條之間 */
+#app .sc-time { width: 104px; height: 66px; padding: 4px 0 0; margin: 0 -10px; background: transparent; border: 0; box-shadow: none; isolation: isolate;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; line-height: 1; }
+#app .sc-time::before, #app .sc-time::after { content: ""; position: absolute; z-index: -1;
+  clip-path: polygon(50% 0%,59% 16%,77% 6%,76% 25%,96% 22%,86% 39%,100% 50%,86% 61%,96% 78%,76% 75%,77% 94%,59% 84%,50% 100%,41% 84%,23% 94%,24% 75%,4% 78%,14% 61%,0% 50%,14% 39%,4% 22%,24% 25%,23% 6%,41% 16%); }
+#app .sc-time::before { inset: 0; background: var(--g-cream); }
+#app .sc-time::after { inset: 4px 5px; background: var(--g-yellow); }
+#app .sc-time.multi { font-size: 24px; }
+#app .sc-time.multi small { margin-top: 1px; font-size: 10px; }
+/* 回主選單:只有箭頭的方鈕 */
+#app .home-btn { width: 44px; height: 44px; padding: 0; justify-content: center; }
+@media (min-width: 921px) {
+  /* 玩家狀態:頭像列 + 五項單欄(名稱 | 條 | 數值) */
+  #app .side-left > .card:nth-of-type(2) { grid-template-columns: minmax(0, 1fr); row-gap: 5px; }
+  #app .side-left .stat { display: grid; grid-template-columns: 40px minmax(0, 1fr) auto; align-items: center; column-gap: 8px; }
+  #app .side-left .stat .stat-row { display: contents; }
+  #app .side-left .stat .stat-row > span { order: 1; font-weight: 900; }
+  #app .side-left .stat .bar3 { order: 2; margin: 0; }
+  #app .side-left .stat .stat-row b { order: 3; text-align: right; font-family: "Luckiest Guy", var(--font-num); font-weight: 400; font-size: 15px; letter-spacing: .03em; }
+  #app .ch-face { width: 38px; height: 38px; }
+  /* 手牌:卡片縮小、拿掉圖例說明 */
+  #app .hand-head .lg, #app .hand-head .hand-tip { display: none; }
+  #app .tcard { width: 84px; height: auto; min-height: 0; padding: 20px 2px 5px; }
+  #app .tc-tag { height: 17px; line-height: 17px; font-size: 10px; letter-spacing: .02em; }
+  #app .tcard img { width: 46px; height: 46px; margin-top: 2px; }
+  #app .tcard b { font-size: 12px; }
+  /* 重新開始鈕拿掉(R 鍵仍可重新開始) */
+  #app .act.restart.wide { display: none; }
+}

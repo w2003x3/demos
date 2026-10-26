@@ -240,9 +240,10 @@ const setupUI = {
       return `<div class="su-row"><span>${o.label}</span><div class="su-opts">${btns}</div></div>`;
     };
     const chars = CHAR_IDS.map((id) =>
-      `<button type="button" data-char="${id}" class="${id === myChar ? 'active' : ''}"><img src="assets/portraits/${id}.webp" alt=""><b>${CHARACTERS[id].name}</b><small>${CHARACTERS[id].role}</small></button>`).join('');
+      `<button type="button" data-char="${id}" class="${id === myChar ? 'active' : ''}"><img src="assets/art/${id}.webp" alt=""><b>${CHARACTERS[id].name}</b><small>${CHARACTERS[id].title}</small><em>${CHARACTERS[id].role}</em></button>`).join('');
     const n = MATCH.size;
-    const summary = `🔵 你${n > 1 ? ` + ${n - 1} 名隊友` : ''} vs 🔴 ${n} 名對手・${MATCH.rounds === 1 ? '單局' : (MATCH.rounds === 3 ? '三戰兩勝' : '五戰三勝')}・每局 ${MATCH.time / 60} 分鐘`;
+    const summary = `<i class="su-dot blue"></i>你${n > 1 ? ` + ${n - 1} 名隊友` : ''}<b class="su-vs">VS</b><i class="su-dot red"></i>${n} 名對手` +
+      `<small>${MATCH.rounds === 1 ? '單局' : (MATCH.rounds === 3 ? '三戰兩勝' : '五戰三勝')}・每局 ${MATCH.time / 60} 分鐘・空位由電腦補上</small>`;
     let side = '';
     if (online) {
       const plan = NET.slotPlan();
@@ -253,11 +254,12 @@ const setupUI = {
         const ok = p.host || NET.ready[p.id];
         const link = p.host ? '' : NET.links[p.id] === 'p2p' ? '<em class="p2p" title="和攤主直接連線(延遲較低)">直連</em>'
           : '<em class="relay" title="經過伺服器轉送">轉送</em>';
-        return `<li class="team-${team}"><b>${escHtml(p.name)}</b><span>${ch}</span>${p.host ? '<em>攤主</em>' : `<em class="${ok ? 'ok' : ''}">${ok ? '已準備' : '未準備'}</em>`}${link}${p.id === NET.id ? '<em>你</em>' : ''}</li>`;
+        const face = CHARACTERS[NET.picks[p.id]] ? NET.picks[p.id] : 'aman';
+        return `<li class="team-${team}${p.id === NET.id ? ' me' : ''}"><img class="su-face" src="assets/avatars/${face}.webp" alt=""><b>${escHtml(p.name)}</b><span>${ch}</span>${p.host ? '<em>攤主</em>' : `<em class="${ok ? 'ok' : ''}">${ok ? '已準備' : '未準備'}</em>`}${link}${p.id === NET.id ? '<em>你</em>' : ''}</li>`;
       }).join('');
       const extra = NET.roster().length - Object.keys(plan).length;
       const link = location.origin + location.pathname + '?room=' + NET.code;
-      side = `<div class="su-room"><div class="su-room-head"><b>攤位 ${escHtml(NET.code)}</b>` +
+      side = `<div class="su-room"><div class="su-title">攤位</div><div class="su-room-head"><small>代碼</small><b>${escHtml(NET.code)}</b>` +
         `<button type="button" class="su-copy" data-link="${escHtml(link)}">複製邀請連結</button></div>` +
         `<ul class="su-players">${rows}</ul>` +
         (extra > 0 ? `<p class="su-note">人數超過 ${2 * n} 人,${extra} 位要等下一場</p>` : `<p class="su-note">空位由電腦補上</p>`) + '</div>';
@@ -277,7 +279,9 @@ const setupUI = {
     box.innerHTML =
       `<div class="su-head"><h2>對戰設定</h2><span>${online ? (host ? '你是攤主,可以調整規則' : '規則由攤主設定') : '單機對戰'}</span></div>` +
       `<div class="su-body"><section class="su-chars"><div class="su-title">選角色</div><div class="su-char-grid">${chars}</div>` +
-      `<p class="su-char-info"><b>${c.name}</b>・${c.role}・HP ${c.hp}・速度 ${c.speed}・威力 ${c.power}・貢丸 ${c.bombs}・技能 ${sk.icon}${sk.name}:${sk.desc}</p></section>` +
+      `<div class="su-char-info"><b class="sci-name">${c.name}・${c.title}</b>` +
+      [['HP', c.hp], ['MP', c.mp], ['速度', c.speed], ['威力', c.power], ['貢丸', c.bombs]].map(([k, v]) => `<span class="sci-chip">${k}<b>${v}</b></span>`).join('') +
+      `<p class="sci-skill"><b>技能・${sk.name}</b>${sk.desc}</p></div></section>` +
       `<section class="su-rules"><div class="su-title">規則</div>${['map', 'size', 'rounds', 'time', 'ai', 'wx', 'teams'].map(row).join('')}` +
       `<p class="su-summary">${summary}</p></section>${side}</div>` +
       `<p class="su-status" id="su-status"></p><div class="su-foot">${foot}</div>`;

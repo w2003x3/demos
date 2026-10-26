@@ -817,17 +817,25 @@ const lobbyUI = {
     const esc = (t) => String(t).replace(/[&<>"]/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
     if (!NET.online) {
       const code = new URLSearchParams(location.search).get('room') || '';
+      // 漫畫風:標題列 + 左表單(暱稱、角色、開攤、代碼加入)+ 右側角色形象圖
+      const name = this.draftName != null ? this.draftName : this.savedName();
       panel.innerHTML =
-        '<div class="logo">🌐 多人連線</div>' +
-        '<p class="sub">和朋友一起玩,最多 8 人;不足的位置由電腦補上</p>' +
-        `<label class="ol-field">暱稱 <input id="ol-name" maxlength="12" placeholder="你的名字" value="${esc(this.savedName())}"></label>` +
-        `<p class="mini">你的角色:<b>${charDef(myChar).name}</b>(在主選單更換)</p>` +
-        '<button type="button" class="big primary" data-ol="create">🏮 開攤(建立攤位)</button>' +
+        '<div class="ol-head"><button type="button" class="ol-back" data-ol="back" aria-label="回主選單">' +
+        '<svg width="24" height="24" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="3.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg></button>' +
+        '<h2>多人連線</h2><span class="ol-badge">最多 8 人</span></div>' +
+        '<div class="ol-body"><div class="ol-form">' +
+        '<p class="sub">和朋友一起玩;人數不足的位置由電腦補上。</p>' +
+        `<label class="ol-field">暱稱 <input id="ol-name" maxlength="12" placeholder="你的名字" value="${esc(name)}"></label>` +
+        `<div class="ol-me"><img src="assets/avatars/${myChar}.webp" alt=""><span><small>你的角色</small><b>${charDef(myChar).name}</b></span>` +
+        '<button type="button" data-ol="char">換角色</button></div>' +
+        '<button type="button" class="big primary" data-ol="create">開攤(建立攤位)</button>' +
+        '<div class="ol-or">或用朋友給的代碼加入</div>' +
         '<div class="ol-join">' +
-        `<input id="ol-code" maxlength="6" placeholder="攤位代碼" value="${esc(code)}" autocomplete="off">` +
+        `<input id="ol-code" maxlength="6" placeholder="攤位代碼" aria-label="攤位代碼" value="${esc(code)}" autocomplete="off">` +
         '<button type="button" class="big" data-ol="join">加入</button></div>' +
         `<p class="ol-status${this.msgErr ? ' err' : ''}">${esc(this.msg)}</p>` +
-        '<button type="button" class="icon-btn" data-ol="back">← 返回</button>';
+        '<p class="mini">收到邀請連結的話,點開會直接帶入代碼。</p></div>' +
+        `<div class="ol-hero" aria-hidden="true"><img src="assets/art/${myChar}.webp" alt=""><span class="ol-bubble">快來陪我擺攤!</span></div></div>`;
       return;
     }
     const host = NET.role === 'host';
@@ -887,7 +895,13 @@ const lobbyUI = {
     else if (a === 'start') NET.startOnline();
     else if (a === 'leave') { NET.leave(); this.status(''); this.render(); }
     else if (a === 'back') { this.hide(); showOverlay('menu-overlay', true); }
-    else if (a === 'copy') {
+    else if (a === 'char') {
+      // 換角色:依序切換,保留已輸入的暱稱
+      const inp = this.el.querySelector('#ol-name');
+      if (inp) this.draftName = inp.value;
+      pickChar(CHAR_IDS[(CHAR_IDS.indexOf(myChar) + 1) % CHAR_IDS.length]);
+      this.render();
+    } else if (a === 'copy') {
       const link = b.dataset.link;
       (navigator.clipboard ? navigator.clipboard.writeText(link) : Promise.reject())
         .then(() => this.status('已複製邀請連結'))
