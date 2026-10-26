@@ -498,6 +498,7 @@ const NET = {
       showOverlay('menu-overlay', false);
       showOverlay('result-overlay', false);
       lobbyUI.hide();
+      logPlay();
       return;
     }
     if (msg.t === 'open') {

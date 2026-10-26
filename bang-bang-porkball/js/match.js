@@ -50,6 +50,15 @@ function beginRound() {
   setupUI.hide();
   showOverlay('menu-overlay', false);
   showOverlay('result-overlay', false);
+  logPlay();
+}
+// 遊玩統計:每開一局送一筆匿名資料到連線伺服器(角色、地圖、人數、模式;不含暱稱或任何個人資料)
+function logPlay() {
+  try {
+    const body = JSON.stringify({ char: myChar, map: currentMapId, size: MATCH.size, round: SERIES.round, rounds: MATCH.rounds,
+      mode: NET.online ? NET.role : 'solo', view: window.VIEW ? VIEW.mode : '2d' });
+    if (navigator.sendBeacon) navigator.sendBeacon(ONLINE_SERVER.replace(/^ws/, 'http') + '/stat', new Blob([body], { type: 'text/plain' }));
+  } catch (e) { /* 統計失敗不影響遊戲 */ }
 }
 function startRound() {
   if (NET.online) { if (NET.role === 'host') NET.startRound(); return; }
