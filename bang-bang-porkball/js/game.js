@@ -2431,7 +2431,7 @@ function buildRoster() {
     const row = document.createElement('div');
     row.className = 'roster-row team-' + f.team + (f === player ? ' me' : '');
     row.innerHTML =
-      `<img class="roster-face" src="assets/${charSprite(f)}.webp" alt="">` +
+      `<img class="roster-face" src="assets/avatars/${f.char || 'aman'}.webp" alt="">` +
       `<span class="roster-name">${f.label || ''}<small>${charDef(f.char).name}</small></span>` +
       `<span class="roster-hp"></span>`;
     el.appendChild(row);
@@ -2444,6 +2444,15 @@ function updateRoster() {
     // HP 上限超過 4(吃芋頭)時改顯示數字,避免愛心一長串把名字擠掉
     hp.textContent = f.maxHp > 4 ? `❤${Math.max(0, f.hp)}/${f.maxHp}` : '❤'.repeat(Math.max(0, f.hp)) + '·'.repeat(Math.max(0, f.maxHp - f.hp));
   }
+}
+
+// 永久道具格:電腦版放左欄(手牌列只留卡牌),窄螢幕放回手牌列右側
+{
+  const slots = document.getElementById('perm-slots'), home = document.getElementById('perm-home');
+  const row = slots && slots.parentElement, mq = window.matchMedia && window.matchMedia('(min-width: 921px)');
+  const place = () => { if (slots && home && mq) (mq.matches ? home : row).appendChild(slots); };
+  place();
+  if (mq) mq.addEventListener('change', place);
 }
 
 // ====================================================================
@@ -2475,7 +2484,7 @@ let hudSel = -1;
 function updateHud() {
   const p = player, w = weatherDef();
   const cd = charDef(p.char), sk = skillOf(p);
-  setHtml('stat-char', `<span class="ch-face"><img src="assets/portraits/${p.char || 'aman'}.webp" alt=""></span><b>${cd.name}</b><span>${cd.role}型</span><span class="team-chip ${p.team === 'red' ? 'red' : 'blue'}">${p.team === 'red' ? '紅隊' : '藍隊'}</span>`);
+  setHtml('stat-char', `<span class="ch-face"><img src="assets/avatars/${p.char || 'aman'}.webp" alt=""></span><b>${cd.name}</b><span>${cd.role}型</span><span class="team-chip ${p.team === 'red' ? 'red' : 'blue'}">${p.team === 'red' ? '紅隊' : '藍隊'}</span>`);
 
   // ---- 五項數值
   const rain = w.speedBonus || 0;
@@ -2498,6 +2507,10 @@ function updateHud() {
     `<div class="wx-now"><span class="wx-icon">${w.icon}</span><b>${w.name}</b></div>` +
     `<div class="wx-chips">${weatherChips(true)}</div>` +
     `<div class="bar thin"><div class="fill" style="width:${Math.round(clamp(env.left / WEATHER_MAX, 0, 1) * 100)}%;background:#8a8f95"></div></div>`);
+
+  setHtml('wx-strip',
+    `<span class="wx-icon">${w.icon}</span><b>${w.name}</b>${weatherChips(true)}` +
+    `<span class="ms-left">${wxFixed ? '固定天氣' : Math.max(0, Math.ceil(env.left)) + ' 秒後變天'}</span>`);
 
   // ---- 動作區:放貢丸 / 技能(冷卻圓環)/ 防護盾 / 現在能做什麼
   setHtml('place-sub', p.held ? '空白鍵・放下夾著的貢丸' : `空白鍵・剩 ${left} 顆`);
@@ -2578,7 +2591,7 @@ function updateHud() {
   const ss = Math.floor(Math.max(0, matchTime) % 60);
   // 比分:每隊成員頭像(自己金框、出局變灰)+ 存活人數
   const faces = (team) => fighters().filter((f) => f.team === team).map((f) =>
-    `<i class="sc-face${f === p ? ' me' : ''}${f.alive || f.away > 0 ? '' : ' out'}"><img src="assets/portraits/${f.char || 'aman'}.webp" alt=""></i>`).join('');
+    `<i class="sc-face${f === p ? ' me' : ''}${f.alive || f.away > 0 ? '' : ' out'}"><img src="assets/avatars/${f.char || 'aman'}.webp" alt=""></i>`).join('');
   const scBox = (team, label) => `<span class="sc-${team}${p.team === team ? ' mine' : ''}">${p.team === team ? '<em>你</em>' : ''}` +
     (team === 'red' ? `<b class="sc-n">${teamAlive(team)}</b><span class="sc-faces">${faces(team)}</span>` : `<span class="sc-faces">${faces(team)}</span><b class="sc-n">${teamAlive(team)}</b>`) +
     `<small class="sc-lbl">${label}隊存活</small></span>`;

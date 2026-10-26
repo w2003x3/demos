@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Noto+Sans+TC:wght@500;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261026n" />
+  <link rel="stylesheet" href="css/style.css?v=20261026o" />
 </head>
 <body>
 <div id="app">
@@ -19,7 +19,7 @@
         <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
         主選單
       </button>
-      <div class="brand"><img class="brand-logo" src="assets/logo.webp?v=20261026n" alt="炸裂丸子" width="900" height="583"></div>
+      <div class="brand"><img class="brand-logo" src="assets/logo.webp?v=20261026o" alt="炸裂丸子" width="900" height="583"></div>
     </div>
     <div id="stat-enemies" class="scoreboard"></div>
     <div class="top-tools">
@@ -95,6 +95,8 @@
       </div>
       <h3 class="ribbon">戰隊</h3>
       <div id="roster" class="roster"></div>
+      <h3 class="ribbon perm-ribbon">永久道具</h3>
+      <div id="perm-home" class="perm-home"></div>
       <p class="ctl-hint only-2d">點地圖一下:走過去・點兩下:放貢丸<br>WASD / ↑↓←→ 移動</p>
       <p class="ctl-hint only-3d">拖曳:旋轉視角・滾輪/雙指:縮放<br>跟隨/第一人稱:方向鍵以鏡頭前方為準<br>點地圖一下:走過去・點兩下:放貢丸</p>
     </aside>
@@ -103,6 +105,8 @@
     <section class="stage-wrap">
       <!-- 手機:天氣 + 五項數值(一行) -->
       <div id="m-status" class="m-status only-phone"></div>
+      <!-- 電腦版:天氣一行(原本在左欄,移到場地上方讓左欄不出捲軸) -->
+      <div id="wx-strip" class="wx-strip"></div>
       <div class="stage">
         <canvas id="game"></canvas>
         <div id="game3d"></div>
@@ -176,7 +180,7 @@
 
   <div class="menu-left">
     <div class="menu-title">
-      <h1 class="menu-logo"><img src="assets/logo.webp?v=20261026n" alt="炸裂丸子 BANG BANG PORKBALL" width="900" height="583"></h1>
+      <h1 class="menu-logo"><img src="assets/logo.webp?v=20261026o" alt="炸裂丸子 BANG BANG PORKBALL" width="900" height="583"></h1>
       <p class="menu-sub">夜市小吃大亂鬥・2 隊限時淘汰</p>
     </div>
     <button id="btn-start" class="start-btn" type="button">
@@ -279,14 +283,14 @@
   </div>
 </div>
 
-<script src="js/config.js?v=20261026n"></script>
-<script src="js/audio.js?v=20261026n"></script>
-<script src="js/net.js?v=20261026n"></script>
-<script src="js/game.js?v=20261026n"></script>
-<script src="js/match.js?v=20261026n"></script>
-<script src="js/controls.js?v=20261026n"></script>
-<script src="js/guide.js?v=20261026n"></script>
-<script src="js/tutorial.js?v=20261026n"></script>
-<script src="js/view.js?v=20261026n"></script>
+<script src="js/config.js?v=20261026o"></script>
+<script src="js/audio.js?v=20261026o"></script>
+<script src="js/net.js?v=20261026o"></script>
+<script src="js/game.js?v=20261026o"></script>
+<script src="js/match.js?v=20261026o"></script>
+<script src="js/controls.js?v=20261026o"></script>
+<script src="js/guide.js?v=20261026o"></script>
+<script src="js/tutorial.js?v=20261026o"></script>
+<script src="js/view.js?v=20261026o"></script>
 </body>
 </html>

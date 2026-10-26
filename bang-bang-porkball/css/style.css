@@ -1226,3 +1226,32 @@ body.map-night #app { --g-shadow: #0c1230; background-color: #1a2550; background
 #app .tcard img { width: 54px; height: 54px; filter: drop-shadow(2px 2px 0 rgba(23,22,28,.25)); }
 #app .tcard.off img { filter: grayscale(.9) opacity(.7); }
 @media (max-width: 920px) { #app .tcard img { width: 40px; height: 40px; } }
+
+/* =====================================================================
+   頭像改用形象圖臉部(assets/avatars,128px 已裁好臉)+ 電腦版天氣列與永久道具移位
+   ===================================================================== */
+#app .sc-face img, #app .ch-face img { width: 100%; height: 100%; max-width: none; margin: 0; transform: none; object-fit: cover; display: block; }
+#app .ch-face { border-radius: 50%; background: var(--g-cream); }
+#app .roster-face { border-radius: 50%; border: 2px solid var(--g-ink); background: var(--g-cream); object-fit: cover; box-sizing: border-box; }
+.wx-strip, .perm-ribbon, .perm-home { display: none; }
+@media (min-width: 921px) {
+  #app .side-left .ribbon:first-of-type, #app .side-left .weather-card { display: none; }
+  #app .wx-strip { display: flex; align-items: center; gap: 6px; width: 100%; box-sizing: border-box; min-height: 30px; padding: 2px 10px;
+    background: var(--g-ink); color: var(--g-cream); border: 3px solid var(--g-yellow); white-space: nowrap; overflow: hidden; font-size: 14px; }
+  #app .wx-strip b { font-size: 16px; color: var(--g-yellow); margin-right: 4px; }
+  #app .wx-strip .wx-icon { font-size: 18px; }
+  #app .wx-strip .chip { font-size: 11px; padding: 1px 6px; }
+  #app .wx-strip .ms-left { margin-left: auto; font-weight: 700; font-size: 12px; color: var(--g-cream); }
+  #app .perm-ribbon { display: block; }
+  #app .perm-home { display: block; }
+  #app .perm-home .perm-slots { flex-direction: row; padding: 0; border: 0; gap: 6px; }
+  #app .perm-home .perm { flex: 1 1 0; min-width: 0; height: 40px; padding: 0 6px 0 2px; }
+  #app .perm-home .perm img { width: 26px; height: 26px; }
+  #app .perm-home .perm b { font-size: 12px; }
+  #app .perm-home .perm small { font-size: 10px; }
+}
+/* 1366 寬的 3D 模式頂列工具較多(視角/畫質/微縮):收緊間距避免最右邊的按鈕被切到 */
+@media (min-width: 921px) and (max-width: 1440px) {
+  #app .top-tools { gap: 5px; }
+  #app .topbar { column-gap: 10px; }
+}
