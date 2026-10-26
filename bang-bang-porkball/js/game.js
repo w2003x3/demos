@@ -2424,7 +2424,10 @@ function buildRoster() {
   if (!el) return;
   el.innerHTML = '';
   rosterEls = [];
-  for (const f of fighters()) {
+  // 藍隊在前、紅隊在後(電腦版兩欄:藍隊左欄、紅隊右欄,CSS grid 依欄排列)
+  const list = fighters().slice().sort((a, b) => (a.team === 'red') - (b.team === 'red'));
+  el.style.setProperty('--roster-rows', Math.max(1, list.filter((f) => f.team !== 'red').length, list.filter((f) => f.team === 'red').length));
+  for (const f of list) {
     const row = document.createElement('div');
     row.className = 'roster-row team-' + f.team + (f === player ? ' me' : '');
     row.innerHTML =
@@ -2438,7 +2441,8 @@ function buildRoster() {
 function updateRoster() {
   for (const { f, row, hp } of rosterEls) {
     row.classList.toggle('down', !f.alive);
-    hp.textContent = '❤'.repeat(Math.max(0, f.hp)) + '·'.repeat(Math.max(0, f.maxHp - f.hp));
+    // HP 上限超過 4(吃芋頭)時改顯示數字,避免愛心一長串把名字擠掉
+    hp.textContent = f.maxHp > 4 ? `❤${Math.max(0, f.hp)}/${f.maxHp}` : '❤'.repeat(Math.max(0, f.hp)) + '·'.repeat(Math.max(0, f.maxHp - f.hp));
   }
 }
 
@@ -2538,6 +2542,8 @@ function updateHud() {
   if (lowTip && lowTip.classList) lowTip.classList.toggle('hidden', !lowHp);
   // 連線模式:隱藏重新開始按鈕(body.online)
   if (document.body && document.body.classList) document.body.classList.toggle('online', !!NET.online);
+  // 遊戲中介面配色依地圖(夜市 = 深藍夜空,其他 = 天空藍)
+  if (document.body && document.body.classList) for (const m of ['park', 'market', 'night']) document.body.classList.toggle('map-' + m, currentMapId === m);
   // 開局隊伍橫幅:你是哪一隊、隊友是誰(開局亮光期間)
   const tb = $el('team-banner');
   if (tb && tb.classList) {
@@ -2570,7 +2576,12 @@ function updateHud() {
 
   const mm = Math.floor(Math.max(0, matchTime) / 60);
   const ss = Math.floor(Math.max(0, matchTime) % 60);
-  const scBox = (team, label) => `<span class="sc-${team}${p.team === team ? ' mine' : ''}">${p.team === team ? '<em>你</em>' : ''}<small>${label}隊<br>存活</small>${teamAlive(team)}</span>`;
+  // 比分:每隊成員頭像(自己金框、出局變灰)+ 存活人數
+  const faces = (team) => fighters().filter((f) => f.team === team).map((f) =>
+    `<i class="sc-face${f === p ? ' me' : ''}${f.alive || f.away > 0 ? '' : ' out'}"><img src="assets/portraits/${f.char || 'aman'}.webp" alt=""></i>`).join('');
+  const scBox = (team, label) => `<span class="sc-${team}${p.team === team ? ' mine' : ''}">${p.team === team ? '<em>你</em>' : ''}` +
+    (team === 'red' ? `<b class="sc-n">${teamAlive(team)}</b><span class="sc-faces">${faces(team)}</span>` : `<span class="sc-faces">${faces(team)}</span><b class="sc-n">${teamAlive(team)}</b>`) +
+    `<small class="sc-lbl">${label}隊存活</small></span>`;
   const multi = MATCH.rounds > 1;   // 多局賽制:勝場另外顯示,避免把存活人數看成比分
   setHtml('stat-enemies', scBox('blue', '藍') +
     `<span class="sc-time${multi ? ' multi' : ''}">${mm}:${ss.toString().padStart(2, '0')}${multi ? `<small>第 ${SERIES.round} 局・勝 ${SERIES.wins.blue}:${SERIES.wins.red}</small>` : ''}</span>` +
@@ -2633,10 +2644,10 @@ function renderCards() {
     for (const key of CARD_ORDER) {
       if (PETS[key]) {
         const s = p.petState[key];
-        if (s && s.status === 'stored') cards.push({ key, n: 1, kind: 'pet', def: PETS[key], img: 'pets/' + key, hot: key === 'rat' ? 'K' : 'L' });
+        if (s && s.status === 'stored') cards.push({ key, n: 1, kind: 'pet', def: PETS[key], img: 'cards/' + key, hot: key === 'rat' ? 'K' : 'L' });
       } else if (p.tools[key] > 0 && TOOLS[key].type === 'once') {
         const def = TOOLS[key];
-        cards.push({ key, n: p.tools[key], kind: 'once', def, img: 'items/' + key, hot: (def.useKey || '').toUpperCase() });
+        cards.push({ key, n: p.tools[key], kind: 'once', def, img: 'cards/' + key, hot: (def.useKey || '').toUpperCase() });
       }
     }
   }
@@ -2745,7 +2756,7 @@ function pickChar(id) {
   if (info) info.innerHTML = `<b>${c.name}</b>・${c.role}・技能 <b>${sk.icon}${sk.name}</b> ${sk.desc}`;
   const img = $el('hero-char');
   if (img) {
-    img.src = `assets/portraits/${id}.webp`;
+    img.src = `assets/art/${id}.webp`;   // 主選單:角色形象插畫(assets/art,由 去背_角色形象圖 分割)
     img.alt = c.name;
     img.classList.remove('swap'); void img.offsetWidth; img.classList.add('swap');   // 換人小動畫
   }

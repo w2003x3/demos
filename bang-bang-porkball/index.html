@@ -6,8 +6,8 @@
   <title>炸裂丸子 — 貢丸版炸彈超人</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261026k" />
+  <link href="https://fonts.googleapis.com/css2?family=Luckiest+Guy&family=Noto+Sans+TC:wght@500;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="css/style.css?v=20261026n" />
 </head>
 <body>
 <div id="app">
@@ -19,7 +19,7 @@
         <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 5l-7 7 7 7" stroke="currentColor" stroke-width="3" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
         主選單
       </button>
-      <div class="brand">炸裂丸子</div>
+      <div class="brand"><img class="brand-logo" src="assets/logo.webp?v=20261026n" alt="炸裂丸子" width="900" height="583"></div>
     </div>
     <div id="stat-enemies" class="scoreboard"></div>
     <div class="top-tools">
@@ -176,11 +176,11 @@
 
   <div class="menu-left">
     <div class="menu-title">
-      <h1 class="menu-logo"><img src="assets/logo.webp?v=20261026k" alt="炸裂丸子 BANG BANG PORKBALL" width="900" height="583"></h1>
+      <h1 class="menu-logo"><img src="assets/logo.webp?v=20261026n" alt="炸裂丸子 BANG BANG PORKBALL" width="900" height="583"></h1>
       <p class="menu-sub">夜市小吃大亂鬥・2 隊限時淘汰</p>
     </div>
     <button id="btn-start" class="start-btn" type="button">
-      <svg width="26" height="26" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z" fill="currentColor"/></svg>
+      <svg width="28" height="28" viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4l13 8-13 8z" fill="currentColor" stroke="#17161c" stroke-width="2" stroke-linejoin="round"/></svg>
       開始對戰
     </button>
     <nav class="menu-nav" aria-label="主選單">
@@ -192,10 +192,10 @@
   </div>
 
   <div class="menu-hero">
-    <div class="sunburst" aria-hidden="true"></div>
-    <div class="sun-inner" aria-hidden="true"></div>
-    <div class="hero-floor" aria-hidden="true"></div>
-    <div class="hero-chars"><img id="hero-char" class="hc-img" src="assets/portraits/aman.webp" alt=""></div>
+    <div class="mh-burst" aria-hidden="true"></div>
+    <div class="mh-burst sun" aria-hidden="true"></div>
+    <div class="mh-glow" aria-hidden="true"></div>
+    <div class="hero-chars"><img id="hero-char" class="hc-img" src="assets/art/aman.webp" alt=""></div>
     <button type="button" class="hero-arrow prev" aria-label="上一位角色" onclick="cycleChar(-1)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 5l-7 7 7 7"/></svg></button>
     <button type="button" class="hero-arrow next" aria-label="下一位角色" onclick="cycleChar(1)"><svg width="26" height="26" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 5l7 7-7 7"/></svg></button>
     <div id="hero-card" class="hero-card" aria-live="polite"></div>
@@ -279,14 +279,14 @@
   </div>
 </div>
 
-<script src="js/config.js?v=20261026k"></script>
-<script src="js/audio.js?v=20261026k"></script>
-<script src="js/net.js?v=20261026k"></script>
-<script src="js/game.js?v=20261026k"></script>
-<script src="js/match.js?v=20261026k"></script>
-<script src="js/controls.js?v=20261026k"></script>
-<script src="js/guide.js?v=20261026k"></script>
-<script src="js/tutorial.js?v=20261026k"></script>
-<script src="js/view.js?v=20261026k"></script>
+<script src="js/config.js?v=20261026n"></script>
+<script src="js/audio.js?v=20261026n"></script>
+<script src="js/net.js?v=20261026n"></script>
+<script src="js/game.js?v=20261026n"></script>
+<script src="js/match.js?v=20261026n"></script>
+<script src="js/controls.js?v=20261026n"></script>
+<script src="js/guide.js?v=20261026n"></script>
+<script src="js/tutorial.js?v=20261026n"></script>
+<script src="js/view.js?v=20261026n"></script>
 </body>
 </html>
