@@ -1,11 +1,11 @@
 // 樓層導覽:在 5F/35F/88F/89F 走動、互動,搭高速電梯往返。跨年夜可在窗邊看煙火。
 import * as THREE from 'three';
-import { DESTS, floorY } from '../config.js?v=4ec109e';
-import { createCharacter, poseIdle, poseWalk, poseLean } from '../world/character.js?v=4ec109e';
-import { makeRide } from '../world/elevator.js?v=4ec109e';
-import { OrbitCam } from './common.js?v=4ec109e';
-import { VIS } from '../ui/tutorial.js?v=4ec109e';
-import { GEO, RIVERS } from '../world/geo.js?v=4ec109e';
+import { DESTS, floorY } from '../config.js?v=6ba67c5';
+import { createCharacter, poseIdle, poseWalk, poseLean } from '../world/character.js?v=6ba67c5';
+import { makeRide } from '../world/elevator.js?v=6ba67c5';
+import { OrbitCam } from './common.js?v=6ba67c5';
+import { VIS } from '../ui/tutorial.js?v=6ba67c5';
+import { GEO, RIVERS } from '../world/geo.js?v=6ba67c5';
 
 const clamp = THREE.MathUtils.clamp;
 // 望遠鏡可辨識的地標(座標以 101 為原點,北 = -Z、東 = +X)

@@ -188,6 +188,60 @@ function generateMap() {
       bushes++;
     }
   }
+  ensureSpawnPockets();
+}
+
+// 開局躲爆炸的凹槽:每個出生點都要能「在出生點或旁邊放貢丸 → 3 步內躲到爆炸打不到的格子」。
+// 出生點在偶數列(如 13 列地圖的中間列)時左右是水泥柱,淨空區只有一條直線,沒有地方躲 → 清出轉角外側一格當凹槽
+function ensureSpawnPockets() {
+  const DIRS = [[1, 0], [-1, 0], [0, 1], [0, -1]];
+  const inside = (c, r) => r > 0 && c > 0 && r < ROWS - 1 && c < COLS - 1;
+  // 爆炸範圍(射程不設限,遇到可站立地面以外的格子停;長椅火焰可穿透)
+  const blastHits = (bc, br, c, r) => {
+    if (c === bc && r === br) return true;
+    if (c !== bc && r !== br) return false;
+    const dc = Math.sign(c - bc), dr = Math.sign(r - br);
+    for (let x = bc + dc, y = br + dr; x !== c || y !== r; x += dc, y += dr) {
+      if (!isFloor(x, y) && grid[y][x] !== TILE.BENCH) return false;
+    }
+    return true;
+  };
+  const hasPocket = (s) => {
+    const bombs = [[s.col, s.row], ...DIRS.map(([dc, dr]) => [s.col + dc, s.row + dr]).filter(([c, r]) => isFloor(c, r))];
+    for (const [bc, br] of bombs) {
+      // 從放貢丸的格子出發(自己可以離開貢丸格),3 步內的可站立格
+      let frontier = [[bc, br]];
+      const seen = new Set([br * COLS + bc]);
+      for (let step = 0; step < 3; step++) {
+        const next = [];
+        for (const [c, r] of frontier) for (const [dc, dr] of DIRS) {
+          const nc = c + dc, nr = r + dr, k = nr * COLS + nc;
+          if (seen.has(k) || !isFloor(nc, nr)) continue;
+          seen.add(k);
+          if (!blastHits(bc, br, nc, nr)) return true;
+          next.push([nc, nr]);
+        }
+        frontier = next;
+      }
+    }
+    return false;
+  };
+  for (const s of teamSpawns()) {
+    if (hasPocket(s)) continue;
+    // 出生點旁的空地 N,再往垂直方向一格 P(不在出生點的爆炸直線上)→ 清成空地
+    const cands = [];
+    for (const [dc, dr] of DIRS) {
+      const nc = s.col + dc, nr = s.row + dr;
+      if (!isFloor(nc, nr)) continue;
+      for (const [pc, pr] of dc ? [[nc, nr + 1], [nc, nr - 1]] : [[nc + 1, nr], [nc - 1, nr]]) {
+        if (inside(pc, pr) && grid[pr][pc] !== TILE.SOLID) cands.push([pc, pr]);
+      }
+    }
+    if (!cands.length) continue;
+    const [pc, pr] = cands[rand(cands.length)];
+    if (grid[pr][pc] === TILE.BENCH) delete benches[pr * COLS + pc];
+    grid[pr][pc] = TILE.EMPTY;
+  }
 }
 
 // 可站立地面:空地或草叢(草叢可通行)

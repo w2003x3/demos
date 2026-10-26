@@ -1,5 +1,5 @@
 // 音效:WebAudio 即時合成(風、電梯、腳步、鈴聲、心跳、煙火…);語音:事先產生的 mp3。
-import { LINES } from '../voice.js?v=4ec109e';
+import { LINES } from '../voice.js?v=6ba67c5';
 
 export class Audio {
   constructor() {
@@ -10,7 +10,7 @@ export class Audio {
     this.voiceOk = new Set();
     this.voiceCache = {};
     this.current = null;
-    fetch('assets/audio/voice/manifest.json?v=4ec109e').then((r) => r.json()).then((ids) => ids.forEach((i) => this.voiceOk.add(i))).catch(() => {});
+    fetch('assets/audio/voice/manifest.json?v=6ba67c5').then((r) => r.json()).then((ids) => ids.forEach((i) => this.voiceOk.add(i))).catch(() => {});
   }
 
   unlock() {
@@ -145,7 +145,7 @@ export class Audio {
     if (!this.voiceOk.has(id)) { onEnd && onEnd(); return null; }
     if (this.current) { this.current.pause(); this.current = null; }
     let a = this.voiceCache[id];
-    if (!a) { a = new window.Audio(`assets/audio/voice/${id}.mp3?v=4ec109e`); this.voiceCache[id] = a; }
+    if (!a) { a = new window.Audio(`assets/audio/voice/${id}.mp3?v=6ba67c5`); this.voiceCache[id] = a; }
     a.currentTime = 0;
     a.muted = this.muted;
     a.volume = this.voiceVolume;

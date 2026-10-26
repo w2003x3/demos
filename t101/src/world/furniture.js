@@ -1,6 +1,6 @@
 // 室內家具與道具。每個建構函式回傳 Group(原點在地面),由 interiors.js 擺放。
 import * as THREE from 'three';
-import { canvasTex, textTexture } from './textures.js?v=4ec109e';
+import { canvasTex, textTexture } from './textures.js?v=6ba67c5';
 
 const std = (color, roughness = 0.7, metalness = 0) => new THREE.MeshStandardMaterial({ color, roughness, metalness });
 export const MAT = {

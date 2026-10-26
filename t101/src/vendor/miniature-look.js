@@ -1,8 +1,8 @@
-// 由 rail-assets/tools/sync.mjs 複製(2026-10-25),請勿在此修改,改 rail-assets/adapters/three/miniature-look.js
+// 由 rail-assets/tools/sync.mjs 複製(2026-10-26),請勿在此修改,改 rail-assets/adapters/three/miniature-look.js
 /**
  * miniature-look.js — 微縮模型風格後製(由 rail-assets/tools/sync.mjs 複製到各專案,請勿在專案內修改)
  *
- *   import { createMiniatureLook } from './miniature-look.js?v=4ec109e';
+ *   import { createMiniatureLook } from './miniature-look.js?v=6ba67c5';
  *   const look = createMiniatureLook(THREE, renderer, { preset: 'diorama' });
  *   look.render(scene, camera);          // 取代 renderer.render(scene, camera)
  *   look.setPreset('grade');             // 換風格(參數會平滑過渡;第二個參數 true = 立即)
@@ -434,6 +434,10 @@ function patchShader(m, fx) {
     const freq = fx.freq.toFixed(3), rough = fx.rough.toFixed(3), bump = fx.bump.toFixed(5);
     const brushed = fx.brushed ? 'vec3(1.0, 1.0, 14.0)' : 'vec3(1.0)';
     const prev = m.onBeforeCompile;
+    // 著色器快取鍵:three 預設用 onBeforeCompile 的原始碼;包一層之後每個材質的原始碼都會變成同一段包裝函式,
+    // 不同的自訂著色器(帷幕室內映射、地板棋盤格…)會共用到彼此的程式 → 必須先保留原本的鍵
+    const ownKey = Object.prototype.hasOwnProperty.call(m, 'customProgramCacheKey') ? m.customProgramCacheKey.bind(m) : null;
+    const prevSrc = prev ? prev.toString() : '';
     m.onBeforeCompile = (sh, r) => {
         if (prev) prev.call(m, sh, r);
         sh.vertexShader = sh.vertexShader
@@ -456,8 +460,7 @@ function patchShader(m, fx) {
     }`);
         sh.fragmentShader = fs;
     };
-    const prevKey = m.customProgramCacheKey ? m.customProgramCacheKey.bind(m) : () => '';
-    m.customProgramCacheKey = () => prevKey() + `|rf${freq}${rough}${bump}${fx.brushed ? 'b' : ''}`;
+    m.customProgramCacheKey = () => (ownKey ? ownKey() : prevSrc) + `|rf${freq}${rough}${bump}${fx.brushed ? 'b' : ''}`;
 }
 
 function toPhysical(THREE, m) {

@@ -1,8 +1,8 @@
 // 信義區真實街景:依 OpenStreetMap 資料(assets/data/xinyi.json)建出 101 周邊建築、道路、綠地、行道樹與車流。
 // 資料授權:© OpenStreetMap contributors(ODbL)。
 import * as THREE from 'three';
-import { glassCurtainTexture, roofTexture, canvasTex } from './textures.js?v=4ec109e';
-import { applyInterior } from './interior.js?v=4ec109e';
+import { glassCurtainTexture, roofTexture, canvasTex } from './textures.js?v=6ba67c5';
+import { applyInterior } from './interior.js?v=6ba67c5';
 
 function rng(seed) {
   let s = seed >>> 0;
@@ -11,7 +11,7 @@ function rng(seed) {
 
 export async function loadXinyi() {
   try {
-    const r = await fetch('assets/data/xinyi.json?v=4ec109e');
+    const r = await fetch('assets/data/xinyi.json?v=6ba67c5');
     if (!r.ok) return null;
     return await r.json();
   } catch { return null; }

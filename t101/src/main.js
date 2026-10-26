@@ -1,31 +1,31 @@
 // 台北101 攀登挑戰 — 進入點:建立世界、主選單、模式切換與主迴圈。
 import * as THREE from 'three';
-import { Input } from './core/input.js?v=4ec109e';
-import { Audio } from './core/audio.js?v=4ec109e';
-import { UI, fmtTime } from './ui/ui.js?v=4ec109e';
-import { setAnisotropy } from './world/textures.js?v=4ec109e';
-import { createSky, createLights, buildGround, buildTerrain, buildCity, buildTrees, buildTraffic, applyTime, TIMES } from './world/environment.js?v=4ec109e';
-import { buildTower, buildPodium } from './world/tower.js?v=4ec109e';
-import { buildInteriors } from './world/interiors.js?v=4ec109e';
-import { buildLandmarks, landmarkZones, buildNanShan, buildSkyline } from './world/landmarks.js?v=4ec109e';
-import { loadXinyi, buildXinyi } from './world/xinyi.js?v=4ec109e';
-import { applyOsmLandmarks, applyOsmBuildings, GEO } from './world/geo.js?v=4ec109e';
-import { Fireworks } from './world/fireworks.js?v=4ec109e';
-import { buildElevatorScene } from './world/elevator.js?v=4ec109e';
-import { buildStairScene } from './world/stairwell.js?v=4ec109e';
-import { ClimbMode } from './modes/climb.js?v=4ec109e';
-import { RaceMode } from './modes/race.js?v=4ec109e';
-import { ExploreMode } from './modes/explore.js?v=4ec109e';
-import { HeliMode } from './modes/heli.js?v=4ec109e';
-import { GlideMode } from './modes/glide.js?v=4ec109e';
-import { RACES } from './config.js?v=4ec109e';
-import { Tutorial } from './ui/tutorial.js?v=4ec109e';
-import { TowerLights } from './world/towerLights.js?v=4ec109e';
+import { Input } from './core/input.js?v=6ba67c5';
+import { Audio } from './core/audio.js?v=6ba67c5';
+import { UI, fmtTime } from './ui/ui.js?v=6ba67c5';
+import { setAnisotropy } from './world/textures.js?v=6ba67c5';
+import { createSky, createLights, buildGround, buildTerrain, buildCity, buildTrees, buildTraffic, applyTime, TIMES } from './world/environment.js?v=6ba67c5';
+import { buildTower, buildPodium } from './world/tower.js?v=6ba67c5';
+import { buildInteriors } from './world/interiors.js?v=6ba67c5';
+import { buildLandmarks, landmarkZones, buildNanShan, buildSkyline } from './world/landmarks.js?v=6ba67c5';
+import { loadXinyi, buildXinyi } from './world/xinyi.js?v=6ba67c5';
+import { applyOsmLandmarks, applyOsmBuildings, GEO } from './world/geo.js?v=6ba67c5';
+import { Fireworks } from './world/fireworks.js?v=6ba67c5';
+import { buildElevatorScene } from './world/elevator.js?v=6ba67c5';
+import { buildStairScene } from './world/stairwell.js?v=6ba67c5';
+import { ClimbMode } from './modes/climb.js?v=6ba67c5';
+import { RaceMode } from './modes/race.js?v=6ba67c5';
+import { ExploreMode } from './modes/explore.js?v=6ba67c5';
+import { HeliMode } from './modes/heli.js?v=6ba67c5';
+import { GlideMode } from './modes/glide.js?v=6ba67c5';
+import { RACES } from './config.js?v=6ba67c5';
+import { Tutorial } from './ui/tutorial.js?v=6ba67c5';
+import { TowerLights } from './world/towerLights.js?v=6ba67c5';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { createMiniatureLook, refineMaterials, LOOK_PRESETS } from './vendor/miniature-look.js?v=4ec109e';
+import { createMiniatureLook, refineMaterials, LOOK_PRESETS } from './vendor/miniature-look.js?v=6ba67c5';
 
 const store = {
   get(k, d) { try { const v = localStorage.getItem('t101.' + k); return v == null ? d : JSON.parse(v); } catch { return d; } },
@@ -245,7 +245,15 @@ class Game {
     }
     if (p !== this.look.preset) this.look.setPreset(p);
     const n = scene === this.scene ? this.night || 0 : 0;
-    this.look.set({ bloom: LOOK_PRESETS[p].bloom + n * 0.6, threshold: n > 0.3 ? 0.85 : LOOK_PRESETS[p].threshold });
+    const P = LOOK_PRESETS[p];
+    // 煙火施放中:煙火是大量極亮的小點,光暈要少、門檻要高,移軸也收斂(煙火在天空,會落在上方模糊區),否則糊成一團
+    const fw = n > 0.5 && this.fireworks.active;
+    this.look.set({
+      bloom: P.bloom + n * (fw ? 0.08 : 0.45),
+      threshold: fw ? 1.8 : n > 0.3 ? 0.85 : P.threshold,
+      tilt: fw ? Math.min(P.tilt, 0.3) : P.tilt,
+      band: fw ? Math.max(P.band, 0.32) : P.band
+    });
   }
 
   /** 讓陰影範圍跟著焦點移動。 */

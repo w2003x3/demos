@@ -1,10 +1,10 @@
 // 台北地標(簡化模型,位置依 101 為原點的大致方位與距離;北 = -Z、東 = +X)。
 import * as THREE from 'three';
-import { terrainHeight } from './environment.js?v=4ec109e';
-import { canvasTex } from './textures.js?v=4ec109e';
-import { applyInterior } from './interior.js?v=4ec109e';
+import { terrainHeight } from './environment.js?v=6ba67c5';
+import { canvasTex } from './textures.js?v=6ba67c5';
+import { applyInterior } from './interior.js?v=6ba67c5';
 
-import { GEO } from './geo.js?v=4ec109e';
+import { GEO } from './geo.js?v=6ba67c5';
 
 const box = (c, w, d, h, name) => [c.x - w / 2, c.z - d / 2, c.x + w / 2, c.z + d / 2, h, name];
 // 城市產生器要避開的範圍 [x0, z0, x1, z1]
@@ -399,7 +399,10 @@ function buildTaoZhu() {
 
 // ───────────── 南山廣場 + 微風南山 ─────────────
 /** 多邊形直立外牆(u 依周長、v 依高度,方便室內映射)。 */
+/** 統一斷面的頂點繞行方向(OSM 基地外框方向不一定):牆面法線朝外、屋頂朝上,不會被背面剔除 */
+const outward = (pts) => (THREE.ShapeUtils.area(pts.map(([x, z]) => new THREE.Vector2(x, z))) > 0 ? pts.slice().reverse() : pts);
 function prism(pts, y0, y1, mat, uScale = 3, vScale = 4.2) {
+  pts = outward(pts);
   const pos = [], uv = [];
   let u = 0;
   for (let i = 0; i < pts.length; i++) {
@@ -417,10 +420,11 @@ function prism(pts, y0, y1, mat, uScale = 3, vScale = 4.2) {
   m.castShadow = m.receiveShadow = true;
   return m;
 }
-function capMesh(pts, y, mat) {
+function capMesh(pts, y, mat, down = false) {
+  pts = outward(pts);
   const tris = THREE.ShapeUtils.triangulateShape(pts.map(([x, z]) => new THREE.Vector2(x, z)), []);
   const pos = [];
-  for (const t of tris) for (const k of [t[0], t[2], t[1]]) pos.push(pts[k][0], y, pts[k][1]);
+  for (const t of tris) for (const k of (down ? [t[0], t[1], t[2]] : [t[0], t[2], t[1]])) pos.push(pts[k][0], y, pts[k][1]);
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(pos, 3));
   g.computeVertexNormals();
@@ -480,10 +484,11 @@ export function buildNanShan(site, breeze) {
   for (const [y0, y1, L, W] of tiers) {
     const p = at(lens(L, W));
     g.add(prism(p, y0, y1, towerMat, 1.5, 4.2));
-    g.add(capMesh(p, y1, white));
-    // 每段頂部的白色飾帶
-    const band = prism(at(lens(L + 1.2, W + 1.2)), y1 - 1.2, y1, white, 4, 1);
-    g.add(band);
+    // 每段頂部的白色飾帶(比塔身大一圈:頂面用飾帶外形,外懸部分補底面)
+    const bp = at(lens(L + 1.2, W + 1.2));
+    g.add(prism(bp, y1 - 1.2, y1, white, 4, 1));
+    g.add(capMesh(bp, y1, white));
+    g.add(capMesh(bp, y1 - 1.2, white, true));
   }
   // 頂冠:斜面與夜間燈帶
   const top = at(lens(22, 20));
@@ -555,6 +560,8 @@ export function buildSkyline(data) {
   const solids = [], names = [];
   const roof = new THREE.MeshStandardMaterial({ color: 0x8f9597, roughness: 0.8 });
   const metal = new THREE.MeshStandardMaterial({ color: 0xd6dbdd, roughness: 0.3, metalness: 0.8, emissive: 0xffffff, emissiveIntensity: 0 });
+  const metalDouble = metal.clone();
+  metalDouble.side = THREE.DoubleSide;
   const mats = [];
   SKYLINE.forEach((S, i) => {
     let cx, cz, site = null;
@@ -580,10 +587,13 @@ export function buildSkyline(data) {
     if (S.style === 'a25') {
       const p = shift(squarePlan(w, d, 0, 4), cx, cz);
       add(prism(p, 0, H - 22, gm, 3, 4.2));
-      // 頂部斜切:四面分段收短,形成斜面輪廓
+      add(capMesh(p, H - 22, roof));
+      // 頂部斜切:四面分段收短,形成斜面輪廓(每一階都有頂面,從上方看不會空心)
       for (let k = 0; k < 6; k++) {
         const y0 = H - 22 + k * 3.6, s = 1 - k * 0.07;
-        add(prism(shift(squarePlan(w * s, d * (1 - k * 0.12), 0, 4 * s), cx + k * 1.6, cz, 1), y0, y0 + 3.6, gm, 3, 4.2));
+        const sp = shift(squarePlan(w * s, d * (1 - k * 0.12), 0, 4 * s), cx + k * 1.6, cz, 1);
+        add(prism(sp, y0, y0 + 3.6, gm, 3, 4.2));
+        add(capMesh(sp, y0 + 3.6, roof));
       }
       add(capMesh(shift(squarePlan(w * 0.6, d * 0.3, 0, 2), cx + 9, cz), H, roof));
       const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.25, 0.5, 18, 8), metal);
@@ -594,30 +604,38 @@ export function buildSkyline(data) {
       for (const [y0, y1, s] of tiers) {
         const p = shift(squarePlan(w, d, 7, 0), cx, cz, s);
         add(prism(p, y0, y1, gm, 3, 4.2));
-        add(capMesh(p, y1, roof));
-        add(prism(shift(squarePlan(w + 1, d + 1, 7.3, 0), cx, cz, s), y1 - 1, y1, metal, 4, 1));
+        const rp = shift(squarePlan(w + 1, d + 1, 7.3, 0), cx, cz, s);
+        add(prism(rp, y1 - 1, y1, metal, 4, 1));
+        add(capMesh(rp, y1, roof));
+        add(capMesh(rp, y1 - 1, metal, true));
       }
     } else if (S.style === 'farglory') {
       const tiers = [[0, H - 26, 1, 0], [H - 26, H - 14, 0.9, 1], [H - 14, H - 6, 0.78, 1], [H - 6, H, 0.6, 1]];
       for (const [y0, y1, s, ring] of tiers) {
         const p = shift(squarePlan(w, d, 5, 0), cx, cz, s);
         add(prism(p, y0, y1, gm, 3, 4.2));
-        add(capMesh(p, y1, roof));
-        if (ring) add(prism(shift(squarePlan(w + 1.5, d + 1.5, 5.5, 0), cx, cz, s), y1 - 1.4, y1, metal, 4, 1));
+        if (ring) {
+          const rp = shift(squarePlan(w + 1.5, d + 1.5, 5.5, 0), cx, cz, s);
+          add(prism(rp, y1 - 1.4, y1, metal, 4, 1));
+          add(capMesh(rp, y1, roof));
+          add(capMesh(rp, y1 - 1.4, metal, true));
+        } else add(capMesh(p, y1, roof));
       }
-      const crown = new THREE.Mesh(new THREE.CylinderGeometry(4, 9, 10, 4, 1, true), metal);
+      const crown = new THREE.Mesh(new THREE.CylinderGeometry(4, 9, 10, 4, 1, true), metalDouble);   // 開口錐筒:從上方看得到內側
       crown.rotation.y = Math.PI / 4;
       crown.position.set(cx, H + 5, cz);
       add(crown);
     } else if (S.style === 'skytower') {
       const p = shift(squarePlan(w, d, 0, 3), cx, cz);
       add(prism(p, S.podium || 0, H - 28, gm, 3, 4.2));
+      add(capMesh(p, H - 28, roof));
       // 頂部:四面高低錯落的斜面板(由不同高度的條狀量體組成)
       for (let k = 0; k < 4; k++) {
         const hh = 28 - k * 6, ww = w / 4;
         const strip = shift([[ww / 2, -d / 2], [ww / 2, d / 2], [-ww / 2, d / 2], [-ww / 2, -d / 2]].reverse(), cx - w / 2 + ww * (k + 0.5), cz);
         add(prism(strip, H - 28, H - 28 + hh, gm, 3, 4.2));
         add(capMesh(strip, H - 28 + hh, roof));
+        add(capMesh(strip, H - 28, roof, true));
       }
       if (!site) { const ped = shift(squarePlan(w + 24, d + 24, 6), cx, cz); add(prism(ped, 0, 24, gm, 6, 5)); add(capMesh(ped, 24, roof)); }
     }
@@ -630,5 +648,5 @@ export function buildSkyline(data) {
     solids.push([cx - w / 2, cz - d / 2, cx + w / 2, cz + d / 2, H, S.name, null, '']);
     if (S.podium) solids.push([a, c2, b2, d2, S.podium, S.name, fp, '']);
   });
-  return { root, solids, names, setNight(n) { for (const m of mats) m.emissiveIntensity = n * 0.7; metal.emissiveIntensity = n * 0.15; } };
+  return { root, solids, names, setNight(n) { for (const m of mats) m.emissiveIntensity = n * 0.7; metal.emissiveIntensity = metalDouble.emissiveIntensity = n * 0.15; } };
 }

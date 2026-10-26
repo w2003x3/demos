@@ -433,6 +433,10 @@ function patchShader(m, fx) {
     const freq = fx.freq.toFixed(3), rough = fx.rough.toFixed(3), bump = fx.bump.toFixed(5);
     const brushed = fx.brushed ? 'vec3(1.0, 1.0, 14.0)' : 'vec3(1.0)';
     const prev = m.onBeforeCompile;
+    // 著色器快取鍵:three 預設用 onBeforeCompile 的原始碼;包一層之後每個材質的原始碼都會變成同一段包裝函式,
+    // 不同的自訂著色器(帷幕室內映射、地板棋盤格…)會共用到彼此的程式 → 必須先保留原本的鍵
+    const ownKey = Object.prototype.hasOwnProperty.call(m, 'customProgramCacheKey') ? m.customProgramCacheKey.bind(m) : null;
+    const prevSrc = prev ? prev.toString() : '';
     m.onBeforeCompile = (sh, r) => {
         if (prev) prev.call(m, sh, r);
         sh.vertexShader = sh.vertexShader
@@ -455,8 +459,7 @@ function patchShader(m, fx) {
     }`);
         sh.fragmentShader = fs;
     };
-    const prevKey = m.customProgramCacheKey ? m.customProgramCacheKey.bind(m) : () => '';
-    m.customProgramCacheKey = () => prevKey() + `|rf${freq}${rough}${bump}${fx.brushed ? 'b' : ''}`;
+    m.customProgramCacheKey = () => (ownKey ? ownKey() : prevSrc) + `|rf${freq}${rough}${bump}${fx.brushed ? 'b' : ''}`;
 }
 
 function toPhysical(THREE, m) {
