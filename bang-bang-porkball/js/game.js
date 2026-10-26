@@ -1265,7 +1265,8 @@ function useSkill(p) {
   } else if (id === 'detonate') {
     const mine = meatballs.filter((m) => m.owner === p && !m.exploded && !m.eaten && !m.held && !isDormant(m));
     if (!mine.length) { if (p === player) say('場上沒有你的貢丸', '#bdbdbd'); return; }
-    mine.forEach((m, i) => { m.fuse = Math.min(m.fuse, 0.05 + i * 0.08); });
+    // 0.4 秒後才爆(留反應時間:鄰格的人來得及往外跑一步),之後每顆再間隔 0.08 秒
+    mine.forEach((m, i) => { m.fuse = Math.min(m.fuse, sk.delay + i * 0.08); });
     say('💥麻辣引爆!', '#ff5252');
   } else if (id === 'blink') {
     const t = blinkTarget(p);

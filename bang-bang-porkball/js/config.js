@@ -348,19 +348,19 @@ const WEATHER_MIN = 5, WEATHER_MAX = 20;    // 每種天氣維持的秒數範圍
 // ---------- 可選角色:初始能力值 + 專屬技能(T 鍵,用完要冷卻) ----------
 const CHARACTERS = {
   aman:     { name: '阿丸', title: '貢丸小子',   role: '均衡', hp: 3, mp: 100, speed: 150, power: 2, bombs: 3, skill: 'boost' },
-  xiaoyu:   { name: '小芋', title: '芋圓妹',     role: '速度', hp: 2, mp: 100, speed: 185, power: 2, bombs: 2, skill: 'dash' },
-  pangshu:  { name: '胖叔', title: '豬肉攤老闆', role: '坦克', hp: 5, mp: 80,  speed: 125, power: 2, bombs: 2, skill: 'heal' },
-  xiaola:   { name: '小辣', title: '麻辣鍋千金', role: '火力', hp: 2, mp: 100, speed: 145, power: 3, bombs: 3, skill: 'detonate' },
-  aren:     { name: '阿忍', title: '夜市忍者',   role: '機動', hp: 3, mp: 100, speed: 160, power: 1, bombs: 3, skill: 'blink' },
+  xiaoyu:   { name: '小芋', title: '芋圓妹',     role: '速度', hp: 3, mp: 90,  speed: 175, power: 2, bombs: 2, skill: 'dash' },
+  pangshu:  { name: '胖叔', title: '豬肉攤老闆', role: '坦克', hp: 4, mp: 80,  speed: 130, power: 2, bombs: 2, skill: 'heal' },
+  xiaola:   { name: '小辣', title: '麻辣鍋千金', role: '火力', hp: 3, mp: 100, speed: 145, power: 3, bombs: 2, skill: 'detonate' },
+  aren:     { name: '阿忍', title: '夜市忍者',   role: '機動', hp: 3, mp: 100, speed: 160, power: 2, bombs: 2, skill: 'blink' },
   bingbing: { name: '冰冰', title: '剉冰店妹',   role: '控制', hp: 3, mp: 150, speed: 140, power: 2, bombs: 3, skill: 'freeze' },
 };
 const CHAR_IDS = Object.keys(CHARACTERS);
 const SKILLS = {
   boost:    { name: '加料',     icon: '🌶️', cd: 12, desc: '下一顆貢丸威力 +2' },
-  dash:     { name: '衝刺',     icon: '💨', cd: 14, desc: '4 秒內速度 +80', time: 4, bonus: 80 },
-  heal:     { name: '鐵肚皮',   icon: '💪', cd: 25, desc: '回復 1 HP、無敵 1 秒' },
-  detonate: { name: '麻辣引爆', icon: '💥', cd: 10, desc: '自己的貢丸立刻全部引爆' },
-  blink:    { name: '瞬步',     icon: '🥷', cd: 9,  desc: '往前閃現 2 格,可穿越障礙' },
+  dash:     { name: '衝刺',     icon: '💨', cd: 12, desc: '4 秒內速度 +80', time: 4, bonus: 80 },
+  heal:     { name: '鐵肚皮',   icon: '💪', cd: 35, desc: '回復 1 HP、無敵 1 秒' },
+  detonate: { name: '麻辣引爆', icon: '💥', cd: 12, desc: '自己的貢丸 0.4 秒後全部引爆', delay: 0.4 },
+  blink:    { name: '瞬步',     icon: '🥷', cd: 10,  desc: '往前閃現 2 格,可穿越障礙' },
   freeze:   { name: '剉冰',     icon: '🧊', cd: 15, desc: '周圍 3 格的貢丸延後 3 秒爆' },
 };
 const charDef = (id) => CHARACTERS[id] || CHARACTERS.aman;
