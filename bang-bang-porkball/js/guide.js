@@ -29,7 +29,8 @@
     '<h2>🎯 目標</h2>',
     '<ul class="help">',
     '<li>🔵 你和隊友 vs 🔴 敵隊。開始前在<b>對戰設定</b>選角色、地圖、人數(1 對 1 ~ 4 對 4)、<b>幾局定勝負</b>、每局時間、電腦難度和天氣。</li>',
-    '<li>多局制時,每局結束會顯示比分,5 秒後自動開下一局;整場結束可以直接換角色再來一輪。</li>',
+    '<li>多局制時,每局結束會顯示比分,' + ROUND_GAP + ' 秒後自動開下一局;整場結束可以直接換角色再來一輪。</li>',
+    '<li>2D 俯視 / 3D 視角可在對戰設定或頂列切換;<b>連線對戰中不能切換</b>(切到 3D 要下載素材),請在準備時選好,每個人可以不同。</li>',
     '<li>用貢丸炸光敵隊就贏;時間到則比<b>存活人數</b>。你倒下後隊友仍可能幫你贏。</li>',
     '<li>⚠️ 會炸到自己和隊友,放完貢丸記得躲開。</li>',
     '</ul>',
@@ -43,9 +44,9 @@
 
     '<h2>❤️ HP / 💧 MP</h2>',
     '<ul class="help">',
-    '<li><b>❤️ HP 生命</b>:開場 3 點,被火焰炸到 −1,歸零出局。受傷後有 1 秒無敵。</li>',
-    `<li><b>💧 MP 魔力</b>:開場 100,每秒自動回 ${MP_REGEN}。用來開<b>防護盾</b>(G,−${SHIELD_MP_COST},維持 ${SHIELD_TIME} 秒、擋一次爆炸)。</li>`,
-    '<li>左側面板的 <b>威力</b>=火焰長度(開場 2 格)、<b>竹籤</b>=能同時放幾顆(開場 3 顆)。</li>',
+    '<li><b>❤️ HP 生命</b>:開場數值依角色不同(見下方「角色與技能」),被火焰炸到 −1,歸零出局。受傷後有 ' + INVULN_TIME + ' 秒無敵。</li>',
+    `<li><b>💧 MP 魔力</b>:開場數值依角色不同,每秒自動回 ${MP_REGEN}。用來開<b>防護盾</b>(G,−${SHIELD_MP_COST},維持 ${SHIELD_TIME} 秒、擋一次爆炸)。</li>`,
+    '<li>左側玩家狀態的 <b>威力</b>=火焰長度、<b>貢丸數</b>=能同時放幾顆,開場數值都依角色不同。</li>',
     '</ul>',
 
     sec('🍡 貢丸(按 1~9 切換)',
@@ -100,11 +101,11 @@
       '<ul class="guide-list">' +
       CHAR_IDS.map((id) => {
         const c = CHARACTERS[id], sk = SKILLS[c.skill];
-        return `<li class="char-li"><img class="guide-ico" src="assets/portraits/${id}.webp" alt=""><b>${c.name}</b>` +
+        return `<li class="char-li"><img class="guide-ico" src="assets/avatars/${id}.webp" alt=""><b>${c.name}</b>` +
           `<span>${c.role}・HP ${c.hp}・速度 ${c.speed}・威力 ${c.power}・貢丸 ${c.bombs}<br>` +
           `${sk.icon}<b>${sk.name}</b>:${sk.desc}(冷卻 ${sk.cd} 秒)</span></li>`;
       }).join('') +
-      '</ul><p class="guide-note">開始對戰前在主選單選角色;電腦玩家會隨機選角,也會用技能。</p>'),
+      '</ul><p class="guide-note">在<b>對戰設定</b>選角色,整場結束的結算畫面也能直接換;電腦玩家會隨機選角,也會用技能。</p>'),
 
     sec('🛡️ 防護盾',
       '<ul class="help">' +
@@ -130,7 +131,7 @@
       '</ul><p class="guide-note">開場手牌:吸塵器、垃圾車、食物夾、彈弓各 1 張,老鼠、蟑螂各 1 張;木箱炸開還會掉。<br>' +
       '寵物會自動跑去<b>啃最近的貢丸</b>,啃完就吃掉、<b>不會爆</b>(連自己的也會啃);寵物被炸倒就沒了。你倒下後仍可放出還沒用的寵物卡。</p>'),
 
-    sec('🌦️ 天氣(左上角天氣卡)',
+    sec('🌦️ 天氣(電腦版在場地上方、手機在畫面上方)',
       '<p class="guide-note">每 ' + WEATHER_MIN + '~' + WEATHER_MAX + ' 秒隨機變天,變天時地圖中央會大字提示。</p><ul class="guide-list">' +
       Object.values(WEATHERS).map((w) => row(w.icon, w.name, w.desc + `(貢丸約 ${w.fuse} 秒爆)`)).join('') +
       '</ul>'),

@@ -326,6 +326,9 @@ const WEATHERS = {
              desc: '火山灰遮住視線' },
   alien:   { name: '外星人來襲', icon: '🛸', fuse: 3.0, decay: 12, weight: 1, alien: true,
              desc: '隨機抓走一人,3 秒後放回、HP 剩 1' },
+  // 極稀有(權重 0.3,約 1.4%);開場不會出現
+  rainbow: { name: '彩虹', icon: '🌈', fuse: 3.0, decay: 12, weight: 0.3, heal: true, rare: true,
+             desc: '全體 HP 補滿(依各自上限)' },
 };
 // 天氣卡的效果標籤:good 可以做的事、limit 限制、bad 危險、fuse 引信快慢
 const WEATHER_CHIPS = {
@@ -339,6 +342,7 @@ const WEATHER_CHIPS = {
   quake:   [['limit', '貢丸隨機移位']],
   volcano: [['bad', '畫面變暗'], ['fuse', '貢丸較快爆']],
   alien:   [['bad', '抓走一人 3 秒,放回 HP 剩 1']],
+  rainbow: [['good', '全體 HP 補滿']],
 };
 const isDisaster = (w) => !!(w.gust || w.shake || w.ash || w.alien);
 const SNOW_SPEED = 90;        // 下雪時所有人的移動速度(最低)
@@ -390,13 +394,13 @@ const MOLD_STAGE = 6;
 function computeMiniDecay() { return weatherDef().decay; }
 
 // 抽一個天氣(依權重;可指定排除目前的、開場不出災害)
-function pickWeather(exclude, noDisaster) {
-  const pool = [];
-  for (const [k, w] of Object.entries(WEATHERS)) {
-    if (k === exclude || (noDisaster && (w.gust || w.shake || w.ash || w.alien))) continue;
-    for (let i = 0; i < w.weight; i++) pool.push(k);
-  }
-  return pool[Math.floor(Math.random() * pool.length)];
+// 權重可以是小數(彩虹 0.3);opening = 開場,不抽稀有天氣
+function pickWeather(exclude, noDisaster, opening) {
+  const pool = Object.entries(WEATHERS).filter(([k, w]) =>
+    k !== exclude && !(noDisaster && isDisaster(w)) && !(opening && w.rare));
+  let r = Math.random() * pool.reduce((s, [, w]) => s + w.weight, 0);
+  for (const [k, w] of pool) { r -= w.weight; if (r < 0) return k; }
+  return pool[pool.length - 1][0];
 }
 function setWeather(id) {
   env.weather = id;
@@ -406,7 +410,7 @@ function setWeather(id) {
   env.abduct = null; env.abductDone = false;   // 外星人:這次來襲抓走的對象
 }
 // 開場天氣(一般天氣之一)
-function randomizeWeather() { setWeather(pickWeather(null, true)); }
+function randomizeWeather() { setWeather(pickWeather(null, true, true)); }
 
 // ===== 黴毒(中毒)=====
 // 被「發霉貢丸」炸到 → 中黴毒,持續數秒、每秒扣 HP

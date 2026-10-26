@@ -1,5 +1,5 @@
 // ====================================================================
-//  炸裂丸子 — 貢丸版炸彈超人
+//  炸裂丸子 — 把貢丸當炸彈玩
 //  純前端 Canvas 遊戲。依賴 config.js 的常數與定義。
 // ====================================================================
 
@@ -254,6 +254,7 @@ function updateWeather(dt) {
   if (env.left <= 0) {
     setWeather(pickWeather(env.weather, MATCH.wx === 'safe'));   // 對戰設定:不含災害
     announceWeather();
+    if (weatherDef().heal) rainbowHeal();
   }
   const w = weatherDef();
   if (w.alien) updateAlien(dt);
@@ -340,6 +341,15 @@ function blindAlpha() {
 }
 
 // 變天提示:地圖中央大字(2D/3D 都看得到)
+// 彩虹:還在場上的人 HP 補滿(依各自目前上限)
+function rainbowHeal() {
+  sfx('jackpot');
+  for (const f of fighters()) {
+    if (!f || !f.alive || f.away > 0 || f.hp >= f.maxHp) continue;
+    spawnText(f.x, f.y - TS * 0.6, '+' + (f.maxHp - f.hp) + ' HP', '#ff7ab6');
+    f.hp = f.maxHp;
+  }
+}
 function announceWeather() {
   const stage = document.querySelector('.stage');
   if (!stage) return;
@@ -722,6 +732,24 @@ class Item {
       this.x = nx; this.y = ny;
     }
   }
+}
+
+// 彩虹天氣:整張地圖蓋一層淡淡的彩虹色(斜向漸層慢慢流動),剛變天時稍亮
+function drawRainbowTint() {
+  const k = clamp(env.t / 1.2, 0, 1);
+  const shift = (performance.now() / 6000) % 1;
+  const g = ctx.createLinearGradient(-W * shift, 0, W * (2 - shift), H);
+  const cols = ['#ff4d4d', '#ffa53a', '#ffe14d', '#5ee06a', '#4dc3ff', '#6d6dff', '#c86dff', '#ff4d4d'];
+  for (let i = 0; i < 2; i++) cols.forEach((c, j) => g.addColorStop(Math.min(1, (i + j / (cols.length - 1)) / 2), c));
+  ctx.save();
+  ctx.globalCompositeOperation = 'soft-light';
+  ctx.globalAlpha = 0.32 * k;
+  ctx.fillStyle = g;
+  ctx.fillRect(0, 0, W, H);
+  ctx.globalCompositeOperation = 'source-over';
+  ctx.globalAlpha = 0.035 * k;
+  ctx.fillRect(0, 0, W, H);
+  ctx.restore();
 }
 
 // ---------- 飄字 ----------
@@ -2019,6 +2047,7 @@ function draw() {
   if (weatherDef().snow) drawFlakes(90, 'rgba(255,255,255,0.9)', 2.2, 38);
   if (weatherDef().ash) drawFlakes(140, 'rgba(70,60,55,0.95)', 2.2, 55);
   if (env.abduct) drawAlien();
+  if (weatherDef().heal) drawRainbowTint();
 
   // 飄字
   particles.forEach((p) => {

@@ -2043,10 +2043,54 @@
     new THREE.MeshBasicMaterial({ color: 0xbaff8c, transparent: true, opacity: 0.35, side: THREE.DoubleSide, depthWrite: false, blending: THREE.AdditiveBlending }));
   ufo.visible = false; beam.visible = false;
   scene.add(ufo, beam);
+  // ---------- 彩虹天氣:場外北側一道七色半圓彩虹 + 全場彩色光澤 ----------
+  const rainbow = new THREE.Group();
+  const RAINBOW_COLS = [0xff3b3b, 0xff9a2e, 0xffe14d, 0x4fd65a, 0x3fb6ff, 0x5a5cff, 0xb05cff];
+  const rainbowMats = RAINBOW_COLS.map((c, i) => {
+    const m = new THREE.MeshBasicMaterial({ color: c, transparent: true, opacity: 0, depthWrite: false, toneMapped: false, fog: false });
+    const r = COLS / 2 + 1.7 - i * 0.36;
+    rainbow.add(new THREE.Mesh(new THREE.TorusGeometry(r, 0.19, 8, 96, Math.PI), m));
+    return m;
+  });
+  // 彩虹橫跨地圖:兩腳落在左右場外、距離上緣約 1/4 處,拱形壓扁一點、半透明,不擋住太多場地
+  const RB_Z = ROWS * 0.25;
+  rainbow.position.set(CX, -0.4, RB_Z);
+  rainbow.scale.y = 0.62;
+  rainbow.visible = false;
+  scene.add(rainbow);
+  // 彩虹光澤:從彩虹兩腳方向打進場內的兩道彩色光(不投影、色相輪轉、兩側互補),讓下方物件反射出彩虹色
+  const glossA = new THREE.DirectionalLight(0xffffff, 0), glossB = new THREE.DirectionalLight(0xffffff, 0);
+  glossA.position.set(CX - 12, 6, RB_Z); glossB.position.set(CX + 12, 6, RB_Z);
+  glossA.target.position.set(CX, 0, CZ); glossB.target.position.set(CX, 0, CZ);
+  // 光源一直掛著、平常亮度 0:開關光源會讓全場材質重新編譯而卡住畫面
+  scene.add(glossA, glossA.target, glossB, glossB.target);
+  const HEMI_SKY = hemi.color.clone();
+  let rainbowOn = false;
+  function updateRainbow(w) {
+    const on = !!w.heal;
+    if (!on) {
+      if (rainbowOn) { rainbowOn = false; rainbow.visible = false; glossA.intensity = glossB.intensity = 0; hemi.color.copy(HEMI_SKY); applyThemeLight(); }
+      return;
+    }
+    rainbowOn = true;
+    rainbow.visible = true;
+    const k = Math.min(1, (typeof env !== 'undefined' ? env.t : 1) / 1.5);   // 剛變天時淡入
+    for (const m of rainbowMats) m.opacity = 0.6 * k;
+    // 全場光澤:天空光色相緩慢輪轉、略提亮曝光
+    const t = performance.now() / 1000;
+    hemi.color.setHSL((t * 0.06) % 1, 0.55, 0.78);
+    glossA.color.setHSL((t * 0.12) % 1, 1, 0.55);
+    glossB.color.setHSL((t * 0.12 + 0.5) % 1, 1, 0.55);
+    glossA.intensity = glossB.intensity = 0.9 * k;
+    const base = (THEME_LIGHT[currentMapId] || THEME_LIGHT.park).exposure;
+    renderer.toneMappingExposure = base * (1 + 0.1 * k);
+  }
+
   const wxClock = new THREE.Clock();
   function updateWeatherFx() {
     const dt = Math.min(0.05, wxClock.getDelta());
     const w = typeof weatherDef === 'function' ? weatherDef() : {};
+    updateRainbow(w);
     const fall = !!(w.snow || w.ash);
     flakes.visible = fall;
     if (fall) {
