@@ -1455,7 +1455,8 @@ window.addEventListener('keydown', (ev) => {
   const onResultScreen = gameState !== 'playing' && gameState !== 'menu';
   if (k === 'escape' && onResultScreen && !NET.online) { backToMainMenu(); return; } // 結算畫面 Esc 回主選單
   if (k === 'enter' && onResultScreen) {                // 結算畫面 Enter:下一局 / 再來一輪
-    if (!NET.online || NET.role === 'host') { if (SERIES.over) startSeries(); else { SERIES.nextAt = 0; startRound(); } }
+    if (!NET.online) { if (SERIES.over) startSeries(); else { SERIES.nextAt = 0; startRound(); } }
+    else if (NET.role === 'host' && SERIES.over) startSeries();   // 連線:局間不能提前開始(大家一起倒數)
     return;
   }
   if (k === 'r') {
@@ -2225,6 +2226,21 @@ function drawCharacter(e) {
     ctx.beginPath(); ctx.ellipse(e.x, footY - 4, rr, rr * 0.45, 0, 0, Math.PI * 2); ctx.stroke();
     ctx.restore();
   }
+  if (e.alive) {                                 // 腳下隊伍色光圈:出生點不分左右,靠顏色分辨隊伍
+    const blue = e.team !== 'red';
+    ctx.save();
+    ctx.fillStyle = blue ? 'rgba(58,166,255,0.30)' : 'rgba(231,76,60,0.30)';
+    ctx.strokeStyle = TEAM_COLOR[e.team]; ctx.lineWidth = e === player ? 3 : 2;
+    ctx.beginPath(); ctx.ellipse(e.x, footY - 3, TS * 0.44, TS * 0.19, 0, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+    // 開局:隊友也打亮(隊伍色光圈擴散),一眼看出隊友在哪
+    if (e !== player && player && e.team === player.team && spotT > 0) {
+      const k = Math.min(1, spotT / 0.6), t = (elapsed * 1.2) % 1;
+      ctx.globalAlpha = k * (1 - t);
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.ellipse(e.x, footY - 3, TS * (0.5 + t * 0.7), TS * (0.22 + t * 0.3), 0, 0, Math.PI * 2); ctx.stroke();
+    }
+    ctx.restore();
+  }
   ctx.globalAlpha = e.alive ? 1 : 0.4;
   const lying = onBench(e) ? benchAt(e.col, e.row) : null;
   if (img && img.complete && img.naturalWidth) {
@@ -2272,10 +2288,11 @@ function drawCharacter(e) {
     const name = displayName(e);
     ctx.font = 'bold 11px "Noto Sans TC", sans-serif';
     const w = ctx.measureText(name).width + 10, ny = headY - 24 + bob;
-    ctx.fillStyle = e === player ? 'rgba(199,154,0,0.92)' : e.team === 'red' ? 'rgba(170,40,30,0.88)' : 'rgba(25,95,170,0.88)';
+    ctx.fillStyle = e.team === 'red' ? 'rgba(170,40,30,0.9)' : 'rgba(25,95,170,0.9)';   // 名牌底色 = 隊伍色(自己也是)
     ctx.beginPath();
     if (ctx.roundRect) ctx.roundRect(e.x - w / 2, ny - 7, w, 15, 4); else ctx.rect(e.x - w / 2, ny - 7, w, 15);
     ctx.fill();
+    if (e === player) { ctx.strokeStyle = '#ffd54f'; ctx.lineWidth = 2; ctx.stroke(); }   // 自己:金框
     ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
     ctx.fillText(name, e.x, ny + 0.5);
     ctx.textBaseline = 'alphabetic';
@@ -2417,7 +2434,7 @@ let hudSel = -1;
 function updateHud() {
   const p = player, w = weatherDef();
   const cd = charDef(p.char), sk = skillOf(p);
-  setHtml('stat-char', `<span class="ch-face"><img src="assets/portraits/${p.char || 'aman'}.webp" alt=""></span><b>${cd.name}</b><span>${cd.role}型</span>`);
+  setHtml('stat-char', `<span class="ch-face"><img src="assets/portraits/${p.char || 'aman'}.webp" alt=""></span><b>${cd.name}</b><span>${cd.role}型</span><span class="team-chip ${p.team === 'red' ? 'red' : 'blue'}">${p.team === 'red' ? '紅隊' : '藍隊'}</span>`);
 
   // ---- 五項數值
   const rain = w.speedBonus || 0;
@@ -2482,6 +2499,19 @@ function updateHud() {
   if (low && low.classList) low.classList.toggle('on', lowHp);
   const lowTip = $el('lowhp-tip');                 // 紅光的文字說明(2D / 3D 都顯示)
   if (lowTip && lowTip.classList) lowTip.classList.toggle('hidden', !lowHp);
+  // 連線模式:隱藏重新開始按鈕(body.online)
+  if (document.body && document.body.classList) document.body.classList.toggle('online', !!NET.online);
+  // 開局隊伍橫幅:你是哪一隊、隊友是誰(開局亮光期間)
+  const tb = $el('team-banner');
+  if (tb && tb.classList) {
+    const show = spotT > 0 && gameState === 'playing' && p.alive;
+    if (show) {
+      const mates = bots.filter((b) => b.team === p.team).map(displayName);
+      const html = `<b>你是${p.team === 'red' ? '🔴 紅隊' : '🔵 藍隊'}</b>${mates.length ? `<span>隊友:${mates.join('、')}(腳下同色光圈)</span>` : ''}`;
+      if (tb.dataset.html !== html) { tb.innerHTML = html; tb.dataset.html = html; }
+    }
+    tb.className = 'team-banner ' + (p.team === 'red' ? 'red' : 'blue') + (show ? '' : ' hidden');
+  }
   setHtml('ctx-hint', tip);
   const ch = $el('ctx-hint');
   if (ch && ch.classList) ch.classList.toggle('hidden', !tip);
@@ -2503,10 +2533,11 @@ function updateHud() {
 
   const mm = Math.floor(Math.max(0, matchTime) / 60);
   const ss = Math.floor(Math.max(0, matchTime) % 60);
-  setHtml('stat-enemies',
-    `<span class="sc-blue">藍 ${teamAlive('blue')}</span>` +
-    `<span class="sc-time">${mm}:${ss.toString().padStart(2, '0')}</span>` +
-    `<span class="sc-red">紅 ${teamAlive('red')}</span>`);
+  const scBox = (team, label) => `<span class="sc-${team}${p.team === team ? ' mine' : ''}">${p.team === team ? '<em>你</em>' : ''}<small>${label}隊<br>存活</small>${teamAlive(team)}</span>`;
+  const multi = MATCH.rounds > 1;   // 多局賽制:勝場另外顯示,避免把存活人數看成比分
+  setHtml('stat-enemies', scBox('blue', '藍') +
+    `<span class="sc-time${multi ? ' multi' : ''}">${mm}:${ss.toString().padStart(2, '0')}${multi ? `<small>第 ${SERIES.round} 局・勝 ${SERIES.wins.blue}:${SERIES.wins.red}</small>` : ''}</span>` +
+    scBox('red', '紅'));
 
   renderCards();
   // 戰隊名單:更新每個人的存活/HP 顯示
@@ -2535,7 +2566,7 @@ function refreshActionButtons() {
          !meatballs.some((m) => !m.exploded && m.col === player.col && m.row === player.row))),
     'g': playing && player.mp >= SHIELD_MP_COST && !(player.shieldT > 0), // 防護盾:MP 夠且沒在作用中
     't': playing && !(player.skillCd > 0),                          // 角色技能:冷卻完畢
-    'r': true,                                                      // 重來:永遠可用
+    'r': !NET.online,                                               // 重來:連線時不提供(按鈕也隱藏)
   };
   for (const b of actionBtns) {
     const key = b.dataset ? b.dataset.key : null;
@@ -2705,7 +2736,7 @@ function cycleChar(d) {
 function restart() {
   if (window.tutorial) tutorial.stop(); // 任何重新開局都會結束教學
   rollSpawns();                         // 每局出生位置都不同
-  spotT = 3.5;                          // 開局亮光標出自己的位置
+  spotT = 4.5;                          // 開局亮光標出自己與隊友的位置 + 隊伍橫幅
   generateMap();
   randomizeWeather();
   if (MATCH.wx === 'calm') { setWeather('cool'); env.left = 1e9; }   // 對戰設定:固定涼爽

@@ -993,7 +993,7 @@
     });
   }
   // 名稱標籤:Canvas 畫成貼圖的 Sprite(固定大小比例、不受燈光影響)
-  function makeNameSprite(text, bg) {
+  function makeNameSprite(text, bg, border) {
     const cv = document.createElement('canvas');
     const g2 = cv.getContext('2d');
     const font = 'bold 44px "Noto Sans TC", sans-serif';
@@ -1005,7 +1005,8 @@
     const r = 14;
     g2.beginPath(); g2.moveTo(r, 0); g2.lineTo(w - r, 0); g2.quadraticCurveTo(w, 0, w, r); g2.lineTo(w, 64 - r); g2.quadraticCurveTo(w, 64, w - r, 64);
     g2.lineTo(r, 64); g2.quadraticCurveTo(0, 64, 0, 64 - r); g2.lineTo(0, r); g2.quadraticCurveTo(0, 0, r, 0); g2.fill();
-    g2.globalAlpha = 1; g2.fillStyle = '#fff'; g2.textAlign = 'center'; g2.textBaseline = 'middle';
+    g2.globalAlpha = 1;
+    if (border) { g2.strokeStyle = border; g2.lineWidth = 6; g2.stroke(); }   // 自己:金框 g2.fillStyle = '#fff'; g2.textAlign = 'center'; g2.textBaseline = 'middle';
     g2.fillText(text, w / 2, 34);
     const tex = new THREE.CanvasTexture(cv);
     const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, depthTest: false, depthWrite: false, transparent: true }));
@@ -1036,6 +1037,12 @@
     maskRing.visible = false;
     g.add(maskRing);
     g.add(blobShadow(0.75));
+    // 腳下隊伍色光圈(顏色每幀依隊伍設定):出生點不分左右,靠顏色分辨
+    const teamRing = new THREE.Mesh(new THREE.RingGeometry(0.34, 0.46, 32), new THREE.MeshBasicMaterial({
+      color: 0x3aa6ff, transparent: true, opacity: 0.85, side: THREE.DoubleSide, depthWrite: false }));
+    teamRing.rotation.x = -Math.PI / 2;
+    teamRing.position.y = 0.03;
+    g.add(teamRing);
     // 開局光柱 + 地面光圈:標出自己的位置
     const beacon = new THREE.Group();
     const beam = new THREE.Mesh(new THREE.CylinderGeometry(0.42, 0.55, 5, 24, 1, true),
@@ -1046,7 +1053,7 @@
     beacon.add(beam, ring);
     beacon.visible = false;
     g.add(beacon);
-    Object.assign(g.userData, { marker, shield, maskRing, beacon, beam, ring });
+    Object.assign(g.userData, { marker, shield, maskRing, beacon, beam, ring, teamRing });
   }
   function makeRealChar(f) {
     const vname = variantFor(f);
@@ -1197,12 +1204,19 @@
         u.armL.rotation.x = -sw * 0.8; u.armR.rotation.x = sw * 0.8;
       }
       u.marker.visible = f.alive;
-      if (u.beacon) {                                   // 開局亮光(只有自己)
-        const on = f === player && f.alive && typeof spotT !== 'undefined' && spotT > 0;
+      if (u.teamRing) {                                 // 腳下隊伍色光圈
+        u.teamRing.visible = f.alive;
+        u.teamRing.material.color.setHex(f.team === 'red' ? 0xe74c3c : 0x3aa6ff);
+      }
+      if (u.beacon) {                                   // 開局亮光:自己(金色)+ 隊友(隊伍色、較淡)
+        const me = f === player;
+        const on = f.alive && typeof spotT !== 'undefined' && spotT > 0 && (me || (player && f.team === player.team));
         u.beacon.visible = on;
         if (on) {
           const k = Math.min(1, spotT / 0.6), pulse = 0.75 + 0.25 * Math.sin(elapsed * 10);
-          u.beam.material.opacity = 0.32 * k * pulse;
+          const col = me ? 0xffd54f : f.team === 'red' ? 0xe74c3c : 0x3aa6ff;
+          u.beam.material.color.setHex(col); u.ring.material.color.setHex(me ? 0xffe082 : col);
+          u.beam.material.opacity = (me ? 0.32 : 0.2) * k * pulse;
           const rr = 1.2 + ((elapsed * 1.2) % 1) * 1.6;
           u.ring.scale.set(rr, rr, 1);
           u.ring.material.opacity = 0.9 * k * (1 - ((elapsed * 1.2) % 1));
@@ -1211,10 +1225,10 @@
       u.marker.position.y = (u.real ? 1.5 : 1.42) + Math.sin(elapsed * 5) * 0.05;
       // 頭上名稱(畫在箭頭上方,永遠面向鏡頭、不被擋住)
       const nm = typeof displayName === 'function' ? displayName(f) : '';
-      const nmKey = nm + '|' + (f === player ? 'me' : f.team);
+      const nmKey = nm + '|' + f.team + (f === player ? '|me' : '');
       if (u.nameKey !== nmKey) {
         if (u.nameSprite) { g.remove(u.nameSprite); u.nameSprite.material.map.dispose(); u.nameSprite.material.dispose(); }
-        u.nameSprite = makeNameSprite(nm, f === player ? '#c79a00' : f.team === 'red' ? '#aa281e' : '#195faa');
+        u.nameSprite = makeNameSprite(nm, f.team === 'red' ? '#aa281e' : '#195faa', f === player ? '#ffd54f' : null);
         g.add(u.nameSprite);
         u.nameKey = nmKey;
       }

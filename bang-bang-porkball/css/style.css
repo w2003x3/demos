@@ -90,6 +90,28 @@ body:not(.mode-3d) .only-3d { display: none !important; }
 .sc-blue { padding: 0 16px 0 22px; background: var(--blue); color: #fff; font-size: 22px; clip-path: polygon(12px 0, 100% 0, 100% 100%, 0 100%); }
 .sc-time { padding: 0 22px; background: var(--accent); color: var(--ink); font-size: 30px; letter-spacing: .04em; }
 .sc-red { padding: 0 22px 0 16px; background: var(--red); color: #fff; font-size: 22px; clip-path: polygon(0 0, 100% 0, calc(100% - 12px) 100%, 0 100%); }
+/* 比分:「存活」小字;自己隊伍加「你」標籤與金色底線;多局賽制在時間下方顯示局數與勝場 */
+.scoreboard small { font-family: "Noto Sans TC", sans-serif; font-size: 10px; line-height: 1.15; font-weight: 700; opacity: .85; margin-right: 6px; text-align: center; }
+.scoreboard em { font-style: normal; font-family: "Noto Sans TC", sans-serif; font-size: 12px; font-weight: 900; background: var(--accent); color: var(--ink); padding: 1px 5px; margin-right: 6px; }
+.sc-blue.mine, .sc-red.mine { box-shadow: inset 0 -4px 0 var(--accent); }
+.sc-time.multi { flex-direction: column; justify-content: center; line-height: 1; font-size: 24px; }
+.sc-time.multi small { margin: 2px 0 0; font-size: 11px; opacity: 1; letter-spacing: 0; }
+.team-chip { margin-left: auto; padding: 2px 8px; font-size: 12px; font-weight: 900; color: #fff; }
+.team-chip.blue { background: var(--blue); }
+.team-chip.red { background: var(--red); }
+/* 開局隊伍橫幅(2D / 3D 共用):放在棋盤正中央 = 九宮格中間,不是出生點,不會擋到任何人 */
+.team-banner { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 7; pointer-events: none;
+  display: flex; flex-direction: column; align-items: center; gap: 4px; padding: 10px 26px; color: #fff; text-align: center;
+  border: 3px solid var(--ink); box-shadow: 4px 4px 0 rgba(0,0,0,.3); animation: teamIn .35s ease-out; }
+.team-banner.blue { background: var(--blue); }
+.team-banner.red { background: var(--red); }
+.team-banner b { font-size: 26px; font-weight: 900; letter-spacing: .06em; }
+.team-banner span { font-size: 13px; font-weight: 700; }
+.team-banner.hidden { display: none; }
+@keyframes teamIn { from { opacity: 0; transform: translate(-50%, -50%) scale(.85); } to { opacity: 1; transform: translate(-50%, -50%); } }
+@media (max-width: 560px) { .team-banner { padding: 6px 14px; } .team-banner b { font-size: 18px; } .team-banner span { font-size: 11px; } }
+/* 連線模式:沒有重新開始 */
+body.online .act.restart { display: none; }
 
 /* 2D / 3D 切換 */
 .view-toggle { display: flex; background: var(--ink-3); padding: 3px; gap: 3px; }

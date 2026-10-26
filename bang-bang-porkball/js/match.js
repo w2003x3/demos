@@ -116,7 +116,7 @@ const resultUI = {
         `<div class="result-title">${roundTitle}</div>` +
         `<p class="result-sub">存活 🔵 ${teamAlive('blue')} vs 🔴 ${teamAlive('red')}・先拿 ${needWins()} 勝獲勝</p>` + seriesBar() +
         `<div class="rs-next">下一局 <b id="rs-count">${ROUND_GAP}</b> 秒後開始</div>` +
-        (!NET.online || NET.role === 'host' ? '<button type="button" class="start-btn" data-rs="next">立即開始下一局</button>' : '');
+        (!NET.online ? '<button type="button" class="start-btn" data-rs="next">立即開始下一局</button>' : '');   // 連線:大家一起倒數,不提供提前開始
     } else {
       const sw = SERIES.wins.blue === SERIES.wins.red ? null : (SERIES.wins.blue > SERIES.wins.red ? 'blue' : 'red');
       const title = single ? (!w ? '🤝 平手!' : w === mine ? '你的隊伍獲勝!' : '你的隊伍輸了')

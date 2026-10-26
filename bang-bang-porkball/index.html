@@ -7,7 +7,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@500;700;900&family=Oswald:wght@500;700&display=swap" rel="stylesheet" />
-  <link rel="stylesheet" href="css/style.css?v=20261026d" />
+  <link rel="stylesheet" href="css/style.css?v=20261026e" />
 </head>
 <body>
 <div id="app">
@@ -109,6 +109,7 @@
         <div id="ink-overlay"></div>
         <div id="lowhp-overlay" aria-hidden="true"></div>
         <div id="lowhp-tip" class="hidden" role="status">❤️ 只剩 1 HP!再被炸到就出局</div>
+        <div id="team-banner" class="team-banner hidden" role="status"></div>
         <div id="ctx-hint" class="ctx-hint hidden" aria-live="polite"></div>
       </div>
       <!-- 手牌:一次性 / 寵物卡 + 右側固定兩格永久能力 -->
@@ -268,7 +269,7 @@
       <li><kbd>G</kbd> 防護盾(耗 MP,維持 3 秒,擋一次爆炸)</li>
       <li><kbd>T</kbd> 角色技能(每位角色不同,用完要冷卻)</li>
       <li><b>卡牌</b>(畫面下方,點一下立刻使用):<kbd>Q</kbd> 吸塵器・<kbd>F</kbd> 垃圾車・<kbd>Z</kbd> 食物夾・<kbd>C</kbd> 彈弓・<kbd>K</kbd> 老鼠・<kbd>L</kbd> 蟑螂</li>
-      <li><kbd>R</kbd> 重新開始</li>
+      <li><kbd>R</kbd> 重新開始(單機;連線對戰沒有重新開始,局間自動倒數)</li>
       <li><kbd>`</kbd>(Esc 下方)切換 2D / 3D 畫面</li>
     </ul>
     <h2 class="only-3d">3D 視角操作</h2>
@@ -279,14 +280,14 @@
   </div>
 </div>
 
-<script src="js/config.js?v=20261026d"></script>
-<script src="js/audio.js?v=20261026d"></script>
-<script src="js/net.js?v=20261026d"></script>
-<script src="js/game.js?v=20261026d"></script>
-<script src="js/match.js?v=20261026d"></script>
-<script src="js/controls.js?v=20261026d"></script>
-<script src="js/guide.js?v=20261026d"></script>
-<script src="js/tutorial.js?v=20261026d"></script>
-<script src="js/view.js?v=20261026d"></script>
+<script src="js/config.js?v=20261026e"></script>
+<script src="js/audio.js?v=20261026e"></script>
+<script src="js/net.js?v=20261026e"></script>
+<script src="js/game.js?v=20261026e"></script>
+<script src="js/match.js?v=20261026e"></script>
+<script src="js/controls.js?v=20261026e"></script>
+<script src="js/guide.js?v=20261026e"></script>
+<script src="js/tutorial.js?v=20261026e"></script>
+<script src="js/view.js?v=20261026e"></script>
 </body>
 </html>
