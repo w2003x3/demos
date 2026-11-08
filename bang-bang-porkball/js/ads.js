@@ -24,10 +24,21 @@ const ADS = (() => {
     document.head.appendChild(s);
   }
 
+  // 主選單/設定/結算等畫面蓋著時,請求廣告會白白用掉(AdSense 一個位置只請求一次,沒拿到就整場空白),
+  // 也可能被判成隱藏廣告。開局後(gameState 是 game.js 的全域)、且廣告位正中央最上層是它自己才請求
+  function visible(box) {
+    if (typeof gameState === 'undefined' || gameState !== 'playing' || !box.offsetWidth) return false;
+    const r = box.getBoundingClientRect();
+    const x = r.left + r.width / 2, y = r.top + r.height / 2;
+    if (x < 0 || y < 0 || x > innerWidth || y > innerHeight) return false;
+    const top = document.elementFromPoint(x, y);
+    return !!top && box.contains(top);
+  }
+
   // 容器顯示出來(有寬度)才放廣告;AdSense 在寬度 0 的位置會報錯、不出廣告
   function fill() {
     for (const box of document.querySelectorAll('.ad-slot')) {
-      if (filled.has(box) || !box.offsetWidth) continue;
+      if (filled.has(box) || !visible(box)) continue;
       filled.add(box);
       if (!live) { box.classList.add('ad-preview'); continue; }
       const ins = document.createElement('ins');
@@ -44,10 +55,10 @@ const ADS = (() => {
     if (!enabled) return;
     document.body.classList.add('has-ads');
     if (live) loadScript();
+    // 開局(主選單關掉)、手機/電腦版面切換後,位置第一次看得到時再放;兩個位置都放過就停
+    const boxes = document.querySelectorAll('.ad-slot').length;
+    const timer = setInterval(() => { fill(); if (filled.size >= boxes) clearInterval(timer); }, 800);
     fill();
-    // 手機/電腦版面切換(轉向、調整視窗)後,另一個位置第一次出現時再放
-    let t = 0;
-    window.addEventListener('resize', () => { clearTimeout(t); t = setTimeout(fill, 300); });
   }
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
