@@ -62,7 +62,8 @@ function logPlay() {
 }
 function startRound() {
   if (NET.online) { if (NET.role === 'host') NET.startRound(); return; }
-  beginRound();
+  // 單機:局與局之間讓 Google 有機會放插頁廣告(次數由 Google 控制，沒廣告就直接開局)
+  if (typeof ADS !== 'undefined') ADS.roundBreak(beginRound); else beginRound();
 }
 
 // ---------------------------------------------------------------- 一局結束

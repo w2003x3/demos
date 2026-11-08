@@ -5,6 +5,10 @@
 //  只在 yryg.com.tw(含子網域)顯示;其他網址(demos 等)不載入廣告、不保留空位
 //  網址加 ?adtest=1 可預覽版面:有廣告單元就跑 AdSense 測試廣告,沒有就畫出灰色預留框
 //  一個廣告單元同時用在兩個位置,尺寸由 CSS 決定(AdSense「依螢幕寬度指定確切大小」的做法)
+//  橫幅一頁只請求一次、不自動重新載入(AdSense 政策不允許程式自動刷新廣告)
+//  局間插頁:單機開下一局前呼叫 Ad Placement API 的 adBreak({type:'next'}),
+//  要不要放、多久放一次由 Google 決定(frequency hint 120 秒);帳號需加入 AdSense 的 H5 遊戲廣告才會真的出廣告,
+//  未開通/被擋/沒廣告時 adBreakDone 會馬上回呼,直接開局
 // ====================================================================
 const ADS = (() => {
   const CLIENT = 'ca-pub-1853487110114225';
@@ -21,7 +25,31 @@ const ADS = (() => {
     s.async = true;
     s.src = 'https://pagead2.googlesyndication.com/pagead/js/adsbygoogle.js?client=' + CLIENT;
     s.crossOrigin = 'anonymous';
+    s.setAttribute('data-ad-frequency-hint', '120s');
+    if (test) s.setAttribute('data-adbreak-test', 'on');
     document.head.appendChild(s);
+    window.adBreak = window.adConfig = function (o) { (window.adsbygoogle = window.adsbygoogle || []).push(o); };
+    adConfig({ preloadAdBreaks: 'on', sound: 'on' });
+  }
+
+  // 局間插頁廣告:每次開下一局前呼叫,done 一定會被呼叫且只呼叫一次
+  // (第一場不放;廣告程式被擋或 3 秒內沒開始播就直接開局,避免卡在結算畫面)
+  let breaks = 0, pending = false;
+  function roundBreak(done) {
+    if (pending) return;
+    if (!live || breaks++ === 0 || typeof window.adBreak !== 'function') { done(); return; }
+    pending = true;
+    let finished = false, showing = false;
+    const finish = () => { if (finished) return; finished = true; pending = false; if (typeof AUDIO !== 'undefined') AUDIO.resume(); done(); };
+    try {
+      adBreak({
+        type: 'next', name: 'round-break',
+        beforeAd() { showing = true; if (typeof AUDIO !== 'undefined') AUDIO.pause(); },
+        afterAd() { if (typeof AUDIO !== 'undefined') AUDIO.resume(); },
+        adBreakDone: finish,
+      });
+    } catch (e) { finish(); return; }
+    setTimeout(() => { if (!showing) finish(); }, 3000);
   }
 
   // 主選單/設定/結算等畫面蓋著時,請求廣告會白白用掉(AdSense 一個位置只請求一次,沒拿到就整場空白),
@@ -63,5 +91,5 @@ const ADS = (() => {
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
   else init();
-  return { enabled, fill };
+  return { enabled, fill, roundBreak };
 })();
