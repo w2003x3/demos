@@ -1575,3 +1575,9 @@ body.has-ads .ad-desk { display: block; width: 728px; height: 90px; max-width: 1
   body.has-ads .m-bar { bottom: calc(70px + env(safe-area-inset-bottom)); }
   body.has-ads .cockpit { padding-bottom: calc(262px + env(safe-area-inset-bottom)); }
 }
+/* 局與局之間:結算畫面下方的橫幅(每次結算換一則) */
+body.has-ads #result-overlay { flex-direction: column; }
+body.has-ads .ad-result { display: block; position: relative; z-index: 1; width: 728px; height: 90px; max-width: 100%; margin: 0 auto 16px; background: rgba(13,12,16,.35); }
+@media (max-width: 800px) { body.has-ads .ad-result { width: 468px; height: 60px; } }
+@media (max-width: 560px) { body.has-ads .ad-result { width: 320px; height: 50px; margin-bottom: calc(10px + env(safe-area-inset-bottom)); } }
+body.has-ads .ad-result:has(ins[data-ad-status="unfilled"]) { visibility: hidden; }

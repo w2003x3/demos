@@ -281,11 +281,7 @@ const AUDIO = (() => {
     return true;
   }
 
-  // 局間插頁廣告播放時整個靜音(暫停 AudioContext),播完再恢復
-  function pause() { if (ac && ac.state === 'running') ac.suspend(); }
-  function resume() { if (ac && ac.state === 'suspended') ac.resume(); }
-
-  return { play, init, openPanel, voice, pause, resume };
+  return { play, init, openPanel, voice };
 })();
 
 // 遊戲內呼叫:播放音效；房主連線時記下來，隨快照送給其他玩家

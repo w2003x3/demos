@@ -62,8 +62,7 @@ function logPlay() {
 }
 function startRound() {
   if (NET.online) { if (NET.role === 'host') NET.startRound(); return; }
-  // 單機:局與局之間讓 Google 有機會放插頁廣告(次數由 Google 控制，沒廣告就直接開局)
-  if (typeof ADS !== 'undefined') ADS.roundBreak(beginRound); else beginRound();
+  beginRound();
 }
 
 // ---------------------------------------------------------------- 一局結束
@@ -86,6 +85,7 @@ function onRoundEnd() {
   }
   resultUI.render();
   showOverlay('result-overlay', true);
+  if (typeof ADS !== 'undefined') ADS.resultAd();
 }
 // 局間倒數:時間到自動開下一局(單機 / 攤主)
 setInterval(() => {
