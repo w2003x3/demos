@@ -15,12 +15,14 @@
   //  pixel:解析度倍率  shadows:即時陰影  env:HDRI 環境光反射  decor:場外造景比例
   //  fx:爆炸特效等級(0 火焰 / 1 +煙與焦痕 / 2 +火星)  realChars:寫實人物(否則積木人)
   //  charShadow:人物投射即時陰影(陰影圖每幀重算)  lights:夜市燈籠點光源
+  //  pmrem:環境光用預先濾波的 PMREM(反射最準,但每個像素要手動取樣 16 次,內顯上佔掉一半以上的畫面時間);
+  //        否則用一般立方體貼圖 + mipmap(硬體取樣 2 次),畫面差異很小
   const QUALITY_ORDER = ['off', 'low', 'mid', 'high'];
   const QUALITY = {
     off:  { name: '省電', pixel: 0.7,  aa: false, shadows: false, env: false, decor: 0,   fx: 0, realChars: false, charShadow: false, lights: false, floorNormal: false },
     low:  { name: '低',   pixel: 0.85, aa: false, shadows: false, env: true,  decor: 0.5, fx: 1, realChars: true,  charShadow: false, lights: false, floorNormal: true },
     mid:  { name: '中',   pixel: 1,    aa: true,  shadows: true,  shadowSize: 1024, soft: false, env: true, decor: 1, fx: 2, realChars: true, charShadow: false, lights: true, floorNormal: true },
-    high: { name: '高',   pixel: 2,    aa: true,  shadows: true,  shadowSize: 2048, soft: true,  env: true, decor: 1, fx: 2, realChars: true, charShadow: true,  lights: true, floorNormal: true },
+    high: { name: '高',   pixel: 2,    aa: true,  shadows: true,  shadowSize: 2048, soft: true,  env: true, decor: 1, fx: 2, realChars: true, charShadow: true,  lights: true, floorNormal: true, pmrem: true },
   };
   let qualityPref = 'auto';
   try { qualityPref = localStorage.getItem('bbw3d_quality') || 'auto'; } catch (e) { /* 無痕模式等 */ }
@@ -42,8 +44,8 @@
     ? MiniatureLook.createMiniatureLook(THREE, renderer, { preset: 'board', samples: Q.soft ? 4 : 0, bloom: Q.fx > 1 })
     : null;
   const lookActive = () => !!look && miniOn && qualityLevel !== 'off';
-  // 材質精修(粗糙度變化、微凹凸、烤漆清漆):只在載入時為中/高畫質時套用(會增加像素著色成本)
-  const refineOn = !!window.MiniatureLook && (qualityLevel === 'mid' || qualityLevel === 'high');
+  // 材質精修(粗糙度變化、微凹凸):每個像素要多算好幾次雜訊,內顯吃不消 → 只在載入時為「高」畫質才套用
+  const refineOn = !!window.MiniatureLook && qualityLevel === 'high';
 
   const scene = new THREE.Scene();
   // 全景/俯視用 30° 窄視角(微縮模型的望遠感)，鏡頭距離依視角放大，畫面範圍與原本 50° 相同
@@ -188,6 +190,8 @@
 
   // ---------- 打光(天光 + 投影主光 + 環境 HDRI；依主題調色) ----------
   const hemi = new THREE.HemisphereLight(0xbfd9ff, 0x5a4a38, 0.85); // 天空/地面反射光
+  // 遠景薄霧:地板邊緣與遠處造景淡入天色(空氣感),不會看到地板的硬邊。場景一開始就掛著,只換顏色(開關霧會讓全場材質重新編譯)
+  scene.fog = new THREE.Fog(0xa9c4dc, 40, 130);
   const sun = new THREE.DirectionalLight(0xffffff, 0.9);
   sun.position.set(CX + 10, 11, CZ + 5); // 斜側光:影子拉長，立體感更好
   sun.target.position.set(CX, 0, CZ);
@@ -196,6 +200,7 @@
   Object.assign(sun.shadow.camera, { left: -15, right: 15, top: 15, bottom: -15, near: 1, far: 50 });
   sun.shadow.bias = -0.0005;
   sun.shadow.normalBias = 0.02;
+  sun.shadow.radius = 2.4;   // 影子邊緣暈開(中畫質的 PCF 也吃這個值,不增加取樣數)
   const ambient = new THREE.AmbientLight(0xffffff, 0.35);
   scene.add(hemi, sun, sun.target, ambient);
   // 爆炸閃光(單一動態光源，永遠掛在最近的爆炸上)
@@ -204,9 +209,10 @@
 
   // env:PBR 物件吃環境光的強度；lantern:燈籠自發光強度
   const THEME_LIGHT = {
-    park:   { bg: 0x87b8e0, hemi: 0.7,  sun: 1.5,  amb: 0.2,  sunColor: 0xffecc8, exposure: 0.9,  env: 0.85, lantern: 1.0 },
-    market: { bg: 0xb9c4cc, hemi: 0.75, sun: 1.25, amb: 0.25, sunColor: 0xfff8ee, exposure: 0.95, env: 1.0,  lantern: 1.0 },
-    night:  { bg: 0x0d1024, hemi: 0.32, sun: 0.38, amb: 0.2,  sunColor: 0x9db4ff, exposure: 1.15, env: 0.55, lantern: 2.2 },
+    // 柔和取向:主光不要太硬(影子不死黑),天光/環境光補多一點;fog = 遠景薄霧顏色(接近天空地平線)
+    park:   { bg: 0x87b8e0, hemi: 0.85, sun: 1.2,  amb: 0.28, sunColor: 0xffe8c6, exposure: 0.9,  env: 0.85, lantern: 1.0, fog: 0xb4cbdc },
+    market: { bg: 0xb9c4cc, hemi: 0.82, sun: 1.05, amb: 0.3,  sunColor: 0xfff4e6, exposure: 0.95, env: 1.0,  lantern: 1.0, fog: 0xb9bfc2 },
+    night:  { bg: 0x0d1024, hemi: 0.4,  sun: 0.4,  amb: 0.22, sunColor: 0x9db4ff, exposure: 1.15, env: 0.55, lantern: 1.5, fog: 0x0e101c },
   };
   let lastMapId = null;
   const pbrMats = new Set(); // 地圖用的 PBR 材質(套用主題環境光強度)
@@ -214,12 +220,13 @@
     const t = THEME_LIGHT[currentMapId] || THEME_LIGHT.park;
     const e = themeEnv(currentMapId);
     scene.background = e.bg || new THREE.Color(t.bg);
-    scene.environment = Q.env ? (e.env || null) : null;
+    scene.environment = Q.env ? ((Q.pmrem ? themePmrem(e) : e.envFast) || null) : null;
     hemi.intensity = t.hemi + (Q.env ? 0 : 0.25);     // 關掉環境反射時補一點天光
     sun.intensity = t.sun;
     sun.color.set(t.sunColor);
     ambient.intensity = t.amb + (Q.env ? 0 : 0.15);
     renderer.toneMappingExposure = t.exposure;
+    scene.fog.color.set(t.fog);
     for (const m of pbrMats) {
       m.envMapIntensity = t.env;
       if (m.userData.glow) m.emissiveIntensity = t.lantern * m.userData.glow;
@@ -271,12 +278,14 @@
   const envCache = {};
   function themeEnv(id) {
     if (envCache[id]) return envCache[id];
-    const e = envCache[id] = { bg: null, env: null };
+    const e = envCache[id] = { bg: null, env: null, envFast: null, src: null };
     if (typeof MAP_TEX === 'undefined' || !MAP_TEX[id + '_env']) return e;
     texLoader.load(MAP_TEX[id + '_env'], (t) => {
       t.encoding = THREE.sRGBEncoding;
       t.mapping = THREE.EquirectangularReflectionMapping;
-      e.env = pmrem.fromEquirectangular(t).texture;
+      e.src = t;
+      // 一般立方體貼圖(256 + mipmap):粗糙表面取高層 mip,硬體一次取樣就有模糊反射
+      e.envFast = new THREE.WebGLCubeRenderTarget(256).fromEquirectangularTexture(renderer, t).texture;
       // 背景用調暗、略模糊的版本(原圖經 ACES 後太亮，夜市尤其刺眼)；反射光仍用原圖
       const BG_LOOK = { park: 'brightness(0.92) blur(1px)', market: 'brightness(0.78) blur(1.5px)', night: 'brightness(0.42) saturate(0.85) blur(1.5px)' };
       let bgTex = t;
@@ -290,10 +299,17 @@
         bgTex.encoding = THREE.sRGBEncoding;
         bgTex.mapping = THREE.EquirectangularReflectionMapping;
       } catch (err) { /* 舊瀏覽器沒有 canvas filter:直接用原圖 */ }
-      e.bg = new THREE.WebGLCubeRenderTarget(1024).fromEquirectangularTexture(renderer, bgTex).texture;
+      // 背景本來就是模糊過的,512 就夠(1024 的立方體貼圖要多佔約 18MB 顯示記憶體)
+      e.bg = new THREE.WebGLCubeRenderTarget(512).fromEquirectangularTexture(renderer, bgTex).texture;
       if (currentMapId === id) applyThemeLight();
     });
     return e;
+  }
+
+  // PMREM 只有「高」畫質用到,用到時才產生
+  function themePmrem(e) {
+    if (!e.env && e.src) e.env = pmrem.fromEquirectangular(e.src).texture;
+    return e.env;
   }
 
   // ---------- 地板:PBR 貼圖(漫射/法線/ARM)+ 場內棋盤格、場外略暗 ----------
@@ -347,6 +363,7 @@
     mesh.position.set(CX, 0, CZ);
     mesh.receiveShadow = true;
     mesh.userData.noFade = true;
+    mesh.renderOrder = 1;   // 地板最後畫:被牆、箱子、人物蓋住的部分不用算(地板的著色最貴)
     return mesh;
   }
 
@@ -366,7 +383,9 @@
       const str = atob(b64);
       const u8 = new Uint8Array(str.length);
       for (let i = 0; i < str.length; i++) u8[i] = str.charCodeAt(i);
-      new THREE.GLTFLoader().parse(u8.buffer, '', (gltf) => {
+      const loader = new THREE.GLTFLoader();
+      if (window.MeshoptDecoder) loader.setMeshoptDecoder(MeshoptDecoder);   // 模型經 tools/optimize 減面 + meshopt 壓縮
+      loader.parse(u8.buffer, '', (gltf) => {
         for (const n of gltf.scene.children.slice()) { prepModel(n); lib.nodes[n.name] = n; }
         lib.animations = gltf.animations || [];
         lib.ready = true;
@@ -437,7 +456,8 @@
       }
     });
     // 不轉成 MeshPhysicalMaterial(pbrMats / floorMats 持有材質參照)
-    if (refineOn) MiniatureLook.refineMaterials(THREE, root, { physical: false });
+    // 人物是卡通純色(顏色在頂點色),不加微凹凸
+    if (refineOn) MiniatureLook.refineMaterials(THREE, root, { physical: false, classify: (n) => (/^chibi_|^outfit_/.test(n) ? 'skin' : null) });
   }
 
   // 依格子座標產生穩定的亂數(同一格每次重建長相一致)
@@ -1858,7 +1878,10 @@
     const first = !lookKey;
     lookKey = key;
     look.setPreset(preset, first);
-    if (currentMapId === 'night') look.set({ threshold: 0.75, bloom: 0.45 });
+    // 柔和取向:飽和、對比、暗角都比模組預設收一點,顆粒減半(畫面不那麼「銳」)
+    look.set({ saturation: preset === 'grade' ? 1.04 : 1.08, contrast: 1.02, vignette: preset === 'grade' ? 0.28 : 0.36, grain: 0.014 }, first);
+    // 夜市:燈籠要暈開,但門檻太低會整片紅光蓋住場地
+    if (currentMapId === 'night') look.set({ threshold: 1.0, bloom: 0.34 });
     if (preset === 'soft') look.set({ center: 0.42 });   // 跟隨:人物在畫面中央偏下
   }
   function draw() {
@@ -2158,4 +2181,5 @@
     trackFps();
   }
   frame();
+  window.R3D_DEBUG = { renderer, scene, camera, look };   // 效能量測用(draw call / 面數):tools/optimize 的截圖腳本會讀
 })();

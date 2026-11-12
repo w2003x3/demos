@@ -2,21 +2,22 @@
 //  2D / 3D 畫面切換(同一頁、同一場遊戲)
 //  遊戲模擬只有一份(game.js)；切換只是換「誰來畫」:
 //    2D = canvas#game(game.js 的 draw)  3D = three.js(js/render3d.js，畫在 #game3d)
-//  3D 程式與模型(約 22MB)第一次切到 3D 才下載，並顯示進度；之後切換是即時的。
+//  3D 程式與模型(約 11MB)第一次切到 3D 才下載，並顯示進度；之後切換是即時的。
 //  網址 ?view=3d 可直接以 3D 開啟；選擇會記在瀏覽器。
 // ====================================================================
 const VIEW = (() => {
-  const V = '20261109c';
+  const V = '20261113a';
   // 3D 需要的腳本(依序執行);size 是大約大小，用來估算進度
   const SCRIPTS_3D = [
     ['assets/atlas.js', 350e3],
-    ['models/map_models.js', 13.9e6],
-    ['models/char_models.js?v=' + V, 11.1e6],
-    ['models/extra_models.js?v=' + V, 0.78e6],
+    ['models/map_models.js?v=' + V, 8.0e6],
+    ['models/char_models.js?v=' + V, 1.3e6],
+    ['models/extra_models.js?v=' + V, 0.57e6],
     ['vendor/three.min.js', 0.6e6],
     ['vendor/OrbitControls.js', 30e3],
     ['vendor/GLTFLoader.js', 100e3],
     ['vendor/SkeletonUtils.js', 10e3],
+    ['vendor/meshopt_decoder.js', 30e3],   // 模型用 meshopt 壓縮(tools/optimize),載入時解壓
     ['vendor/miniature-look.js?v=' + V, 25e3],
     ['js/render3d.js?v=' + V, 90e3],
   ];
